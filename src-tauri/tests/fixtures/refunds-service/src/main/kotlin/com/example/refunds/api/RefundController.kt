@@ -21,6 +21,11 @@ class RefundController(
         return refundService.get(id)
     }
 
+    @PostMapping("/{id}/cancel")
+    fun cancel(@PathVariable id: UUID) {
+        refundService.cancel(id)
+    }
+
     @PostMapping("/{id}/approve")
     fun approve(@PathVariable id: UUID) {
         approvalService.approve(id)

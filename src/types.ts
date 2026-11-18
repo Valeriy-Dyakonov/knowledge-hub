@@ -167,6 +167,20 @@ export interface TableInfo {
   /** Where the structure comes from: migrations, the entity only, or only a reference in code. */
   source: "migration" | "entity" | "both" | "code";
   evidence?: Evidence;
+  /** Every place in code that reads or writes it, whether or not a feature's flow reaches it. */
+  accesses?: TableAccess[];
+}
+
+export interface TableAccess {
+  componentId: string;
+  method: string;
+  kind: "READ" | "WRITE";
+  /** `dirtyChecking`: a loaded entity changed inside @Transactional, written on commit without save. */
+  implicit?: string;
+  /** `@Query`: the table appears in a repository query. */
+  via?: string;
+  origin: Origin;
+  evidence?: Evidence;
 }
 
 export interface Datasource { property: string; profile?: string; kind: string; host?: string; database?: string; url: string }

@@ -285,6 +285,7 @@ impl<'a> Analysis<'a> {
         for bean in &beans {
             self.triggers(bean);
             self.bodies(bean);
+            self.implicit_writes(bean);
             if bean.kind == "CLIENT" {
                 self.feign(bean);
             }
@@ -516,6 +517,80 @@ impl<'a> Analysis<'a> {
         }
     }
 
+    /// JPA dirty checking: in a `@Transactional` (not read-only) method, an entity loaded through a repository and
+    /// then changed (`e.status = …`) is written on commit without a `save`. Inferred, so it goes to review.
+    fn implicit_writes(&mut self, b: &Bean) {
+        let tx = |anns: &[Annotation]| anns.iter().find(|a| a.name == "Transactional").map(|a| a.refs(&["readOnly"]).iter().any(|r| r == "true"));
+        let class_tx = tx(&b.class.annotations);
+        for f in &b.class.functions {
+            let Some(read_only) = tx(&f.annotations).or(class_tx) else { continue };
+            if read_only {
+                continue;
+            }
+            let mut done: BTreeSet<String> = BTreeSet::new();
+            for (var, prop, line) in &f.assignments {
+                let Some((_, Some((receiver, method)))) = f.locals.iter().rev().find(|(n, _)| n == var) else { continue };
+                let Some(repo) = b.injected.get(receiver) else { continue };
+                let Some(entity) = self.repository_entity(repo) else { continue };
+                // Only JPA tracks loaded entities; Spring Data JDBC, MongoDB, Redis need an explicit save.
+                let Some(e) = self.facts.entities.iter().find(|e| e.id == entity && e.store == "sql") else { continue };
+                let jpa = self.index.classes.get(&entity).is_some_and(|(_, c)| c.annotation(&["Entity"]).is_some());
+                if !jpa || !done.insert(e.table.clone()) {
+                    continue;
+                }
+                let table = e.table.clone();
+                let ev = self.ev(b.file, *line, *line);
+                self.facts.sink_accesses.push(SinkAccessFact {
+                    component_id: b.class.fqn.clone(),
+                    method: f.name.clone(),
+                    sink_kind: "DB_TABLE".into(),
+                    sink_name: table,
+                    edge_kind: "WRITE".into(),
+                    origin: "INFERRED".into(),
+                    confidence: "MEDIUM".into(),
+                    attributes: [
+                        ("operation".to_string(), format!("{var}.{prop} = …")),
+                        ("implicit".to_string(), "dirtyChecking".to_string()),
+                        ("loadedBy".to_string(), format!("{receiver}.{method}")),
+                    ]
+                    .into(),
+                    evidence: ev,
+                });
+            }
+        }
+    }
+
+    /// The entity type (FQN) of a Spring Data repository interface.
+    fn repository_entity(&self, repo: &str) -> Option<String> {
+        let &(i, class) = self.index.classes.get(repo)?;
+        let base = class.supertypes.iter().find(|s| REPOSITORY_BASES.contains(&simple(&s.name)))?;
+        Some(self.index.resolve(base.args.first()?, &self.index.files[i]))
+    }
+
+    /// Tables named in a `@Query`: native SQL as is; JPQL entity names (`from Refund r`) mapped to their tables.
+    fn query_tables(&self, query: &str, native: bool) -> (Vec<String>, Vec<String>) {
+        let (write, read) = sql_tables(query);
+        if native {
+            return (write, read);
+        }
+        let map = |names: Vec<String>| -> Vec<String> {
+            names
+                .into_iter()
+                .filter(|n| !n.contains('.'))
+                .filter_map(|n| {
+                    self.facts.entities.iter().find(|e| simple(&e.id).eq_ignore_ascii_case(&n) || self.entity_name(&e.id).is_some_and(|x| x.eq_ignore_ascii_case(&n))).map(|e| e.table.clone())
+                })
+                .collect()
+        };
+        (map(write), map(read))
+    }
+
+    /// `@Entity(name = "X")`: the name JPQL uses instead of the class name.
+    fn entity_name(&self, fqn: &str) -> Option<String> {
+        let (_, c) = self.index.classes.get(fqn)?;
+        c.annotation(&["Entity"]).and_then(|a| self.ann_value(a, &["name"]))
+    }
+
     fn sink(&mut self, b: &Bean, f: &Function, kind: &str, name: String, edge: &str, attrs: Vec<(&str, String)>, ev: Option<Evidence>) {
         self.facts.sink_accesses.push(SinkAccessFact {
             component_id: b.class.fqn.clone(),
@@ -645,13 +720,37 @@ impl<'a> Analysis<'a> {
         };
         let mut methods: BTreeMap<String, Option<Evidence>> = BTreeMap::new();
         let mut writes: BTreeSet<String> = BTreeSet::new();
+        let mut joined: Vec<(String, String, bool)> = Vec::new();
         for f in &b.class.functions {
             methods.insert(f.name.clone(), self.fn_ev(b.file, f));
-            let modifying = f.annotations.iter().any(|a| a.name == "Modifying")
-                || f.annotations.iter().find(|a| a.name == "Query").and_then(|a| a.values(&["value"]).into_iter().next()).is_some_and(|q| !sql_tables(&q).0.is_empty());
+            let query = f.annotations.iter().find(|a| a.name == "Query");
+            let text = query.and_then(|a| a.values(&["value"]).into_iter().next());
+            let native = query.is_some_and(|a| a.refs(&["nativeQuery"]).iter().any(|r| r == "true"));
+            let (qw, qr) = text.as_deref().map(|q| self.query_tables(q, native)).unwrap_or_default();
+            let modifying = f.annotations.iter().any(|a| a.name == "Modifying") || text.as_deref().is_some_and(|q| !sql_tables(q).0.is_empty());
             if modifying {
                 writes.insert(f.name.clone());
             }
+            // Tables of the query other than the repository's own: joins, subqueries, updates of other tables.
+            for (t, write) in qw.into_iter().map(|t| (t, true)).chain(qr.into_iter().map(|t| (t, false))) {
+                if !t.eq_ignore_ascii_case(&table) {
+                    joined.push((f.name.clone(), t, write));
+                }
+            }
+        }
+        for (m, t, write) in joined {
+            let ev = methods.get(&m).cloned().flatten();
+            self.facts.sink_accesses.push(SinkAccessFact {
+                component_id: b.class.fqn.clone(),
+                method: m.clone(),
+                sink_kind: "DB_TABLE".into(),
+                sink_name: t,
+                edge_kind: if write { "WRITE" } else { "READ" }.into(),
+                origin: "STATIC".into(),
+                confidence: "HIGH".into(),
+                attributes: [("operation".to_string(), m), ("via".to_string(), "@Query".to_string())].into(),
+                evidence: ev,
+            });
         }
         let header = self.ev(b.file, b.class.start_line, b.class.header_end_line);
         let called: Vec<String> = self.facts.calls.iter().filter(|c| c.target_type == b.class.fqn).map(|c| c.target_method.clone()).collect();

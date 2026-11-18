@@ -12,6 +12,7 @@ import com.example.refunds.persistence.RefundLockRepository
 import com.example.refunds.persistence.RefundRepository
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
@@ -37,6 +38,20 @@ class RefundService(
         val entity = repository.findById(id).orElseThrow()
         entity.status = "PAID"
         repository.save(entity)
+    }
+
+    /** No save: the loaded entity is changed inside a transaction and written on commit. */
+    @Transactional
+    fun cancel(id: UUID) {
+        val entity = repository.findById(id).orElseThrow()
+        entity.status = "CANCELLED"
+    }
+
+    @Transactional(readOnly = true)
+    fun preview(id: UUID): String {
+        val entity = repository.findById(id).orElseThrow()
+        entity.status = "PREVIEW"
+        return entity.status
     }
 
     private fun toRefund(e: RefundEntity) = Refund(e.id, e.amount, e.status)

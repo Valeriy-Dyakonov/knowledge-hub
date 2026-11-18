@@ -17,6 +17,7 @@ class ReconciliationJob(
     @Scheduled(cron = "\${refunds.reconciliation.cron:0 0 * * * *}")
     fun reconcile() {
         val pending = repository.findAllByStatus("PAID")
+        val bySku = repository.findBySku("SKU-1")
         val region = env.getProperty("refunds.region")
         restTemplate.getForObject("https://ledger.example.com/api/balance", String::class.java)
     }

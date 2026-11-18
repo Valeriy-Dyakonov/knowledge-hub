@@ -119,6 +119,10 @@ pub struct Function {
     pub signature_end_line: u32,
     pub end_line: u32,
     pub calls: Vec<Call>,
+    /// `val x = field.m(...)...`: local name -> the first call of its initializer (receiver, method).
+    pub locals: Vec<(String, Option<(String, String)>)>,
+    /// `x.prop = …` / `x.prop += …`: (variable, property, line).
+    pub assignments: Vec<(String, String, u32)>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -676,7 +680,8 @@ impl<'s> Walker<'s> {
     fn collect_values(&self, n: Node, arg: &mut AnnArg) {
         match n.kind() {
             "string_literal" => arg.strings.push(self.string(n)),
-            "identifier" => arg.refs.push(self.text(n).to_string()),
+            // `readOnly = true`, `nativeQuery = true`
+            "identifier" | "boolean_literal" => arg.refs.push(self.text(n).to_string()),
             "navigation_expression" => match self.dotted(n) {
                 Some(d) => arg.refs.push(d),
                 None => named(n).into_iter().for_each(|c| self.collect_values(c, arg)),
@@ -752,10 +757,13 @@ impl<'s> Walker<'s> {
         let return_type = named(n).into_iter().find(|c| c.kind() == "user_type" || c.kind() == "nullable_type").and_then(|t| self.type_name_of(t));
         let signature_end_line = body.map(|b| line(b)).unwrap_or_else(|| end_line(n));
         let mut calls = Vec::new();
+        let mut locals = Vec::new();
+        let mut assignments = Vec::new();
         if let Some(b) = body {
             self.calls(b, &mut calls);
+            self.statements(b, &mut locals, &mut assignments);
         }
-        Function { name, annotations, params, return_type, start_line: line(n), signature_end_line, end_line: end_line(n), calls }
+        Function { name, annotations, params, return_type, start_line: line(n), signature_end_line, end_line: end_line(n), calls, locals, assignments }
     }
 
     fn property(&self, n: Node) -> Property {
@@ -784,6 +792,52 @@ impl<'s> Walker<'s> {
         for c in named(n) {
             self.calls(c, out);
         }
+    }
+
+    /// Local values and property assignments of a body (lambdas included), for implicit writes of loaded entities.
+    fn statements(&self, n: Node, locals: &mut Vec<(String, Option<(String, String)>)>, assignments: &mut Vec<(String, String, u32)>) {
+        match n.kind() {
+            "property_declaration" => {
+                let name = find(n, "variable_declaration").and_then(|v| find(v, "identifier")).map(|i| self.text(i).to_string());
+                if let Some(name) = name {
+                    // The innermost call with a receiver: `repo.findById(id).orElseThrow()` -> (repo, findById).
+                    let source = named(n).into_iter().find(|c| c.kind() != "variable_declaration" && c.kind() != "modifiers").and_then(|init| self.base_call(init));
+                    locals.push((name, source));
+                }
+            }
+            "assignment" => {
+                if let Some(target) = n.named_child(0).filter(|t| t.kind() == "navigation_expression") {
+                    let parts = named(target);
+                    if parts.len() == 2 && parts[0].kind() == "identifier" && parts[1].kind() == "identifier" {
+                        assignments.push((self.text(parts[0]).to_string(), self.text(parts[1]).to_string(), line(n)));
+                    }
+                }
+            }
+            _ => {}
+        }
+        for c in named(n) {
+            self.statements(c, locals, assignments);
+        }
+    }
+
+    /// The first call of an expression that has a receiver, following chains inward and `?:`/`!!` wrappers.
+    fn base_call(&self, n: Node) -> Option<(String, String)> {
+        // Pre-order: the outermost call with a receiver wins over calls in its arguments.
+        let mut stack = vec![n];
+        while let Some(x) = stack.pop() {
+            if x.kind() == "lambda_literal" {
+                continue;
+            }
+            if x.kind() == "call_expression" {
+                if let Some(Call { receiver: Some(r), method, .. }) = self.call(x) {
+                    return Some((r, method));
+                }
+            }
+            for c in named(x).into_iter().rev() {
+                stack.push(c);
+            }
+        }
+        None
     }
 
     fn call(&self, n: Node) -> Option<Call> {

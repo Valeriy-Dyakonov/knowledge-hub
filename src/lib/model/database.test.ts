@@ -27,6 +27,20 @@ describe("database", () => {
     expect(refunds.evidence?.path).toContain("V1__init.sql");
   });
 
+  it("lists every access in code, implicit writes and @Query joins included", () => {
+    const db = model.database!;
+    const refunds = db.tables.find((t) => t.name === "refunds")!;
+    const implicit = refunds.accesses!.find((a) => a.implicit === "dirtyChecking")!;
+    expect(`${implicit.componentId.split(".").pop()}.${implicit.method}:${implicit.kind}:${implicit.origin}`).toBe("RefundService.cancel:WRITE:INFERRED");
+    // A read-only transaction writes nothing.
+    expect(refunds.accesses!.some((a) => a.method === "preview" && a.kind === "WRITE")).toBe(false);
+    const items = db.tables.find((t) => t.name === "refund_items")!;
+    expect(items.accesses!.map((a) => `${a.method}:${a.via}`)).toEqual(["findBySku:@Query"]);
+    // The cancel endpoint's flow writes the table.
+    const cancel = model.features.find((f) => f.technicalName.includes("cancel"))!;
+    expect(cancel.edges.some((e) => e.kind === "WRITE" && e.to.id === "db_table:refunds" && e.origin === "INFERRED")).toBe(true);
+  });
+
   it("describes the datasource without credentials", () => {
     const kinds = model.database!.datasources.map((d) => `${d.kind} ${d.host}`);
     expect(kinds).toEqual(["mongodb mongo:27017", "redis redis:6379", "postgresql db:5432"]);

@@ -100,6 +100,10 @@ function ErView(props: { model: KnowledgeModel; focus?: string; onSelect: (name:
 function TableView({ table, model, onSelect, onOpenFeature }: { table: TableInfo; model: KnowledgeModel; onSelect: (n: string) => void; onOpenFeature: (id: string) => void }) {
   const t = useT().database;
   const uses = tableUsage(model, table.name);
+  const access = table.accesses ?? [];
+  // Components on the flow of a feature that uses the table; other accesses are not reached from any entry point.
+  const onFlows = new Set(uses.flatMap((u) => [...u.feature.componentIds, ...u.feature.triggers.map((x) => x.componentId)]));
+  const inFeatures = new Set(access.filter((a) => onFlows.has(a.componentId)).map((a) => `${a.componentId}#${a.method}`));
   const referencedBy = model.database!.tables.flatMap((x) => x.columns.filter((c) => c.references?.table === table.name).map((c) => ({ table: x.name, column: c.name })));
   return (
     <>
@@ -142,7 +146,12 @@ function TableView({ table, model, onSelect, onOpenFeature }: { table: TableInfo
       )}
       <Card>
         <Title tip={t.usedByTip}>{t.usedBy}</Title>
-        {uses.length === 0 ? <p className="muted">{t.unused}</p> : (
+        {uses.length === 0 ? (
+          <>
+            <p className="muted">{t.unused}</p>
+            <p className="hint">{access.length ? t.unusedButAccessed : table.source === "code" ? t.unusedCodeOnly : t.unusedNoAccess}</p>
+          </>
+        ) : (
           <ul className="plain">
             {uses.map((u) => (
               <li key={u.feature.id}>
@@ -154,6 +163,23 @@ function TableView({ table, model, onSelect, onOpenFeature }: { table: TableInfo
           </ul>
         )}
       </Card>
+      {access.length > 0 && (
+        <Card>
+          <Title tip={t.accessTip}>{t.access}</Title>
+          <ul className="plain">
+            {access.map((a, i) => (
+              <li key={i}>
+                {a.kind === "WRITE" ? <Badge tone="warn">{t.writes}</Badge> : <Badge>{t.reads}</Badge>}{" "}
+                <code>{a.componentId.split(".").pop()}.{a.method}</code>
+                {a.implicit && <> <Badge tone="warn">{t.implicit[a.implicit] ?? a.implicit}</Badge></>}
+                {a.via && <span className="hint"> {a.via}</span>}
+                {!inFeatures.has(`${a.componentId}#${a.method}`) && <span className="hint"> · {t.outsideFeatures}</span>}
+                <span className="hint flow-loc"> {loc(a.evidence)}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       {table.columns.length > 0 && table.store === "sql" && (
         <Card>
           <Title tip={t.relationsTip}>{t.relations}</Title>

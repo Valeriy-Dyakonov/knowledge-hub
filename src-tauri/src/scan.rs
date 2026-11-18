@@ -153,10 +153,10 @@ mod tests {
         assert!(seen.iter().any(|p| p.kind == "extractor" && p.item.ends_with("RefundService.kt")));
         assert_eq!(seen.iter().filter(|p| p.kind == "contextSource").count(), 4);
         assert_eq!(res.steps[0].stats["files"], 19);
-        assert_eq!(res.steps[0].stats["triggers"], 9);
+        assert_eq!(res.steps[0].stats["triggers"], 10);
         assert!(res.steps.iter().all(|s| s.status == "done"), "{:?}", res.steps);
         assert_eq!(res.steps.iter().filter(|s| s.kind == "extractor").map(|s| s.id).collect::<Vec<_>>(), vec!["kotlin-spring"]);
-        assert_eq!(res.facts.triggers.len(), 9);
+        assert_eq!(res.facts.triggers.len(), 10);
         let mut json = serde_json::to_value(&res).unwrap();
         for step in json["steps"].as_array_mut().unwrap() {
             step["millis"] = serde_json::json!(0);

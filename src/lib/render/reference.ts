@@ -41,7 +41,8 @@ export function erDiagram(db: DatabaseInfo, lang: string, focus?: string): { tex
     if (!t.columns.length) out.push(`    unknown ${erIdent(m.noColumns)}`);
     for (const c of t.columns) {
       const keys = [c.primaryKey && "PK", c.references && "FK"].filter(Boolean).join(", ");
-      out.push(`    ${erType(c.dataType)} ${erIdent(c.name)}${keys ? ` ${keys}` : ""}${c.nullable || c.primaryKey ? "" : ` "${m.notNull}"`}`);
+      // Mermaid draws "type name keys comment" left to right; the column name goes first, so it takes the type slot.
+      out.push(`    ${erIdent(c.name)} ${erType(c.dataType)}${keys ? ` ${keys}` : ""}${c.nullable || c.primaryKey ? "" : ` "${m.notNull}"`}`);
     }
     out.push("  }");
   }
@@ -80,6 +81,13 @@ export function databaseMarkdown(model: KnowledgeModel, lang: string): string {
     if (uses.length) {
       const list = uses.map((u) => `${md(n.feature(u.feature))} (${[u.reads && m.edges.READ, u.writes && m.edges.WRITE].filter(Boolean).join(", ")})`);
       out.push(`- ${m.usedBy}: ${list.join("; ")}`);
+    }
+    const access = t.accesses ?? [];
+    if (access.length) {
+      const list = access.map((a) => `\`${a.componentId.split(".").pop()}.${a.method}\` (${[m.edges[a.kind], a.implicit && m.implicitWrite, a.via].filter(Boolean).join(", ")})`);
+      out.push(`- ${m.codeAccess}: ${list.join("; ")}`);
+    } else if (t.source !== "code") {
+      out.push(`- ${m.noCodeAccess}`);
     }
     if (t.columns.length) {
       out.push("", `| ${m.column} | ${m.dataType} | ${m.keys} | ${m.field} |`, "|---|---|---|---|");

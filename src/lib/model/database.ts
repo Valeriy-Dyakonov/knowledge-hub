@@ -43,6 +43,20 @@ export function buildDatabase(facts: SourceFacts, context: ContextFacts, sinks: 
     }
     tables.set(store === "sql" ? name : `${store}:${name}`, t);
   }
+  // Code-level accesses: repositories, JDBC, @Query, implicit writes — reached by a feature or not.
+  for (const a of facts.sinkAccesses.filter((x) => x.sinkKind === "DB_TABLE")) {
+    const t = [...tables.values()].find((x) => x.name.toLowerCase() === a.sinkName.toLowerCase());
+    if (!t) continue;
+    (t.accesses ??= []).push({
+      componentId: a.componentId,
+      method: a.method,
+      kind: a.edgeKind === "WRITE" ? "WRITE" : "READ",
+      implicit: a.attributes.implicit,
+      via: a.attributes.via,
+      origin: a.origin,
+      evidence: a.evidence,
+    });
+  }
   for (const s of sinks.filter((x) => x.kind === "DB_TABLE")) {
     const name = s.technicalName.toLowerCase();
     const mapped = [...tables.values()].some((t) => t.name.toLowerCase() === name);
