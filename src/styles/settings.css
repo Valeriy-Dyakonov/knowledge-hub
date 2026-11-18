@@ -17,3 +17,4 @@
 .rooms .room-list { max-height: 220px; overflow: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 @media (max-width: 820px) { .settings-layout { grid-template-columns: 1fr; } .settings-nav { position: static; flex-direction: row; flex-wrap: wrap; } .side-note { display: none; } }
 .field .row input { flex: 1; }
+.limits .field { flex: 1; min-width: 200px; }

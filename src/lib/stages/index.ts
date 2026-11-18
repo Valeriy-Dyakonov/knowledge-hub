@@ -9,4 +9,4 @@ import type { Stage } from "./types";
 /** The stages in run order (docs/03-pipeline.md). A new stage is a new file plus an entry here. */
 export const STAGES: Stage[] = [scanStage, discoverStage, traceStage, describeStage, assembleStage, renderStage, indexStage];
 
-export type { FeatureCandidate, RunContext, RunState, Stage } from "./types";
+export type { Activity, FeatureCandidate, RunContext, RunState, Stage } from "./types";

@@ -6,6 +6,9 @@ use crate::error::AppResult;
 use crate::model::facts::SourceFacts;
 use crate::repo::RepoSnapshot;
 
+/// Progress of a long step: `current` of `total` items, the item being processed.
+pub type Progress<'a> = &'a dyn Fn(usize, usize, &str);
+
 pub trait Extractor: Send + Sync {
     fn id(&self) -> &'static str;
     fn version(&self) -> &'static str;
@@ -13,7 +16,7 @@ pub trait Extractor: Send + Sync {
         false
     }
     fn supports(&self, repo: &RepoSnapshot) -> bool;
-    fn extract(&self, repo: &RepoSnapshot) -> AppResult<SourceFacts>;
+    fn extract(&self, repo: &RepoSnapshot, progress: Progress) -> AppResult<SourceFacts>;
 }
 
 /// Registered extractors, tried in order; every one whose `supports` is true runs.

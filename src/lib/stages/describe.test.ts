@@ -4,7 +4,7 @@ import type { KnowledgeModel, LogEntry } from "../../types";
 import { confirm } from "../model/claims";
 import { mergeModels } from "../model/merge";
 import { analyse, scan } from "../testing/fixture";
-import { describeStage, parse } from "./describe";
+import { describeStage, parse, RateLimiter } from "./describe";
 import { discover } from "./discover";
 import { Tracer } from "./trace";
 import type { RunContext, RunState } from "./types";
@@ -21,15 +21,18 @@ function context(llm: (system: string, user: string) => Promise<string>, previou
   };
   const warnings: LogEntry[] = [];
   const requests: string[] = [];
+  const slept: number[] = [];
   const ctx = {
     options: { serviceId: "refunds", serviceName: "Refunds", repoPath: "/r", language: "ru", describe: true },
     backend: { llmChat: (s: string, u: string) => { requests.push(u); return llm(s, u); } } as unknown as Backend,
     state, previous, versions: {}, warnings,
     log: () => {},
     warn: (code: string, params?: Record<string, string>) => warnings.push({ at: "", level: "warn", code, params }),
+    progress: () => {},
+    sleep: async (ms: number) => { slept.push(ms); },
     now: () => "",
   } as unknown as RunContext;
-  return { ctx, warnings, requests };
+  return { ctx, warnings, requests, slept };
 }
 
 /** Names every feature, component and sink it was asked about. */
@@ -79,6 +82,35 @@ describe("describe stage", () => {
     const second = context(echo, model);
     await describeStage.run(second.ctx);
     expect(second.requests).toHaveLength(0);
+  });
+
+  it("keeps to the request budget and the rate limit", async () => {
+    const { ctx, warnings, requests, slept } = context(echo);
+    (ctx.options as { llm?: unknown }).llm = { requestsPerMinute: 2, maxRequests: 0 };
+    await describeStage.run(ctx);
+    expect(requests).toHaveLength(0);
+    expect(warnings[0].code).toBe("llmBudgetExceeded");
+    expect(slept).toEqual([]);
+
+    const limiter = new RateLimiter(2, async (ms) => { now += ms; }, () => now);
+    let now = 0;
+    expect(await limiter.acquire(() => {})).toBe(0);
+    now += 10_000;
+    expect(await limiter.acquire(() => {})).toBe(20_000); // 2 per minute: 30 s apart
+  });
+
+  it("retries a request rejected with HTTP 429", async () => {
+    let calls = 0;
+    const { ctx, warnings, slept } = context(async (s, u) => {
+      calls++;
+      if (calls === 1) throw { code: "http", params: { service: "LLM", status: "429 Too Many Requests" } };
+      return echo(s, u);
+    });
+    await describeStage.run(ctx);
+    expect(calls).toBe(2);
+    expect(slept).toContain(15_000);
+    expect(warnings).toEqual([]);
+    expect(Object.keys(ctx.state.descriptions!.features)).toHaveLength(6);
   });
 
   it("parses JSON wrapped in prose", () => {

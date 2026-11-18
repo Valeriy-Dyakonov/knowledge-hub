@@ -32,6 +32,9 @@ export interface RunState {
   model?: KnowledgeModel;
 }
 
+/** What a stage is doing right now; not saved, only shown ("Сейчас: …" with a progress bar). */
+export interface Activity { code: string; params?: Record<string, string>; current?: number; total?: number }
+
 /** Shared state of one analysis run, handed to every stage. */
 export interface RunContext {
   readonly run: RunRecord;
@@ -44,7 +47,11 @@ export interface RunContext {
   readonly warnings: LogEntry[];
   log(level: LogLevel, code: string, params?: Record<string, string>): void;
   warn(code: string, params?: Record<string, string>): void;
+  /** Live activity of the current stage; null clears it. */
+  progress(activity: Activity | null): void;
   now(): string;
+  /** Waiting between LLM requests; tests replace it so they do not wait. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export interface Stage {

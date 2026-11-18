@@ -61,6 +61,14 @@ export function LlmSection({ form, set, keyStored, onKeyChanged }: SectionProps)
       <Field label={t.llmModel}>
         <input value={form.llmModel} onChange={(e) => set({ llmModel: e.target.value })} />
       </Field>
+      <div className="row wrap limits">
+        <Field label={t.llmRate} tip={t.llmLimitsTip}>
+          <input type="number" min={1} max={600} value={form.llmRequestsPerMinute} onChange={(e) => set({ llmRequestsPerMinute: Math.max(1, Number(e.target.value) || 1) })} />
+        </Field>
+        <Field label={t.llmBudget} tip={t.llmLimitsTip}>
+          <input type="number" min={0} max={1000} value={form.llmMaxRequests} onChange={(e) => set({ llmMaxRequests: Math.max(0, Number(e.target.value) || 0) })} />
+        </Field>
+      </div>
       <Field label={t.llmKey} hint={keyStored ? t.llmKeyStored : undefined}>
         <div className="row">
           <input type="password" autoComplete="off" value={key} placeholder={keyStored ? "••••••••••" : t.llmKeyPlaceholder} onChange={(e) => setKey(e.target.value)} />

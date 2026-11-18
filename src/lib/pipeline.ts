@@ -1,12 +1,14 @@
 import type { Backend } from "../api";
 import type { KnowledgeModel, LogEntry, LogLevel, RunOptions, RunRecord } from "../types";
 import { errorInfo, HubError } from "./errors";
-import { STAGES, type RunContext, type RunState, type Stage } from "./stages";
+import { STAGES, type Activity, type RunContext, type RunState, type Stage } from "./stages";
 import { runStep } from "./steps";
 
 export interface RunHandlers {
   onLog?(entry: LogEntry): void;
   onRun?(run: RunRecord): void;
+  /** What the current stage is doing right now, with the stage id. */
+  onProgress?(stage: string | undefined, activity: Activity | null): void;
 }
 
 export interface PipelineDeps {
@@ -89,6 +91,7 @@ async function execute(initial: RunRecord, state: RunState, deps: PipelineDeps, 
       log("warn", code, params);
       warnings.push({ at: now(), level: "warn", stage, code, params });
     },
+    progress: (activity) => h.onProgress?.(stage, activity),
     now,
   };
 
@@ -96,6 +99,7 @@ async function execute(initial: RunRecord, state: RunState, deps: PipelineDeps, 
   for (const s of stages) {
     if (run.completedStages.includes(s.id)) continue;
     stage = s.id;
+    h.onProgress?.(stage, null);
     try {
       await runStep(ctx, "stage", s.id, s.required, s.skipReason?.(ctx) ?? null, () => s.run(ctx));
     } catch (e) {
@@ -110,6 +114,7 @@ async function execute(initial: RunRecord, state: RunState, deps: PipelineDeps, 
     await save({ ...run, completedStages: [...run.completedStages, s.id], versions: { ...ctx.versions } });
   }
   stage = undefined;
+  h.onProgress?.(undefined, null);
   log("ok", "runCompleted", { runId: run.id, features: String(state.model?.features.length ?? 0) });
   await flush();
   await save({ ...run, status: "COMPLETED", finishedAt: now() });

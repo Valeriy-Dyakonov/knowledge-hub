@@ -2,7 +2,7 @@
 mod spring;
 pub mod syntax;
 
-use super::Extractor;
+use super::{Extractor, Progress};
 use crate::error::AppResult;
 use crate::model::facts::SourceFacts;
 use crate::model::Evidence;
@@ -50,10 +50,13 @@ impl Extractor for KotlinSpringExtractor {
         !kotlin.is_empty() && (spring_build || kotlin.iter().take(200).any(|k| repo.read(k).is_ok_and(|t| t.contains("org.springframework"))))
     }
 
-    fn extract(&self, repo: &RepoSnapshot) -> AppResult<SourceFacts> {
+    fn extract(&self, repo: &RepoSnapshot, progress: Progress) -> AppResult<SourceFacts> {
         let mut texts = HashMap::new();
         let mut files = Vec::new();
-        for path in repo.files(is_main_source) {
+        let paths = repo.files(is_main_source);
+        for (i, path) in paths.iter().enumerate() {
+            progress(i + 1, paths.len(), path);
+            let path = path.clone();
             let text = repo.read(&path)?;
             files.push(syntax::parse(&path, &text));
             texts.insert(path, text);

@@ -23,7 +23,7 @@ function sections(t: ReturnType<typeof useT>["settings"]): Section[] {
       id: "llm",
       status: (p) => {
         const ok = !!p.form.llmBaseUrl.trim() && !!p.form.llmModel.trim();
-        return { ok, sub: ok ? p.form.llmModel : `${t.status.optional} · ${t.status.llmOff}` };
+        return { ok, sub: ok ? `${p.form.llmModel} · ≤${p.form.llmRequestsPerMinute}/min` : `${t.status.optional} · ${t.status.llmOff}` };
       },
       Component: LlmSection,
     },

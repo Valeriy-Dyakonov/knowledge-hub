@@ -103,6 +103,3 @@ pub fn is_known(name: &str) -> bool {
     ALL.iter().any(|s| s.name == name)
 }
 
-pub fn require(secret: &Secret) -> AppResult<String> {
-    get(secret.name).ok_or_else(|| AppError::new("tokenMissing").with("secret", secret.name))
-}

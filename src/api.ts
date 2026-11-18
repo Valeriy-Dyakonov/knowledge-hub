@@ -3,7 +3,7 @@ import { t } from "./i18n";
 import type { ErrorParams } from "./i18n/messages/ru/errors";
 import type { ReviewBackend } from "./lib/review/service";
 import type {
-  GeneratedFile, JournalEntry, KnowledgeModel, LogEntry, RepoInfo, ReviewAnswer, ReviewBatch, ReviewQuestion, RunRecord, ScanResult, SearchHit, Settings, StoredBatch, GitUser,
+  GeneratedFile, JournalEntry, KnowledgeModel, LogEntry, RepoInfo, ReviewAnswer, ReviewBatch, ReviewQuestion, RunRecord, ScanProgress, ScanResult, SearchHit, Settings, StoredBatch, GitUser,
 } from "./types";
 
 /** A backend failure worded in the UI language; `String(e)` gives just the message. */
@@ -38,7 +38,7 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
 /** What the analysis needs from the backend; tests pass a fake. */
 export interface Backend {
   inspectRepo(path: string): Promise<RepoInfo>;
-  scanRepo(path: string): Promise<ScanResult>;
+  scanRepo(path: string, onProgress?: (p: ScanProgress) => void): Promise<ScanResult>;
   loadModel(serviceId: string): Promise<KnowledgeModel | null>;
   saveModel(serviceId: string, model: KnowledgeModel): Promise<void>;
   writeGenerated(serviceId: string, files: GeneratedFile[]): Promise<void>;
@@ -59,7 +59,14 @@ export const api = {
   gitUser: () => call<GitUser>("git_user"),
 
   inspectRepo: (path: string) => call<RepoInfo>("inspect_repo", { path }),
-  scanRepo: (path: string) => call<ScanResult>("scan_repo", { path }),
+  scanRepo: async (path: string, onProgress?: (p: ScanProgress) => void) => {
+    const unlisten = onProgress ? await import("@tauri-apps/api/event").then((m) => m.listen<ScanProgress>("scan-progress", (e) => onProgress(e.payload))) : undefined;
+    try {
+      return await call<ScanResult>("scan_repo", { path });
+    } finally {
+      unlisten?.();
+    }
+  },
   readRepoFile: (path: string, file: string) => call<string>("read_repo_file", { path, file }),
 
   listServices: () => call<string[]>("list_services"),

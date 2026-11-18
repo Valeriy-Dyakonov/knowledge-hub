@@ -50,7 +50,7 @@ fn golden_refunds_service() {
     let repo = RepoSnapshot::open(fixtures().join("refunds-service").to_str().unwrap()).unwrap();
     let ex = KotlinSpringExtractor;
     assert!(ex.supports(&repo));
-    let actual = summary(&ex.extract(&repo).unwrap());
+    let actual = summary(&ex.extract(&repo, &|_, _, _| {}).unwrap());
     let golden = fixtures().join("refunds-service.golden.txt");
     if std::env::var("UPDATE_GOLDEN").is_ok() || !golden.exists() {
         std::fs::write(&golden, &actual).unwrap();

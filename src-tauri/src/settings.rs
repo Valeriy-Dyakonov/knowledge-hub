@@ -30,6 +30,10 @@ pub struct Settings {
     pub repos: Vec<RepoEntry>,
     pub llm_base_url: String,
     pub llm_model: String,
+    /// At most this many LLM requests per minute (the analysis waits between requests).
+    pub llm_requests_per_minute: u32,
+    /// At most this many LLM requests in one analysis run; the rest of the features keep technical names.
+    pub llm_max_requests: u32,
     pub review_policy: String,
     /// Overrides the reviewer name; empty = `user.name` from the global git config.
     pub reviewer: String,
@@ -42,6 +46,8 @@ impl Default for Settings {
             repos: vec![],
             llm_base_url: String::new(),
             llm_model: String::new(),
+            llm_requests_per_minute: 6,
+            llm_max_requests: 20,
             review_policy: "strict".into(),
             reviewer: String::new(),
         }

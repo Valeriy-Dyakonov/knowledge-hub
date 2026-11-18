@@ -1,14 +1,27 @@
 .stages { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 0; padding: 0; }
-.stages li { font-size: 12.5px; padding: 3px 10px; border-radius: var(--r-pill); border: 1px solid var(--line); color: var(--muted); }
+.stages li { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 4px 10px; border-radius: var(--r-pill); border: 1px solid var(--line); color: var(--muted); cursor: help; }
+.stages .st-mark { display: inline-grid; place-items: center; width: 14px; }
 .stages li.done { color: var(--good); border-color: var(--good); }
+.stages li.current { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); font-weight: 600; }
 .stages li.failed { color: var(--bad); border-color: var(--bad); }
+.stages li.skipped { border-style: dashed; }
+.spin.dark { width: 12px; height: 12px; border-color: color-mix(in srgb, var(--accent) 30%, transparent); border-top-color: var(--accent); }
 
-.runlog { list-style: none; margin: 0; padding: 0; font-size: 13px; max-height: 420px; overflow: auto; }
-.runlog li { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
-.runlog .rl-stage { flex: none; width: 150px; color: var(--muted); }
-.runlog li.ok { color: var(--good); }
-.runlog li.warn { color: var(--warn); }
-.runlog li.error { color: var(--bad); }
+.activity { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center; margin-top: 12px; padding: 10px 12px; border-radius: var(--r-md); background: var(--bg); font-size: 13.5px; }
+.activity .act-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 12.5px; }
+.activity .meter { grid-column: 1 / -1; height: 6px; }
+.activity .meter i { background: var(--accent); transition: width .2s; }
+
+.runlog { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; max-height: 480px; overflow: auto; }
+.runlog li { display: grid; grid-template-columns: 64px 150px 1fr; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.runlog .rl-time { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+.runlog .rl-stage { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runlog .rl-text { overflow-wrap: anywhere; }
+.runlog li.ok .rl-text { color: var(--good); }
+.runlog li.warn .rl-text { color: var(--warn); }
+.runlog li.error .rl-text { color: var(--bad); }
+.runlog li.detail .rl-text { color: var(--muted); padding-left: 14px; }
 
 .runs { list-style: none; margin: 0; padding: 0; }
-.runs li { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.runs li { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-bottom: 1px solid var(--line); border-radius: var(--r); }
+.runs li.on { background: color-mix(in srgb, var(--accent) 8%, transparent); }

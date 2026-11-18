@@ -1177,27 +1177,65 @@
     {
       "id": "kotlin-spring",
       "kind": "extractor",
+      "millis": 0,
+      "stats": {
+        "calls": 14,
+        "components": 10,
+        "events": 1,
+        "files": 12,
+        "sinkAccesses": 8,
+        "triggers": 7,
+        "unresolved": 1
+      },
       "status": "done",
       "version": "0.1.0"
     },
     {
       "id": "spring-config",
       "kind": "contextSource",
+      "millis": 0,
+      "stats": {
+        "apiOperations": 0,
+        "ownership": 0,
+        "properties": 8,
+        "tables": 0
+      },
       "status": "done"
     },
     {
       "id": "openapi",
       "kind": "contextSource",
+      "millis": 0,
+      "stats": {
+        "apiOperations": 3,
+        "ownership": 0,
+        "properties": 0,
+        "tables": 0
+      },
       "status": "done"
     },
     {
       "id": "migrations",
       "kind": "contextSource",
+      "millis": 0,
+      "stats": {
+        "apiOperations": 0,
+        "ownership": 0,
+        "properties": 0,
+        "tables": 2
+      },
       "status": "done"
     },
     {
       "id": "codeowners",
       "kind": "contextSource",
+      "millis": 0,
+      "stats": {
+        "apiOperations": 0,
+        "ownership": 2,
+        "properties": 0,
+        "tables": 0
+      },
       "status": "done"
     }
   ]

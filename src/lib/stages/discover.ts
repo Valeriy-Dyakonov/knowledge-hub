@@ -13,6 +13,9 @@ export const discoverStage: Stage = {
   async run(ctx) {
     const scan = ctx.state.scan;
     ctx.state.candidates = scan ? discover(scan.facts, scan.context, ctx.previous) : [];
+    for (const c of ctx.state.candidates) {
+      ctx.log("detail", "featureFound", { id: c.id, trigger: c.technicalName, reason: c.groupingReason });
+    }
     ctx.log("ok", "discoverSummary", { candidates: String(ctx.state.candidates.length) });
   },
 };

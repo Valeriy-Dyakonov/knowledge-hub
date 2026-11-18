@@ -12,6 +12,8 @@ pub const FEATURE_FILE: &str = "feature.yaml";
 pub const FEATURES_DIR: &str = "features";
 pub const STATE_DIR: &str = ".state";
 
+/// A saved previous version of a feature. Part of the store contract; no screen shows the history yet.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelRevision {
@@ -24,6 +26,7 @@ pub trait KnowledgeStore {
     fn services(&self) -> AppResult<Vec<String>>;
     fn load(&self, service: &str) -> AppResult<Option<KnowledgeModel>>;
     fn save(&self, service: &str, model: &KnowledgeModel) -> AppResult<()>;
+    #[allow(dead_code)]
     fn history(&self, service: &str, feature: &str) -> AppResult<Vec<ModelRevision>>;
     fn write_generated(&self, service: &str, files: &[GeneratedFile]) -> AppResult<()>;
     fn read_generated(&self, service: &str, relative_path: &str) -> AppResult<Option<String>>;

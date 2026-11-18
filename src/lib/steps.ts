@@ -20,8 +20,10 @@ export async function runStep<T>(
     return { status: "skipped", reason: skipReason };
   }
   try {
+    const started = Date.now();
     const value = await fn();
-    ctx.log("ok", "stepDone", { kind, id });
+    // Stages are milestones; finished renderers, indexers... are details.
+    ctx.log(kind === "stage" ? "ok" : "detail", "stepDone", { kind, id, millis: String(Date.now() - started) });
     return { status: "done", value };
   } catch (e) {
     const { code, params } = errorInfo(e);

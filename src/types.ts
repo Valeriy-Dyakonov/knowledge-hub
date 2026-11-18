@@ -208,7 +208,19 @@ export interface ContextFacts {
   ownership: OwnershipRule[];
 }
 
-export interface ScanStep { kind: "extractor" | "contextSource"; id: string; version?: string; status: "done" | "skipped" | "failed"; error?: { code: string; params?: Record<string, unknown> } }
+export interface ScanStep {
+  kind: "extractor" | "contextSource";
+  id: string;
+  version?: string;
+  status: "done" | "skipped" | "failed";
+  error?: { code: string; params?: Record<string, unknown> };
+  /** What the step found: files, components, triggers... or properties, tables... */
+  stats?: Record<string, number>;
+  millis?: number;
+}
+
+/** Live progress of the Rust scan (`scan-progress` events). */
+export interface ScanProgress { kind: "extractor" | "contextSource"; id: string; current: number; total: number; item: string }
 
 export interface ScanResult {
   commit: string;
@@ -222,14 +234,17 @@ export interface RepoInfo { path: string; name: string; commit: string; branch?:
 
 // ---- Runs ----
 
-export type LogLevel = "info" | "ok" | "warn" | "error";
+/** `detail` entries describe individual items (a feature, a request); the journal can hide them. */
+export type LogLevel = "info" | "ok" | "warn" | "error" | "detail";
 
 /** Log entries are codes with params; the UI words them (i18n `run.log`). */
 export interface LogEntry { at: string; level: LogLevel; stage?: string; code: string; params?: Record<string, string> }
 
 export type RunStatus = "RUNNING" | "COMPLETED" | "FAILED";
 
-export interface RunOptions { serviceId: ServiceId; serviceName: string; repoPath: string; language: string; describe: boolean }
+export interface LlmLimits { requestsPerMinute: number; maxRequests: number }
+
+export interface RunOptions { serviceId: ServiceId; serviceName: string; repoPath: string; language: string; describe: boolean; llm?: LlmLimits }
 
 export interface RunRecord {
   id: string;
@@ -337,6 +352,10 @@ export interface Settings {
   repos: RepoEntry[];
   llmBaseUrl: string;
   llmModel: string;
+  /** At most this many LLM requests per minute; the analysis waits between requests. */
+  llmRequestsPerMinute: number;
+  /** At most this many LLM requests in one analysis run. */
+  llmMaxRequests: number;
   reviewPolicy: string;
   /** Overrides the reviewer name; empty = `user.name` from the global git config. */
   reviewer: string;
@@ -352,6 +371,8 @@ export const defaultSettings: Settings = {
   repos: [],
   llmBaseUrl: "",
   llmModel: "",
+  llmRequestsPerMinute: 6,
+  llmMaxRequests: 20,
   reviewPolicy: "strict",
   reviewer: "",
 };

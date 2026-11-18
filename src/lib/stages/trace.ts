@@ -13,7 +13,19 @@ export const traceStage: Stage = {
   async run(ctx) {
     const scan = ctx.state.scan;
     const tracer = new Tracer(scan?.facts ?? emptyFacts(), scan?.context ?? emptyContext());
-    const traced = (ctx.state.candidates ?? []).map((c) => tracer.trace(c));
+    const candidates = ctx.state.candidates ?? [];
+    const traced = candidates.map((c, i) => {
+      ctx.progress({ code: "tracing", params: { id: c.id }, current: i + 1, total: candidates.length });
+      const t = tracer.trace(c);
+      const f = t.feature;
+      ctx.log("detail", "featureTraced", {
+        id: f.id,
+        steps: String(f.steps.length),
+        sinks: f.sinkIds.join(", ") || "-",
+        breaks: f.breaks.map((b) => b.reason).join(", ") || "-",
+      });
+      return t;
+    });
     ctx.state.traced = traced.map(({ candidate, feature }) => ({ candidate, feature }));
     ctx.state.catalogComponents = tracer.catalogComponents();
     const sinks = new Map<string, Sink>();

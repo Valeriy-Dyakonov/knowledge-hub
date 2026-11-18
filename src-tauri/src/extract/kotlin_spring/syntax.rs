@@ -35,7 +35,6 @@ pub struct AnnArg {
 pub struct Annotation {
     pub name: String,
     pub args: Vec<AnnArg>,
-    pub line: u32,
 }
 
 impl Annotation {
@@ -105,7 +104,6 @@ pub struct Property {
     pub annotations: Vec<Annotation>,
     pub modifiers: Vec<String>,
     pub string_value: Option<String>,
-    pub line: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -134,7 +132,6 @@ pub struct KtClass {
     pub properties: Vec<Property>,
     pub start_line: u32,
     pub header_end_line: u32,
-    pub end_line: u32,
 }
 
 impl KtClass {
@@ -288,7 +285,6 @@ impl<'s> Walker<'s> {
             supertypes,
             start_line: line(n),
             header_end_line,
-            end_line: end_line(n),
             ..Default::default()
         };
         if let Some(body) = body {
@@ -349,7 +345,7 @@ impl<'s> Walker<'s> {
     }
 
     fn annotation(&self, n: Node) -> Annotation {
-        let mut ann = Annotation { line: line(n), ..Default::default() };
+        let mut ann = Annotation::default();
         if let Some(ci) = find(n, "constructor_invocation") {
             ann.name = find(ci, "user_type").map(|t| self.user_type_name(t)).unwrap_or_default();
             if let Some(va) = find(ci, "value_arguments") {
@@ -472,7 +468,6 @@ impl<'s> Walker<'s> {
             annotations: modifiers_node.map(|m| self.annotations(m)).unwrap_or_default(),
             modifiers,
             string_value: find(n, "string_literal").map(|s| self.string(s)),
-            line: line(n),
         }
     }
 

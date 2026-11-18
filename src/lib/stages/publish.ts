@@ -13,9 +13,11 @@ export const renderStage: Stage = {
     let files = 0;
     for (const r of RENDERERS) {
       await runStep(ctx, "renderer", r.id, false, null, async () => {
+        ctx.progress({ code: "rendering", params: { id: r.id } });
         const out = r.render(model, { language: ctx.options.language });
         await ctx.backend.writeGenerated(ctx.options.serviceId, out);
         files += out.length;
+        ctx.log("detail", "rendered", { id: r.id, files: String(out.length) });
       });
     }
     ctx.log("ok", "renderSummary", { files: String(files) });
@@ -27,6 +29,7 @@ export const indexStage: Stage = {
   id: "index",
   required: false,
   async run(ctx) {
+    ctx.progress({ code: "indexing" });
     const n = await ctx.backend.indexService(ctx.options.serviceId);
     ctx.log("ok", "indexSummary", { features: String(n) });
   },

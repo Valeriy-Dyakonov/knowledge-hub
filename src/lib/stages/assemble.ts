@@ -12,6 +12,14 @@ export const assembleStage: Stage = {
     ctx.state.model = model;
     await ctx.backend.saveModel(ctx.options.serviceId, model);
     const claims = [...model.catalog.claims, ...model.features.flatMap((f) => f.claims)];
+    const by = (s: string) => String(claims.filter((c) => c.status === s).length);
+    ctx.log("info", "mergeSummary", {
+      proposed: by("PROPOSED"),
+      confirmed: String(claims.filter((c) => c.status === "CONFIRMED" || c.status === "EDITED").length),
+      stale: by("STALE"),
+      rejected: by("REJECTED"),
+      diffs: String(claims.filter((c) => c.previousPayload).length),
+    });
     ctx.log("ok", "assembleSummary", {
       features: String(model.features.length),
       claims: String(claims.length),
