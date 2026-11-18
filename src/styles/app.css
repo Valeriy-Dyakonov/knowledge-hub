@@ -40,8 +40,6 @@
 code { font-family: var(--font-mono); font-size: 12.5px; }
 
 /* Diagrams */
-.diagram { overflow: auto; padding: 8px 0; }
-.diagram svg { max-width: 100%; height: auto; }
 .mmd-src { font-family: var(--font-mono); font-size: 12px; white-space: pre; overflow: auto; max-height: 300px; margin: 8px 0 0; }
 
 /* Review */
@@ -93,8 +91,8 @@ button.fl-group-name:hover { background: var(--bg); color: var(--text); }
 .fl-group-name .caret { width: 10px; }
 
 /* Clickable diagram nodes, drill-down */
-.diagram g.node.clickable { cursor: pointer; }
-.diagram g.node.clickable:hover { filter: brightness(.95); }
+
+.diagram-canvas g.node.clickable:hover { filter: brightness(.95); }
 .lg-more i { background: var(--card); border-style: dashed; border-color: var(--muted); }
 .drill { margin: 6px 0 10px; }
 .crumbs { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13.5px; }
@@ -123,3 +121,16 @@ table.matrix { border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .act-PUBLISH, .act-CONSUME { background: var(--warn); }
 .act-HTTP_CALL, .act-CALL { background: var(--accent); }
 .dotmark { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+
+/* Diagram viewport: zoom and pan */
+.diagram-box { margin-top: 6px; }
+.diagram-box.full { position: fixed; inset: 0; z-index: 50; background: var(--card); padding: 10px; display: flex; flex-direction: column; }
+.diagram-box.full .diagram-viewport { flex: 1; }
+.zoombar { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; }
+.zoombar button { border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: var(--r-sm); padding: 2px 9px; font: inherit; font-size: 13px; min-width: 32px; }
+.zoombar button:hover { border-color: var(--accent); color: var(--accent); }
+.zoombar .hint { margin-left: 8px; }
+.diagram-viewport { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--bg); cursor: grab; touch-action: none; }
+.diagram-viewport:active { cursor: grabbing; }
+.diagram-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.diagram-canvas g.node.clickable { cursor: pointer; }

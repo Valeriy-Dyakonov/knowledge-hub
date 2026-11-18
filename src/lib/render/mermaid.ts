@@ -52,9 +52,35 @@ function shape(id: string, text: string, cls: NodeClass): string {
 
 interface Frame { id: string; title: string; dir?: "TB" | "LR" }
 
+/** Frames with more nodes than this are laid out in columns instead of one long line. */
+const COLUMN_AT = 6;
+
+/** "refund_items" / "refunds.created" -> "refund" / "refunds": names sharing a prefix are put in one column. */
+export const prefixOf = (name: string) => name.toLowerCase().split(/[_.\-:/]/).find((p) => p.length > 1) ?? name.toLowerCase();
+
+/**
+ * How a large frame is split: by name prefix when that gives real groups (at least two prefixes shared by two or more
+ * names, covering most of them), otherwise into even columns. Returns [title, members] in display order.
+ */
+export function columns<T>(items: T[], nameOf: (t: T) => string): [string, T[]][] {
+  if (items.length <= COLUMN_AT) return [["", items]];
+  const byPrefix = new Map<string, T[]>();
+  for (const it of items) byPrefix.set(prefixOf(nameOf(it)), [...(byPrefix.get(prefixOf(nameOf(it))) ?? []), it]);
+  const groups = [...byPrefix.entries()].filter(([, xs]) => xs.length >= 2);
+  const covered = groups.reduce((n, [, xs]) => n + xs.length, 0);
+  if (groups.length >= 2 && covered >= items.length * 0.6) {
+    const rest = items.filter((it) => !groups.some(([, xs]) => xs.includes(it)));
+    return [...groups.map(([p, xs]): [string, T[]] => [`${p}*`, xs]), ...(rest.length ? [["…", rest] as [string, T[]]] : [])];
+  }
+  const per = Math.ceil(Math.sqrt(items.length));
+  const out: [string, T[]][] = [];
+  for (let i = 0; i < items.length; i += per) out.push(["", items.slice(i, i + per)]);
+  return out;
+}
+
 class Graph {
   private ids = new Map<string, string>();
-  private frames = new Map<string, { mid: string; title: string; dir?: string; nodes: string[] }>();
+  private frames = new Map<string, { mid: string; title: string; dir?: string; nodes: { line: string; name: string }[] }>();
   private loose: string[] = [];
   private edges = new Map<string, string>();
   readonly keys: Record<string, string> = {};
@@ -67,7 +93,8 @@ class Graph {
       this.ids.set(key, id);
       this.keys[id] = key;
       const line = shape(id, text, cls);
-      if (frame) this.frame(frame).nodes.push(line);
+      // The plain first line of the label is the name used for column grouping.
+      if (frame) this.frame(frame).nodes.push({ line, name: text.split("<br/>")[0] });
       else this.loose.push(line);
     }
     return id;
@@ -93,10 +120,21 @@ class Graph {
   }
 
   spec(header: string, direction: "LR" | "TB" = "LR"): DiagramSpec {
+    const styles: string[] = [];
     const frames = [...this.frames.values()]
       .filter((f) => f.nodes.length)
-      .flatMap((f) => [`  subgraph ${f.mid}["${label(f.title)}"]`, ...(f.dir ? [`    direction ${f.dir}`] : []), ...f.nodes.map((n) => `    ${n}`), "  end"]);
-    const text = [`%% ${header}`, `flowchart ${direction}`, ...this.loose.map((n) => `  ${n}`), ...frames, ...this.edges.values(), ...CLASSES.map((c) => `  ${c}`)].join("\n") + "\n";
+      .flatMap((f) => {
+        const cols = columns(f.nodes, (n) => n.name);
+        if (cols.length === 1) return [`  subgraph ${f.mid}["${label(f.title)}"]`, ...(f.dir ? [`    direction ${f.dir}`] : []), ...f.nodes.map((n) => `    ${n.line}`), "  end"];
+        // Columns side by side, each a small frame of its own: titled by prefix, or invisible for an even grid.
+        const body = cols.flatMap(([title, nodes], i) => {
+          const cid = `${f.mid}c${i + 1}`;
+          if (!title) styles.push(`  style ${cid} fill:transparent,stroke:transparent`);
+          return [`    subgraph ${cid}["${title ? label(title) : " "}"]`, "      direction TB", ...nodes.map((n) => `      ${n.line}`), "    end"];
+        });
+        return [`  subgraph ${f.mid}["${label(f.title)}"]`, "    direction LR", ...body, "  end"];
+      });
+    const text = [`%% ${header}`, `flowchart ${direction}`, ...this.loose.map((n) => `  ${n}`), ...frames, ...this.edges.values(), ...CLASSES.map((c) => `  ${c}`), ...styles].join("\n") + "\n";
     return { text, nodes: { ...this.keys } };
   }
 }

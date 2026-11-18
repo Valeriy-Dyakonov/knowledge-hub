@@ -20,6 +20,7 @@ export const diagrams: typeof ru = {
   interactions: "Who it talks to, and why",
   interactionsTip: "The same picture as the diagrams, as a table: every external party, what the service does with it and for which features.",
   cols: { system: "System", how: "How", why: "For (features)", feature: "Feature", component: "Component", features: "Features" },
+  zoom: { in: "Zoom in", out: "Zoom out", reset: "100 %", fit: "Fit", fitTip: "Show the whole diagram (or double-click)", full: "Full screen", exitFull: "Normal size", hint: "Ctrl + wheel zooms, wheel or drag moves" },
   mapViews: { table: "Table", diagram: "Diagram" },
   clickHint: "Nodes are clickable: a collapsed group expands, a table, topic or area shows the features working with it, a feature opens.",
   close: "Close",

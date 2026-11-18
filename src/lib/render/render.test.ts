@@ -9,7 +9,7 @@ import { mergeModels } from "../model/merge";
 import { reject } from "../model/claims";
 import { analyse, scan } from "../testing/fixture";
 import { RENDERERS } from ".";
-import { componentsDiagram, contextDiagram, featureMapDiagram, flowDiagram, MAX_NODES } from "./mermaid";
+import { columns, componentsDiagram, contextDiagram, featureMapDiagram, flowDiagram, MAX_NODES } from "./mermaid";
 
 const descriptions = {
   language: "ru",
@@ -59,6 +59,40 @@ describe("renderers", () => {
     const without: Feature = { ...create, claims: create.claims.map((c) => (c.id === http.claimId ? reject(c, "ann", "now") : c)) };
     expect(flowDiagram(model, create, "ru")).toContain("payments");
     expect(flowDiagram(model, without, "ru")).not.toContain("payments");
+  });
+
+  it("lay out an expanded large group in columns by name prefix, or in an even grid", async () => {
+    expect(columns(["refund_a", "refund_b", "refund_c", "payment_a", "payment_b", "audit"], (x) => x)).toEqual([["", ["refund_a", "refund_b", "refund_c", "payment_a", "payment_b", "audit"]]]);
+    const named = ["refund_a", "refund_b", "refund_c", "payment_a", "payment_b", "payment_c", "audit"];
+    expect(columns(named, (x) => x).map(([t, xs]) => `${t}:${xs.length}`)).toEqual(["refund*:3", "payment*:3", "…:1"]);
+    const plain = ["alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta", "iota"];
+    expect(columns(plain, (x) => x).map(([t, xs]) => `${t}:${xs.length}`)).toEqual([":3", ":3", ":3"]);
+
+    const tables = [...named, "refund_d", "payment_d"];
+    const wide: KnowledgeModel = {
+      ...model,
+      catalog: { ...model.catalog, sinks: tables.map((t) => ({ id: `db_table:${t}`, kind: "DB_TABLE" as const, technicalName: t, businessName: {} })) },
+      features: [{
+        ...model.features[0], claims: [],
+        edges: tables.map((t, i) => ({ id: `w${i}`, from: { type: "COMPONENT" as const, id: "c" }, to: { type: "SINK" as const, id: `db_table:${t}` }, kind: "WRITE" as const, label: "save", origin: "STATIC" as const, confidence: "HIGH" as const })),
+      }],
+    };
+    const collapsedView = contextDiagram(wide, "ru").text;
+    expect(collapsedView).toContain("нажмите, чтобы раскрыть");
+    const expanded = contextDiagram(wide, "ru", { expand: new Set(["out-db"]) }).text;
+    expect(expanded).toContain('["refund*"]');
+    expect(expanded).toContain('["payment*"]');
+    await expect(mermaid.parse(expanded)).resolves.toBeTruthy();
+
+    // No common prefixes: an even grid of invisible columns.
+    const gridModel: KnowledgeModel = {
+      ...wide,
+      catalog: { ...wide.catalog, sinks: plain.map((t) => ({ id: `db_table:${t}`, kind: "DB_TABLE" as const, technicalName: t, businessName: {} })) },
+      features: [{ ...wide.features[0], edges: plain.map((t, i) => ({ ...wide.features[0].edges[0], id: `p${i}`, to: { type: "SINK" as const, id: `db_table:${t}` } })) }],
+    };
+    const grid = contextDiagram(gridModel, "ru", { expand: new Set(["out-db"]) }).text;
+    expect(grid).toContain("fill:transparent,stroke:transparent");
+    await expect(mermaid.parse(grid)).resolves.toBeTruthy();
   });
 
   it("keep L1 and L2 within the node limit by grouping", async () => {
