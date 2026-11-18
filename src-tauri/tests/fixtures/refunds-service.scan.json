@@ -1,0 +1,1204 @@
+{
+  "commit": "unknown",
+  "context": {
+    "apiOperations": [
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "529ca4c5f3b976a8",
+          "lines": {
+            "end": 6,
+            "start": 6
+          },
+          "path": "api/openapi.yaml",
+          "repo": "refunds-service"
+        },
+        "method": "POST",
+        "operationId": "createRefund",
+        "path": "/api/v1/refunds",
+        "summary": "Create a refund",
+        "tags": [
+          "refunds"
+        ]
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "571fb83ee2af3439",
+          "lines": {
+            "end": 11,
+            "start": 11
+          },
+          "path": "api/openapi.yaml",
+          "repo": "refunds-service"
+        },
+        "method": "GET",
+        "operationId": "getRefund",
+        "path": "/api/v1/refunds/{id}",
+        "tags": [
+          "refunds"
+        ]
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "5977cdce93ee91ee",
+          "lines": {
+            "end": 15,
+            "start": 15
+          },
+          "path": "api/openapi.yaml",
+          "repo": "refunds-service"
+        },
+        "method": "POST",
+        "path": "/api/v1/refunds/{id}/approve",
+        "summary": "Approve a refund",
+        "tags": [
+          "approvals"
+        ]
+      }
+    ],
+    "ownership": [
+      {
+        "owners": [
+          "@team-refunds"
+        ],
+        "pattern": "*"
+      },
+      {
+        "owners": [
+          "@team-ledger"
+        ],
+        "pattern": "/src/main/kotlin/com/example/refunds/jobs/"
+      }
+    ],
+    "properties": {
+      "clients.payments.api-key": "***",
+      "clients.payments.url": "http://payments:8080",
+      "payments.topics.completed": "payments.completed",
+      "refunds.topics.created": "refunds.created",
+      "spring.application.name": "refunds",
+      "spring.datasource.password": "***",
+      "spring.datasource.url": "jdbc:postgresql://db:5432/refunds",
+      "spring.datasource.username": "refunds"
+    },
+    "tables": [
+      "refunds",
+      "audit_log"
+    ]
+  },
+  "facts": {
+    "calls": [
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "9c42bc48b2f62501",
+          "lines": {
+            "end": 17,
+            "start": 17
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.api.RefundController",
+        "fromMethod": "create",
+        "targetMethod": "create",
+        "targetType": "com.example.refunds.service.RefundService"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "d53973e37b991f80",
+          "lines": {
+            "end": 21,
+            "start": 21
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.api.RefundController",
+        "fromMethod": "get",
+        "targetMethod": "get",
+        "targetType": "com.example.refunds.service.RefundService"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "30a1c826b2c64ff6",
+          "lines": {
+            "end": 26,
+            "start": 26
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.api.RefundController",
+        "fromMethod": "approve",
+        "targetMethod": "approve",
+        "targetType": "com.example.refunds.service.ApprovalService"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "95a5e112ccaa4e82",
+          "lines": {
+            "end": 15,
+            "start": 15
+          },
+          "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.jobs.ReconciliationJob",
+        "fromMethod": "reconcile",
+        "targetMethod": "findAllByStatus",
+        "targetType": "com.example.refunds.persistence.RefundRepository"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "ae1420ce38b09a9c",
+          "lines": {
+            "end": 16,
+            "start": 16
+          },
+          "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.messaging.PaymentEventsConsumer",
+        "fromMethod": "onPaymentCompleted",
+        "targetMethod": "markPaid",
+        "targetType": "com.example.refunds.service.RefundService"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "3cc8df35cc39bf86",
+          "lines": {
+            "end": 17,
+            "start": 17
+          },
+          "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.messaging.PaymentEventsConsumer",
+        "fromMethod": "onPaymentCompleted",
+        "targetMethod": "audit",
+        "targetType": "com.example.refunds.messaging.PaymentEventsConsumer"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "cf8b66f8552df292",
+          "lines": {
+            "end": 21,
+            "start": 21
+          },
+          "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.messaging.PaymentEventsConsumer",
+        "fromMethod": "audit",
+        "targetMethod": "table",
+        "targetType": "com.example.refunds.messaging.PaymentEventsConsumer"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "99ba9073c65b7bdd",
+          "lines": {
+            "end": 21,
+            "start": 21
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "create",
+        "targetMethod": "save",
+        "targetType": "com.example.refunds.persistence.RefundRepository"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "3e817def1d58d2e2",
+          "lines": {
+            "end": 22,
+            "start": 22
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "create",
+        "targetMethod": "reserve",
+        "targetType": "com.example.refunds.client.PaymentsClient"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "f7ee265797b35ea8",
+          "lines": {
+            "end": 24,
+            "start": 24
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "create",
+        "targetMethod": "toRefund",
+        "targetType": "com.example.refunds.service.RefundService"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "0f8775034bcf03bc",
+          "lines": {
+            "end": 27,
+            "start": 27
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "get",
+        "targetMethod": "toRefund",
+        "targetType": "com.example.refunds.service.RefundService"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "0f8775034bcf03bc",
+          "lines": {
+            "end": 27,
+            "start": 27
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "get",
+        "targetMethod": "findById",
+        "targetType": "com.example.refunds.persistence.RefundRepository"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "69a98913fdec70eb",
+          "lines": {
+            "end": 30,
+            "start": 30
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "markPaid",
+        "targetMethod": "findById",
+        "targetType": "com.example.refunds.persistence.RefundRepository"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "6a99814813c88b38",
+          "lines": {
+            "end": 32,
+            "start": 32
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "markPaid",
+        "targetMethod": "save",
+        "targetType": "com.example.refunds.persistence.RefundRepository"
+      }
+    ],
+    "components": [
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "616a78b8545de8fc",
+          "lines": {
+            "end": 7,
+            "start": 5
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/HealthController.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.api.HealthController",
+        "injected": {},
+        "isInterface": false,
+        "kind": "CONTROLLER",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "88a62b50e42cfaf6",
+              "lines": {
+                "end": 9,
+                "start": 8
+              },
+              "path": "src/main/kotlin/com/example/refunds/api/HealthController.kt",
+              "repo": "refunds-service"
+            },
+            "name": "ping",
+            "parameterTypes": []
+          }
+        ],
+        "simpleName": "HealthController",
+        "supertypes": []
+      },
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "92083f028488b338",
+          "lines": {
+            "end": 15,
+            "start": 10
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.api.RefundController",
+        "injected": {
+          "approvalService": "com.example.refunds.service.ApprovalService",
+          "refundService": "com.example.refunds.service.RefundService"
+        },
+        "isInterface": false,
+        "kind": "CONTROLLER",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "b5bd1284ae53f681",
+              "lines": {
+                "end": 17,
+                "start": 16
+              },
+              "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+              "repo": "refunds-service"
+            },
+            "name": "create",
+            "parameterTypes": [
+              "com.example.refunds.domain.CreateRefund"
+            ]
+          },
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "d392399711955cb6",
+              "lines": {
+                "end": 22,
+                "start": 19
+              },
+              "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+              "repo": "refunds-service"
+            },
+            "name": "get",
+            "parameterTypes": [
+              "java.util.UUID"
+            ]
+          },
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "8b7a4906bace3385",
+              "lines": {
+                "end": 27,
+                "start": 24
+              },
+              "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+              "repo": "refunds-service"
+            },
+            "name": "approve",
+            "parameterTypes": [
+              "java.util.UUID"
+            ]
+          }
+        ],
+        "simpleName": "RefundController",
+        "supertypes": []
+      },
+      {
+        "attributes": {
+          "feign.name": "payments",
+          "feign.url": "${clients.payments.url}"
+        },
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "912b4fbbc7f03e98",
+          "lines": {
+            "end": 10,
+            "start": 9
+          },
+          "path": "src/main/kotlin/com/example/refunds/client/PaymentsClient.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.client.PaymentsClient",
+        "injected": {},
+        "isInterface": true,
+        "kind": "CLIENT",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "db4eb01b47f27ffc",
+              "lines": {
+                "end": 12,
+                "start": 11
+              },
+              "path": "src/main/kotlin/com/example/refunds/client/PaymentsClient.kt",
+              "repo": "refunds-service"
+            },
+            "name": "reserve",
+            "parameterTypes": [
+              "com.example.refunds.client.Reservation"
+            ]
+          }
+        ],
+        "simpleName": "PaymentsClient",
+        "supertypes": []
+      },
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "810aced5b5ac24f3",
+          "lines": {
+            "end": 13,
+            "start": 9
+          },
+          "path": "src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.events.RefundEventsListener",
+        "injected": {
+          "kafkaTemplate": "org.springframework.kafka.core.KafkaTemplate"
+        },
+        "isInterface": false,
+        "kind": "LISTENER",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "b6ec5675c0465441",
+              "lines": {
+                "end": 17,
+                "start": 14
+              },
+              "path": "src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt",
+              "repo": "refunds-service"
+            },
+            "name": "onCreated",
+            "parameterTypes": [
+              "com.example.refunds.domain.RefundCreated"
+            ]
+          }
+        ],
+        "simpleName": "RefundEventsListener",
+        "supertypes": []
+      },
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "9a95a56133e9d2a9",
+          "lines": {
+            "end": 12,
+            "start": 8
+          },
+          "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.jobs.ReconciliationJob",
+        "injected": {
+          "repository": "com.example.refunds.persistence.RefundRepository",
+          "restTemplate": "org.springframework.web.client.RestTemplate"
+        },
+        "isInterface": false,
+        "kind": "COMPONENT",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "696b0c94186a284d",
+              "lines": {
+                "end": 17,
+                "start": 13
+              },
+              "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+              "repo": "refunds-service"
+            },
+            "name": "reconcile",
+            "parameterTypes": []
+          }
+        ],
+        "simpleName": "ReconciliationJob",
+        "supertypes": []
+      },
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "b3e616b1c20093b0",
+          "lines": {
+            "end": 13,
+            "start": 9
+          },
+          "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.messaging.PaymentEventsConsumer",
+        "injected": {
+          "jdbcTemplate": "org.springframework.jdbc.core.JdbcTemplate",
+          "refundService": "com.example.refunds.service.RefundService"
+        },
+        "isInterface": false,
+        "kind": "LISTENER",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "f8d4404b54111827",
+              "lines": {
+                "end": 18,
+                "start": 14
+              },
+              "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+              "repo": "refunds-service"
+            },
+            "name": "onPaymentCompleted",
+            "parameterTypes": [
+              "String"
+            ]
+          },
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "d74ca7476a148423",
+              "lines": {
+                "end": 23,
+                "start": 20
+              },
+              "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+              "repo": "refunds-service"
+            },
+            "name": "audit",
+            "parameterTypes": [
+              "String"
+            ]
+          },
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "0157da2382af451d",
+              "lines": {
+                "end": 25,
+                "start": 25
+              },
+              "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+              "repo": "refunds-service"
+            },
+            "name": "table",
+            "parameterTypes": []
+          }
+        ],
+        "simpleName": "PaymentEventsConsumer",
+        "supertypes": []
+      },
+      {
+        "attributes": {
+          "table": "refunds"
+        },
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "f6e350d01cec01a8",
+          "lines": {
+            "end": 6,
+            "start": 6
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.RefundRepository",
+        "injected": {},
+        "isInterface": true,
+        "kind": "REPOSITORY",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "071b9b1e1771df6e",
+              "lines": {
+                "end": 7,
+                "start": 7
+              },
+              "path": "src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt",
+              "repo": "refunds-service"
+            },
+            "name": "findAllByStatus",
+            "parameterTypes": [
+              "String"
+            ]
+          }
+        ],
+        "simpleName": "RefundRepository",
+        "supertypes": [
+          "org.springframework.data.jpa.repository.JpaRepository"
+        ]
+      },
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "7e39b36fa93eb97e",
+          "lines": {
+            "end": 14,
+            "start": 13
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/ApprovalService.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.service.ManualApprovalService",
+        "injected": {
+          "jdbcTemplate": "org.springframework.jdbc.core.JdbcTemplate"
+        },
+        "isInterface": false,
+        "kind": "SERVICE",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "7194dcabd6cb45b7",
+              "lines": {
+                "end": 17,
+                "start": 15
+              },
+              "path": "src/main/kotlin/com/example/refunds/service/ApprovalService.kt",
+              "repo": "refunds-service"
+            },
+            "name": "approve",
+            "parameterTypes": [
+              "java.util.UUID"
+            ]
+          }
+        ],
+        "simpleName": "ManualApprovalService",
+        "supertypes": [
+          "com.example.refunds.service.ApprovalService"
+        ]
+      },
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "188a1ed9231f31a0",
+          "lines": {
+            "end": 21,
+            "start": 20
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/ApprovalService.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.service.AutoApprovalService",
+        "injected": {
+          "kafkaTemplate": "org.springframework.kafka.core.KafkaTemplate"
+        },
+        "isInterface": false,
+        "kind": "SERVICE",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "b7405f7355925555",
+              "lines": {
+                "end": 24,
+                "start": 22
+              },
+              "path": "src/main/kotlin/com/example/refunds/service/ApprovalService.kt",
+              "repo": "refunds-service"
+            },
+            "name": "approve",
+            "parameterTypes": [
+              "java.util.UUID"
+            ]
+          }
+        ],
+        "simpleName": "AutoApprovalService",
+        "supertypes": [
+          "com.example.refunds.service.ApprovalService"
+        ]
+      },
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "873ba46d2877b0bb",
+          "lines": {
+            "end": 19,
+            "start": 14
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.service.RefundService",
+        "injected": {
+          "events": "org.springframework.context.ApplicationEventPublisher",
+          "paymentsClient": "com.example.refunds.client.PaymentsClient",
+          "repository": "com.example.refunds.persistence.RefundRepository"
+        },
+        "isInterface": false,
+        "kind": "SERVICE",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "17adaf223a7ab02c",
+              "lines": {
+                "end": 25,
+                "start": 20
+              },
+              "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+              "repo": "refunds-service"
+            },
+            "name": "create",
+            "parameterTypes": [
+              "com.example.refunds.domain.CreateRefund"
+            ]
+          },
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "0f8775034bcf03bc",
+              "lines": {
+                "end": 27,
+                "start": 27
+              },
+              "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+              "repo": "refunds-service"
+            },
+            "name": "get",
+            "parameterTypes": [
+              "java.util.UUID"
+            ]
+          },
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "71f4523dfe80f9dd",
+              "lines": {
+                "end": 33,
+                "start": 29
+              },
+              "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+              "repo": "refunds-service"
+            },
+            "name": "markPaid",
+            "parameterTypes": [
+              "java.util.UUID"
+            ]
+          },
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "4a37d959b894e1f3",
+              "lines": {
+                "end": 35,
+                "start": 35
+              },
+              "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+              "repo": "refunds-service"
+            },
+            "name": "toRefund",
+            "parameterTypes": [
+              "com.example.refunds.persistence.RefundEntity"
+            ]
+          }
+        ],
+        "simpleName": "RefundService",
+        "supertypes": []
+      }
+    ],
+    "events": [
+      {
+        "componentId": "com.example.refunds.service.RefundService",
+        "eventType": "com.example.refunds.domain.RefundCreated",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "29de02b910d40882",
+          "lines": {
+            "end": 23,
+            "start": 23
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "method": "create"
+      }
+    ],
+    "sinkAccesses": [
+      {
+        "attributes": {
+          "httpMethod": "POST",
+          "operation": "reserve",
+          "path": "/reservations"
+        },
+        "componentId": "com.example.refunds.client.PaymentsClient",
+        "confidence": "HIGH",
+        "edgeKind": "HTTP_CALL",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "db4eb01b47f27ffc",
+          "lines": {
+            "end": 12,
+            "start": 11
+          },
+          "path": "src/main/kotlin/com/example/refunds/client/PaymentsClient.kt",
+          "repo": "refunds-service"
+        },
+        "method": "reserve",
+        "origin": "STATIC",
+        "sinkKind": "EXTERNAL_HTTP",
+        "sinkName": "payments"
+      },
+      {
+        "attributes": {
+          "operation": "send"
+        },
+        "componentId": "com.example.refunds.events.RefundEventsListener",
+        "confidence": "HIGH",
+        "edgeKind": "PUBLISH",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "d9a4eb14b23e1897",
+          "lines": {
+            "end": 16,
+            "start": 16
+          },
+          "path": "src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt",
+          "repo": "refunds-service"
+        },
+        "method": "onCreated",
+        "origin": "STATIC",
+        "sinkKind": "TOPIC",
+        "sinkName": "${refunds.topics.created}"
+      },
+      {
+        "attributes": {
+          "httpMethod": "GET",
+          "operation": "reconcile",
+          "path": "/api/balance"
+        },
+        "componentId": "com.example.refunds.jobs.ReconciliationJob",
+        "confidence": "HIGH",
+        "edgeKind": "HTTP_CALL",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "8c0271841668fd14",
+          "lines": {
+            "end": 16,
+            "start": 16
+          },
+          "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+          "repo": "refunds-service"
+        },
+        "method": "reconcile",
+        "origin": "STATIC",
+        "sinkKind": "EXTERNAL_HTTP",
+        "sinkName": "ledger.example.com"
+      },
+      {
+        "attributes": {
+          "operation": "update"
+        },
+        "componentId": "com.example.refunds.service.ManualApprovalService",
+        "confidence": "HIGH",
+        "edgeKind": "WRITE",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "5d53fca5107c91d3",
+          "lines": {
+            "end": 16,
+            "start": 16
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/ApprovalService.kt",
+          "repo": "refunds-service"
+        },
+        "method": "approve",
+        "origin": "STATIC",
+        "sinkKind": "DB_TABLE",
+        "sinkName": "refunds"
+      },
+      {
+        "attributes": {
+          "operation": "send"
+        },
+        "componentId": "com.example.refunds.service.AutoApprovalService",
+        "confidence": "HIGH",
+        "edgeKind": "PUBLISH",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "17876ef2af66421c",
+          "lines": {
+            "end": 23,
+            "start": 23
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/ApprovalService.kt",
+          "repo": "refunds-service"
+        },
+        "method": "approve",
+        "origin": "STATIC",
+        "sinkKind": "TOPIC",
+        "sinkName": "refunds.approved"
+      },
+      {
+        "attributes": {
+          "operation": "findAllByStatus"
+        },
+        "componentId": "com.example.refunds.persistence.RefundRepository",
+        "confidence": "HIGH",
+        "edgeKind": "READ",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "071b9b1e1771df6e",
+          "lines": {
+            "end": 7,
+            "start": 7
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt",
+          "repo": "refunds-service"
+        },
+        "method": "findAllByStatus",
+        "origin": "STATIC",
+        "sinkKind": "DB_TABLE",
+        "sinkName": "refunds"
+      },
+      {
+        "attributes": {
+          "operation": "findById"
+        },
+        "componentId": "com.example.refunds.persistence.RefundRepository",
+        "confidence": "HIGH",
+        "edgeKind": "READ",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "f6e350d01cec01a8",
+          "lines": {
+            "end": 6,
+            "start": 6
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt",
+          "repo": "refunds-service"
+        },
+        "method": "findById",
+        "origin": "STATIC",
+        "sinkKind": "DB_TABLE",
+        "sinkName": "refunds"
+      },
+      {
+        "attributes": {
+          "operation": "save"
+        },
+        "componentId": "com.example.refunds.persistence.RefundRepository",
+        "confidence": "HIGH",
+        "edgeKind": "WRITE",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "f6e350d01cec01a8",
+          "lines": {
+            "end": 6,
+            "start": 6
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt",
+          "repo": "refunds-service"
+        },
+        "method": "save",
+        "origin": "STATIC",
+        "sinkKind": "DB_TABLE",
+        "sinkName": "refunds"
+      }
+    ],
+    "triggers": [
+      {
+        "attributes": {
+          "httpMethod": "GET",
+          "path": "/internal/ping"
+        },
+        "componentId": "com.example.refunds.api.HealthController",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "88a62b50e42cfaf6",
+          "lines": {
+            "end": 9,
+            "start": 8
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/HealthController.kt",
+          "repo": "refunds-service"
+        },
+        "method": "ping",
+        "type": "HTTP"
+      },
+      {
+        "attributes": {
+          "httpMethod": "POST",
+          "path": "/api/v1/refunds"
+        },
+        "componentId": "com.example.refunds.api.RefundController",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "b5bd1284ae53f681",
+          "lines": {
+            "end": 17,
+            "start": 16
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+          "repo": "refunds-service"
+        },
+        "method": "create",
+        "type": "HTTP"
+      },
+      {
+        "attributes": {
+          "httpMethod": "GET",
+          "path": "/api/v1/refunds/{id}"
+        },
+        "componentId": "com.example.refunds.api.RefundController",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "0be18573b7ac6c50",
+          "lines": {
+            "end": 20,
+            "start": 19
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+          "repo": "refunds-service"
+        },
+        "method": "get",
+        "type": "HTTP"
+      },
+      {
+        "attributes": {
+          "httpMethod": "POST",
+          "path": "/api/v1/refunds/{id}/approve"
+        },
+        "componentId": "com.example.refunds.api.RefundController",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "17315d1d213810cd",
+          "lines": {
+            "end": 25,
+            "start": 24
+          },
+          "path": "src/main/kotlin/com/example/refunds/api/RefundController.kt",
+          "repo": "refunds-service"
+        },
+        "method": "approve",
+        "type": "HTTP"
+      },
+      {
+        "attributes": {
+          "eventType": "com.example.refunds.domain.RefundCreated"
+        },
+        "componentId": "com.example.refunds.events.RefundEventsListener",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "acaddcb865b36bb2",
+          "lines": {
+            "end": 15,
+            "start": 14
+          },
+          "path": "src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt",
+          "repo": "refunds-service"
+        },
+        "method": "onCreated",
+        "type": "EVENT"
+      },
+      {
+        "attributes": {
+          "cron": "0 0 * * * *"
+        },
+        "componentId": "com.example.refunds.jobs.ReconciliationJob",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "95432d34e26e6072",
+          "lines": {
+            "end": 14,
+            "start": 13
+          },
+          "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+          "repo": "refunds-service"
+        },
+        "method": "reconcile",
+        "type": "SCHEDULE"
+      },
+      {
+        "attributes": {
+          "broker": "kafka",
+          "destination": "${payments.topics.completed}"
+        },
+        "componentId": "com.example.refunds.messaging.PaymentEventsConsumer",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "cc7cad2be4a13ac0",
+          "lines": {
+            "end": 15,
+            "start": 14
+          },
+          "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+          "repo": "refunds-service"
+        },
+        "method": "onPaymentCompleted",
+        "type": "MESSAGE"
+      }
+    ],
+    "unresolved": [
+      {
+        "componentId": "com.example.refunds.messaging.PaymentEventsConsumer",
+        "detail": "jdbcTemplate.update",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "b38e47a43cc048cf",
+          "lines": {
+            "end": 22,
+            "start": 22
+          },
+          "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+          "repo": "refunds-service"
+        },
+        "method": "audit",
+        "reason": "DYNAMIC_SQL"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "kotlin-spring",
+      "kind": "extractor",
+      "status": "done",
+      "version": "0.1.0"
+    },
+    {
+      "id": "spring-config",
+      "kind": "contextSource",
+      "status": "done"
+    },
+    {
+      "id": "openapi",
+      "kind": "contextSource",
+      "status": "done"
+    },
+    {
+      "id": "migrations",
+      "kind": "contextSource",
+      "status": "done"
+    },
+    {
+      "id": "codeowners",
+      "kind": "contextSource",
+      "status": "done"
+    }
+  ]
+}

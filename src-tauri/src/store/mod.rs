@@ -293,6 +293,21 @@ mod tests {
         assert!(!dir.path().join("svc/features/refunds/get").exists());
     }
 
+    /// The model produced by the TypeScript pipeline (written by src/lib/stages/golden.test.ts) must survive the
+    /// serde mirror and a save/load cycle without losing a field.
+    #[test]
+    fn round_trips_the_model_written_by_the_frontend() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/refunds-service.model.json");
+        let original: serde_json::Value = serde_json::from_str(&fs::read_to_string(path).unwrap()).unwrap();
+        let model: KnowledgeModel = serde_json::from_value(original.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&model).unwrap(), original);
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = FsStore::new(dir.path());
+        store.save("refunds", &model).unwrap();
+        assert_eq!(serde_json::to_value(store.load("refunds").unwrap().unwrap()).unwrap(), original);
+    }
+
     #[test]
     fn generated_files_stay_inside_the_service() {
         let dir = tempfile::tempdir().unwrap();

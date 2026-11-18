@@ -9,10 +9,6 @@ pub const SCHEMA_VERSION: u32 = 1;
 
 pub type Text = BTreeMap<String, String>;
 
-fn is_empty_map(m: &BTreeMap<String, String>) -> bool {
-    m.is_empty()
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct LineRange {
     pub start: u32,
@@ -109,7 +105,7 @@ pub struct Component {
     pub id: String,
     pub kind: String,
     pub technical_name: String,
-    #[serde(default, skip_serializing_if = "is_empty_map")]
+    #[serde(default)]
     pub business_name: Text,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub evidence: Option<Evidence>,
@@ -121,7 +117,7 @@ pub struct Sink {
     pub id: String,
     pub kind: String,
     pub technical_name: String,
-    #[serde(default, skip_serializing_if = "is_empty_map")]
+    #[serde(default)]
     pub business_name: Text,
 }
 

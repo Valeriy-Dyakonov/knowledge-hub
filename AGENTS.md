@@ -15,7 +15,7 @@ Design docs live in `docs/` (Russian); read `docs/00-vision.md` and `docs/01-arc
 | Frontend tests | `npm test` (vitest, `src/**/*.test.ts`) |
 | Frontend build | `npx vite build` |
 | Rust tests | `cargo test` in `src-tauri/` |
-| Regenerate extractor golden files | `UPDATE_GOLDEN=1 cargo test golden` in `src-tauri/`, then review the diff |
+| Regenerate golden files | `UPDATE_GOLDEN=1 cargo test` in `src-tauri/` (scan facts, scan JSON), then `UPDATE_GOLDEN=1 npm test` (features, model JSON); review the diffs |
 | Print the tree-sitter tree of a Kotlin file | `cargo run --example sexp -- File.kt` in `src-tauri/` |
 
 On this Windows machine cargo may be missing from PATH in Git Bash: prefix with `PATH="$HOME/.cargo/bin:$PATH"`.
@@ -31,7 +31,7 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
   - `pipeline.ts` — `runAnalysis()`: orchestrates stages only; checkpoints after each stage.
   - `steps.ts` — the single skip/required/warning policy.
   - `stages/` — one file per stage (`scan`, `discover`, `trace`, `describe`, `assemble`, `render`, `index`), registry `STAGES`.
-  - `model/` — claim ids, claim building, merge with the previous model, statuses.
+  - `model/` — `ids.ts` (stable ids), `claims.ts` (claim creation and review transitions), `merge.ts` (merge with the previous model + projection of names), `placeholders.ts`, `status.ts`.
   - `review/` — `ReviewPolicy` implementations (strict, lenient), registry, review use-cases.
   - `render/` — `Renderer`s (markdown, Mermaid L1–L3), registry `RENDERERS`.
   - `prompt.ts` — LLM prompts per language.

@@ -105,6 +105,14 @@ mod tests {
         assert!(json["facts"]["sinkAccesses"].is_array());
         assert!(json["facts"]["components"][0]["isInterface"].is_boolean());
         assert!(json["context"]["apiOperations"].is_array());
+
+        // The same JSON feeds the TypeScript golden test of Discover/Trace/Assemble (src/lib/stages/golden.test.ts).
+        let dump = path.parent().unwrap().join("refunds-service.scan.json");
+        let text = serde_json::to_string_pretty(&json).unwrap() + "\n";
+        if std::env::var("UPDATE_GOLDEN").is_ok() || !dump.exists() {
+            std::fs::write(&dump, &text).unwrap();
+        }
+        assert_eq!(std::fs::read_to_string(&dump).unwrap().replace("\r\n", "\n"), text, "scan JSON differs from {}", dump.display());
     }
 
     #[test]

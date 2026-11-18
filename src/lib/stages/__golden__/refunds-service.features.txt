@@ -1,0 +1,54 @@
+FEATURE refunds/get-refund group=refunds owner=@team-refunds :: GET /api/v1/refunds/{id}
+  STEP 1 RefundController.get [http:GET /api/v1/refunds/{id} -CALL-> RefundController STATIC/HIGH]
+  STEP 2 RefundService.get [RefundController -CALL-> RefundService STATIC/HIGH]
+  STEP 3 RefundRepository.findById [RefundService -CALL-> RefundRepository STATIC/HIGH]
+  STEP 4 RefundRepository.findById [RefundRepository -READ-> db_table:refunds STATIC/HIGH]
+  SINK db_table:refunds
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=3 EXISTS/STATIC/HIGH=1 READS/STATIC/HIGH=1
+FEATURE ping/list group=ping owner=@team-refunds :: GET /internal/ping
+  STEP 1 HealthController.ping [http:GET /internal/ping -CALL-> HealthController STATIC/HIGH]
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=1 EXISTS/STATIC/HIGH=1
+FEATURE refunds/create-refund group=refunds owner=@team-refunds :: POST /api/v1/refunds
+  STEP 1 RefundController.create [http:POST /api/v1/refunds -CALL-> RefundController STATIC/HIGH]
+  STEP 2 RefundService.create [RefundController -CALL-> RefundService STATIC/HIGH]
+  STEP 3 RefundRepository.save [RefundService -CALL-> RefundRepository STATIC/HIGH]
+  STEP 4 RefundRepository.save [RefundRepository -WRITE-> db_table:refunds STATIC/HIGH]
+  STEP 5 PaymentsClient.reserve [RefundService -CALL-> PaymentsClient STATIC/HIGH]
+  STEP 6 PaymentsClient.reserve [PaymentsClient -HTTP_CALL-> external_http:payments STATIC/HIGH]
+  STEP 7 RefundEventsListener.onCreated [RefundService -CALL-> RefundEventsListener INFERRED/MEDIUM]
+  STEP 8 RefundEventsListener.send [RefundEventsListener -PUBLISH-> topic:refunds.created STATIC/HIGH]
+  SINK db_table:refunds
+  SINK external_http:payments
+  SINK topic:refunds.created
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=4 EXISTS/STATIC/HIGH=1 HTTP_CALLS/STATIC/HIGH=1 PUBLISHES_TO/STATIC/HIGH=1 WRITES_TO/STATIC/HIGH=1
+FEATURE approvals/approve group=approvals owner=@team-refunds :: POST /api/v1/refunds/{id}/approve
+  STEP 1 RefundController.approve [http:POST /api/v1/refunds/{id}/approve -CALL-> RefundController STATIC/HIGH]
+  STEP 2 ManualApprovalService.approve [RefundController -CALL-> ManualApprovalService INFERRED/LOW]
+  STEP 3 ManualApprovalService.update [ManualApprovalService -WRITE-> db_table:refunds STATIC/HIGH]
+  STEP 4 AutoApprovalService.approve [RefundController -CALL-> AutoApprovalService INFERRED/LOW]
+  STEP 5 AutoApprovalService.send [AutoApprovalService -PUBLISH-> topic:refunds.approved STATIC/HIGH]
+  SINK db_table:refunds
+  SINK topic:refunds.approved
+  BREAK MULTIPLE_IMPLEMENTATIONS RefundController.approve com.example.refunds.service.ApprovalService
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/INFERRED/LOW=2 CALLS/STATIC/HIGH=1 EXISTS/STATIC/HIGH=1 PUBLISHES_TO/STATIC/HIGH=1 WRITES_TO/STATIC/HIGH=1
+FEATURE payment-events/on-payment-completed group=payment-events owner=@team-refunds :: kafka payments.completed
+  STEP 1 PaymentEventsConsumer.onPaymentCompleted [message:payments.completed:com.example.refunds.messaging.PaymentEventsConsumer.onPaymentCompleted -CALL-> PaymentEventsConsumer STATIC/HIGH]
+  STEP 2 RefundService.markPaid [PaymentEventsConsumer -CALL-> RefundService STATIC/HIGH]
+  STEP 3 RefundRepository.findById [RefundService -CALL-> RefundRepository STATIC/HIGH]
+  STEP 4 RefundRepository.findById [RefundRepository -READ-> db_table:refunds STATIC/HIGH]
+  STEP 5 RefundRepository.save [RefundService -CALL-> RefundRepository STATIC/HIGH]
+  STEP 6 RefundRepository.save [RefundRepository -WRITE-> db_table:refunds STATIC/HIGH]
+  CONSUME topic:payments.completed -> PaymentEventsConsumer
+  SINK topic:payments.completed
+  SINK db_table:refunds
+  BREAK DYNAMIC_SQL PaymentEventsConsumer.audit jdbcTemplate.update
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=4 CONSUMES/STATIC/HIGH=1 EXISTS/STATIC/HIGH=1 READS/STATIC/HIGH=1 WRITES_TO/STATIC/HIGH=1
+FEATURE reconciliation/reconcile group=reconciliation owner=@team-ledger :: schedule 0 0 * * * * ReconciliationJob.reconcile
+  STEP 1 ReconciliationJob.reconcile [schedule:com.example.refunds.jobs.ReconciliationJob.reconcile -CALL-> ReconciliationJob STATIC/HIGH]
+  STEP 2 ReconciliationJob.reconcile [ReconciliationJob -HTTP_CALL-> external_http:ledger.example.com STATIC/HIGH]
+  STEP 3 RefundRepository.findAllByStatus [ReconciliationJob -CALL-> RefundRepository STATIC/HIGH]
+  STEP 4 RefundRepository.findAllByStatus [RefundRepository -READ-> db_table:refunds STATIC/HIGH]
+  SINK external_http:ledger.example.com
+  SINK db_table:refunds
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=2 EXISTS/STATIC/HIGH=1 HTTP_CALLS/STATIC/HIGH=1 READS/STATIC/HIGH=1
+CATALOG components=10 sinks=db_table:refunds,external_http:payments,topic:refunds.created,topic:refunds.approved,topic:payments.completed,external_http:ledger.example.com
