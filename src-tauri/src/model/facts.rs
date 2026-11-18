@@ -85,6 +85,9 @@ pub struct UnresolvedFact {
     pub method: String,
     pub reason: String,
     pub detail: String,
+    /// PARSE_ERROR: `context` (grammar nodes around the error) and `pattern` (anonymised code).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub attributes: BTreeMap<String, String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub evidence: Option<Evidence>,
 }

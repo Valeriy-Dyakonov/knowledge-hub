@@ -188,7 +188,8 @@ export interface SinkAccessFact {
 
 export interface EventPublishFact { componentId: string; method: string; eventType?: string; evidence?: Evidence }
 
-export interface UnresolvedFact { componentId: string; method: string; reason: BreakReason; detail: string; evidence?: Evidence }
+/** PARSE_ERROR facts carry `context` (grammar nodes around the error) and `pattern` (anonymised code) in attributes. */
+export interface UnresolvedFact { componentId: string; method: string; reason: BreakReason; detail: string; attributes?: Record<string, string>; evidence?: Evidence }
 
 export interface SourceFacts {
   components: ComponentFact[];

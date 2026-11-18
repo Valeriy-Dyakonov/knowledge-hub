@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, backend } from "../../api";
 import { getLocale, useT } from "../../i18n";
-import { parseDetail, parseReport } from "../../lib/parseReport";
+import { constructs, parseReport } from "../../lib/parseReport";
 import { resumeRun, runAnalysis } from "../../lib/pipeline";
 import { STAGES, type Activity } from "../../lib/stages";
 import type { LogEntry, RepoEntry, RunRecord, Settings } from "../../types";
@@ -121,7 +121,7 @@ export default function RunScreen(props: { repo: RepoEntry; settings: Settings }
         {error && <p className="error">{error}</p>}
       </Card>
 
-      <ParseProblems log={log} repo={repo} run={current} />
+      <ParseProblems log={log} run={current} />
 
       {log.length > 0 && (
         <Card>
@@ -153,38 +153,39 @@ export default function RunScreen(props: { repo: RepoEntry; settings: Settings }
   );
 }
 
-/** Files the grammar could not fully parse, with a ready-to-paste report for improving the parser. */
-function ParseProblems(props: { log: LogEntry[]; repo: RepoEntry; run: RunRecord | null }) {
+/** Constructs the grammar could not parse, shown anonymised; the report for a chat carries no file names or code. */
+function ParseProblems(props: { log: LogEntry[]; run: RunRecord | null }) {
   const t = useT().run;
   const [copied, setCopied] = useState(false);
-  const problems = props.log.filter((e) => e.code === "parseError" && e.params?.file).map((e) => ({ file: e.params!.file, detail: e.params!.detail ?? "" }));
+  const problems = props.log
+    .filter((e) => e.code === "parseError" && e.params?.file)
+    .map((e) => ({ file: e.params!.file, detail: e.params!.detail ?? "", context: e.params!.context, pattern: e.params!.pattern }));
   if (!problems.length) return null;
+  const list = constructs(problems);
   const copy = async () => {
-    const text = await parseReport(problems, (f) => api.readRepoFile(props.repo.path, f), {
-      extractor: "kotlin-spring",
-      version: props.run?.versions["extractor.kotlin-spring"],
-      commit: props.run?.commit,
-    });
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(parseReport(problems, { extractor: "kotlin-spring", version: props.run?.versions["extractor.kotlin-spring"] }));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
   return (
     <Card>
       <div className="row wrap">
-        <h3 className="warn-title">{t.parseProblems(problems.length)}</h3>
+        <h3 className="warn-title">{t.parseProblems(list.length)}</h3>
         <span className="spacer" />
         <Button variant="primary" onClick={copy}>{copied ? t.copied : t.copyReport}</Button>
       </div>
       <p className="muted">{t.parseProblemsText}</p>
-      <ul className="plain">
-        {problems.map((p) => (
-          <li key={p.file}>
-            <code>{p.file}</code>
-            {parseDetail(p.detail).slice(0, 3).map(([l, near]) => <span key={l} className="hint"> · {l}: {near}</span>)}
-          </li>
-        ))}
-      </ul>
+      {list.map((c, i) => (
+        <div key={i} className="construct">
+          <b>{t.constructTitle(i + 1, c.files.length, c.count)}</b>
+          <div className="hint">{t.context}: <code>{c.context || "?"}</code></div>
+          <pre className="mmd-src">{c.pattern || "?"}</pre>
+          <details className="help">
+            <summary>{t.where}</summary>
+            <ul className="plain">{c.files.map((f) => <li key={f}><code>{f}</code></li>)}</ul>
+          </details>
+        </div>
+      ))}
     </Card>
   );
 }

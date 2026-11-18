@@ -1,19 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { parseDetail, parseReport } from "./parseReport";
+import { constructs, parseReport } from "./parseReport";
+
+const problem = (file: string, pattern: string) => ({ file, detail: "line 3: `x`", context: "class_declaration › class_body › ERROR", pattern });
 
 describe("parse error report", () => {
-  it("reads the detail written by the Rust extractor", () => {
-    expect(parseDetail("line 12: `companion object { val T = 1 }`; line 15: `x`")).toEqual([[12, "companion object { val T = 1 }"], [15, "x"]]);
+  it("groups errors by construct, most widespread first", () => {
+    const list = constructs([problem("a/A.kt", "companion object { val A1 = 0 }"), problem("b/B.kt", "companion object { val A1 = 0 }"), problem("b/B.kt", "x1 = \"…\"")]);
+    expect(list.map((c) => [c.files.length, c.count])).toEqual([[2, 2], [1, 1]]);
   });
 
-  it("quotes the code around the error lines with secrets removed", async () => {
-    const file = Array.from({ length: 20 }, (_, i) => (i === 11 ? "  companion object { val T = 1 }" : i === 9 ? 'val password = "hunter2"' : `line ${i + 1}`)).join("\n");
-    const text = await parseReport([{ file: "src/A.kt", detail: "line 12: `companion object { val T = 1 }`" }], async () => file, { extractor: "kotlin-spring", version: "0.1.0", commit: "abcdef123" });
-    expect(text).toContain("## src/A.kt");
-    expect(text).toContain(">>   12 |   companion object { val T = 1 }");
-    expect(text).toContain("     8 | line 8");
-    expect(text).not.toContain("hunter2");
+  it("contains the anonymised constructs and no file names", () => {
+    const text = parseReport([problem("src/main/kotlin/com/acme/secret/Billing.kt", "companion object { val A1 = 0 }")], { extractor: "kotlin-spring", version: "0.1.0" });
+    expect(text).toContain("companion object { val A1 = 0 }");
+    expect(text).toContain("class_declaration › class_body › ERROR");
     expect(text).toContain("syntax.rs");
-    expect(text).toContain("abcdef1");
+    expect(text).not.toContain("acme");
+    expect(text).not.toContain("Billing");
+    expect(text).not.toContain("line 3");
   });
 });

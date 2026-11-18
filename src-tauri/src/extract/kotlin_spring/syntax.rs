@@ -12,8 +12,20 @@ pub struct KtFile {
     pub classes: Vec<KtClass>,
     /// `const val` values addressable as `NAME` and `Owner.NAME`.
     pub constants: BTreeMap<String, String>,
-    /// Where the grammar could not parse the code (line, start of the unparsed text); declarations there may be missing.
-    pub parse_errors: Vec<(u32, String)>,
+    /// Where the grammar could not parse the code; declarations there may be missing.
+    pub parse_errors: Vec<ParseError>,
+}
+
+/// A place the grammar could not parse, described so it can be reported without the code itself.
+#[derive(Debug, Clone)]
+pub struct ParseError {
+    pub line: u32,
+    /// Start of the unparsed text (local display only).
+    pub near: String,
+    /// Grammar nodes around the error, outermost first: "class_declaration › class_body".
+    pub context: String,
+    /// The surrounding lines with every project name, literal and comment removed.
+    pub pattern: String,
 }
 
 #[derive(Debug, Clone)]
@@ -160,27 +172,47 @@ pub fn parse(path: &str, source: &str) -> KtFile {
         }
     }
     if root.has_error() {
-        collect_errors(root, source, &mut file.parse_errors);
+        collect_errors(root, source, &mut Vec::new(), &mut file.parse_errors);
     }
     let prefix = if file.package.is_empty() { String::new() } else { format!("{}.", file.package) };
     w.declarations(root, &prefix, &mut file);
     file
 }
 
-fn collect_errors(n: Node, source: &str, out: &mut Vec<(u32, String)>) {
+fn collect_errors<'a>(n: Node<'a>, source: &str, path: &mut Vec<&'static str>, out: &mut Vec<ParseError>) {
     if n.is_error() || n.is_missing() {
         // The first line of the unparsed text tells a developer where the grammar gave up.
         let text = source[n.byte_range()].lines().find(|l| !l.trim().is_empty()).unwrap_or("").trim();
         let near = if text.chars().count() > 80 { text.chars().take(80).collect::<String>() + "…" } else { text.to_string() };
-        out.push((line(n), if n.is_missing() { format!("missing {}", n.kind()) } else { near }));
+        let mut context: Vec<&str> = path.iter().rev().take(4).rev().copied().collect();
+        context.push(if n.is_missing() { "MISSING" } else { "ERROR" });
+        out.push(ParseError {
+            line: line(n),
+            near: if n.is_missing() { format!("missing {}", n.kind()) } else { near },
+            context: context.join(" › "),
+            pattern: pattern(source, line(n), end_line(n)),
+        });
         return;
     }
+    path.push(n.kind());
     let mut c = n.walk();
     for ch in n.children(&mut c) {
         if ch.has_error() || ch.is_missing() {
-            collect_errors(ch, source, out);
+            collect_errors(ch, source, path, out);
         }
     }
+    path.pop();
+}
+
+/// One line before the error to three after it (at most eight), dedented and anonymised.
+fn pattern(source: &str, from: u32, to: u32) -> String {
+    let all: Vec<&str> = source.lines().collect();
+    let start = from.saturating_sub(2) as usize;
+    let end = (to.min(from + 3) as usize).min(all.len()).min(start + 8);
+    let lines = &all[start.min(end)..end];
+    let indent = lines.iter().filter(|l| !l.trim().is_empty()).map(|l| l.len() - l.trim_start().len()).min().unwrap_or(0);
+    let text = lines.iter().map(|l| if l.len() >= indent { &l[indent..] } else { l.trim_start() }).collect::<Vec<_>>().join("\n");
+    super::anon::anonymise(&text)
 }
 
 fn named(n: Node) -> Vec<Node> {
@@ -629,7 +661,10 @@ object Topics { const val X = "x.topic" }
         let f = parse("E.kt", "class E { companion object { val T = 1 } }
 ");
         assert_eq!(f.parse_errors.len(), 1);
-        assert_eq!(f.parse_errors[0].0, 1);
-        assert!(f.parse_errors[0].1.contains("companion object"), "{:?}", f.parse_errors);
+        let e = &f.parse_errors[0];
+        assert_eq!(e.line, 1);
+        assert!(e.near.contains("companion object"), "{e:?}");
+        assert!(e.context.ends_with("ERROR"), "{e:?}");
+        assert_eq!(e.pattern, "class A1 { companion object { val A2 = 0 } }");
     }
 }

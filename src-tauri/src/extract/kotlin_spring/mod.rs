@@ -1,4 +1,5 @@
 //! Kotlin + Spring Boot extractor: tree-sitter syntax (`syntax.rs`) + Spring semantics (`spring.rs`).
+mod anon;
 mod spring;
 pub mod syntax;
 

@@ -18,7 +18,9 @@ export const scanStage: Stage = {
     }
     ctx.state.scan = result;
     const f = result.facts;
-    for (const u of f.unresolved.filter((x) => x.reason === "PARSE_ERROR")) ctx.warn("parseError", { file: u.componentId, detail: u.detail });
+    for (const u of f.unresolved.filter((x) => x.reason === "PARSE_ERROR")) {
+      ctx.warn("parseError", { file: u.componentId, detail: u.detail, context: u.attributes?.context ?? "", pattern: u.attributes?.pattern ?? "" });
+    }
     ctx.log("ok", "scanSummary", {
       components: String(f.components.length),
       triggers: String(f.triggers.length),

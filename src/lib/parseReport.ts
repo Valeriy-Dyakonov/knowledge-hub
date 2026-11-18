@@ -1,53 +1,42 @@
 import { t } from "../i18n";
 import { redact } from "./redact";
 
-export interface ParseProblem { file: string; detail: string }
+/** One parse error as logged by stage Scan: file and line stay local, context and pattern are anonymous. */
+export interface ParseProblem { file: string; detail: string; context?: string; pattern?: string }
 
-/** "line 12: `companion object { … }`; line 15: `…`" (written by the Rust extractor) -> [[12, "companion…"], …]. */
-export function parseDetail(detail: string): [number, string][] {
-  return [...detail.matchAll(/line (\d+): `([^`]*)`/g)].map((m) => [Number(m[1]), m[2]]);
+/** A construct the grammar could not parse, with how often and where it occurs. */
+export interface ParseConstruct { context: string; pattern: string; files: string[]; count: number }
+
+/** Groups errors by construct (same place in the tree and same anonymised code), most frequent first. */
+export function constructs(problems: ParseProblem[]): ParseConstruct[] {
+  const by = new Map<string, ParseConstruct>();
+  for (const p of problems) {
+    const context = p.context ?? "";
+    const pattern = p.pattern ?? "";
+    const key = `${context}\u0000${pattern}`;
+    const c = by.get(key) ?? { context, pattern, files: [], count: 0 };
+    c.count++;
+    if (!c.files.includes(p.file)) c.files.push(p.file);
+    by.set(key, c);
+  }
+  return [...by.values()].sort((a, b) => b.files.length - a.files.length || b.count - a.count);
 }
 
-const CONTEXT = 4;
-
 /**
- * A ready-to-paste message for a chat with a developer or an AI assistant: what the extractor could not parse,
- * the code around it (secrets redacted) and where the parser lives — enough to reproduce and fix the grammar gap.
+ * A ready-to-paste message for a developer or an AI assistant: which Kotlin constructs the grammar could not parse,
+ * as anonymised code (project names, literals and comments replaced) and their place in the syntax tree.
+ * No file names, paths, line numbers or commits: it can be shared outside the team.
  */
-export async function parseReport(
-  problems: ParseProblem[],
-  readFile: (path: string) => Promise<string>,
-  meta: { extractor: string; version?: string; commit?: string },
-): Promise<string> {
+export function parseReport(problems: ParseProblem[], meta: { extractor: string; version?: string }): string {
   const m = t().run.parseReport;
-  const out = [...m.intro(meta.extractor, meta.version ?? "", meta.commit?.slice(0, 7) ?? "?"), ""];
-  for (const p of problems.slice(0, 10)) {
-    const errors = parseDetail(p.detail);
-    out.push(`## ${p.file}`, "", m.lines(errors.map(([l, near]) => `${l} (\`${near}\`)`).join(", ") || p.detail), "");
-    let text: string;
-    try {
-      text = await readFile(p.file);
-    } catch {
-      out.push(m.unreadable, "");
-      continue;
-    }
-    const lines = text.split(/\r?\n/);
-    const marked = new Set(errors.map(([l]) => l));
-    // Nearby errors share one fragment.
-    const windows: [number, number][] = [];
-    for (const [l] of errors.slice(0, 5)) {
-      const from = Math.max(1, l - CONTEXT);
-      const to = Math.min(lines.length, l + CONTEXT);
-      const last = windows[windows.length - 1];
-      if (last && from <= last[1] + 1) last[1] = Math.max(last[1], to);
-      else windows.push([from, to]);
-    }
-    for (const [from, to] of windows) {
-      out.push("```kotlin");
-      for (let n = from; n <= to; n++) out.push(`${marked.has(n) ? ">>" : "  "}${String(n).padStart(5)} | ${redact(lines[n - 1] ?? "")}`);
-      out.push("```", "");
-    }
-  }
-  if (problems.length > 10) out.push(m.more(problems.length - 10));
+  const list = constructs(problems);
+  const files = new Set(problems.map((p) => p.file)).size;
+  const out = [...m.intro(meta.extractor, meta.version ?? "", list.length, files), ""];
+  list.slice(0, 15).forEach((c, i) => {
+    out.push(m.construct(i + 1, c.files.length, c.count), "", m.context(c.context || "?"), "");
+    // The pattern is anonymised in Rust already; redaction is a second line of defence.
+    out.push("```kotlin", redact(c.pattern || "?"), "```", "");
+  });
+  if (list.length > 15) out.push(m.more(list.length - 15));
   return out.join("\n");
 }

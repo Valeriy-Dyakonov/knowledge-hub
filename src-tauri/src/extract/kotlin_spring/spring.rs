@@ -211,12 +211,18 @@ impl<'a> Analysis<'a> {
     }
 
     fn run(&mut self) {
+        // One fact per error: the UI groups them by construct (`pattern`) and reports them without file names.
         for f in self.index.files {
-            if let Some((first, _)) = f.parse_errors.first() {
-                // "line 12: `companion object { val T = 1 }`; line 15: …" — parsed back by the UI for the report.
-                let lines: Vec<String> = f.parse_errors.iter().take(10).map(|(l, near)| format!("line {l}: `{near}`")).collect();
-                let ev = self.ev(f, *first, *first);
-                self.facts.unresolved.push(UnresolvedFact { component_id: f.path.clone(), method: String::new(), reason: "PARSE_ERROR".into(), detail: lines.join("; "), evidence: ev });
+            for e in f.parse_errors.iter().take(10) {
+                let ev = self.ev(f, e.line, e.line);
+                self.facts.unresolved.push(UnresolvedFact {
+                    component_id: f.path.clone(),
+                    method: String::new(),
+                    reason: "PARSE_ERROR".into(),
+                    detail: format!("line {}: `{}`", e.line, e.near),
+                    attributes: BTreeMap::from([("context".to_string(), e.context.clone()), ("pattern".to_string(), e.pattern.clone())]),
+                    evidence: ev,
+                });
             }
         }
         let beans = self.beans();
@@ -472,7 +478,7 @@ impl<'a> Analysis<'a> {
     }
 
     fn unresolved(&mut self, b: &Bean, f: &Function, reason: &str, detail: String, ev: Option<Evidence>) {
-        self.facts.unresolved.push(UnresolvedFact { component_id: b.class.fqn.clone(), method: f.name.clone(), reason: reason.into(), detail, evidence: ev });
+        self.facts.unresolved.push(UnresolvedFact { component_id: b.class.fqn.clone(), method: f.name.clone(), reason: reason.into(), detail, attributes: BTreeMap::new(), evidence: ev });
     }
 
     fn library_call(&mut self, b: &Bean, f: &Function, field: &str, ty: &str, call: &Call, ev: Option<Evidence>) {
@@ -621,7 +627,7 @@ impl<'a> Analysis<'a> {
 
     fn unresolved_class(&mut self, b: &Bean, reason: &str, detail: &str) {
         let ev = self.ev(b.file, b.class.start_line, b.class.header_end_line);
-        self.facts.unresolved.push(UnresolvedFact { component_id: b.class.fqn.clone(), method: String::new(), reason: reason.into(), detail: detail.into(), evidence: ev });
+        self.facts.unresolved.push(UnresolvedFact { component_id: b.class.fqn.clone(), method: String::new(), reason: reason.into(), detail: detail.into(), attributes: BTreeMap::new(), evidence: ev });
     }
 }
 
