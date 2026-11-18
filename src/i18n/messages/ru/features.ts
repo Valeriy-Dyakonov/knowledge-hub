@@ -23,6 +23,8 @@ export const features = {
   via: (c: string) => `через ${c}`,
   async: "асинхронно",
   hasAsync: "В потоке есть асинхронные шаги (@Async): вызывающий не ждёт их завершения",
+  collapseAll: "Свернуть все",
+  expandAll: "Развернуть все",
   owner: "Владелец",
   noOwner: "владелец не указан",
   unverified: (n: number) => `непроверенных утверждений: ${n}`,

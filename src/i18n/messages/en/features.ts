@@ -25,6 +25,8 @@ export const features: typeof ru = {
   via: (c) => `via ${c}`,
   async: "async",
   hasAsync: "The flow has async steps (@Async): the caller does not wait for them",
+  collapseAll: "Collapse all",
+  expandAll: "Expand all",
   owner: "Owner",
   noOwner: "no owner",
   unverified: (n) => `unverified claims: ${n}`,

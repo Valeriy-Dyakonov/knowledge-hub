@@ -78,7 +78,7 @@ describe("renderers", () => {
         ],
       })),
     };
-    for (const d of [contextDiagram(big, "ru"), featureMapDiagram(big, "ru"), componentsDiagram(big, "ru")]) {
+    for (const d of [contextDiagram(big, "ru").text, featureMapDiagram(big, "ru").text, componentsDiagram(big, "ru").text]) {
       expect(nodeCount(d)).toBeLessThanOrEqual(MAX_NODES);
       await expect(mermaid.parse(d)).resolves.toBeTruthy();
     }

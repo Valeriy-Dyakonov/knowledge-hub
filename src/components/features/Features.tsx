@@ -29,7 +29,7 @@ function entryKey(f: Feature): string {
   return t.type === "MESSAGE" && t.attributes.broker ? `MESSAGE:${t.attributes.broker}` : t.type;
 }
 
-export default function Features(props: { repo: RepoEntry }) {
+export default function Features(props: { repo: RepoEntry; focus?: { id: string } | null }) {
   const t = useT().features;
   const [model, setModel] = useState<KnowledgeModel | null | undefined>(undefined);
   const [selected, setSelected] = useState<string | null>(null);
@@ -44,6 +44,22 @@ export default function Features(props: { repo: RepoEntry }) {
     setSelected(null);
     api.loadModel(props.repo.serviceId).then(setModel).catch(() => setModel(null));
   }, [props.repo.serviceId]);
+
+  // Collapsed groups, remembered per grouping mode.
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    try { setCollapsed(new Set(JSON.parse(localStorage.getItem(`${GROUP_KEY}.collapsed.${groupBy}`) ?? "[]"))); } catch { setCollapsed(new Set()); }
+  }, [groupBy]);
+  const saveCollapsed = (s: Set<string>) => {
+    setCollapsed(s);
+    try { localStorage.setItem(`${GROUP_KEY}.collapsed.${groupBy}`, JSON.stringify([...s])); } catch { /* remembered until restart */ }
+  };
+  const toggleGroup = (g: string) => {
+    const next = new Set(collapsed);
+    if (next.has(g)) next.delete(g);
+    else next.add(g);
+    saveCollapsed(next);
+  };
 
   // Full-text search through the index (same as MCP `search`); a plain substring filter if the index is unavailable.
   const [hits, setHits] = useState<Map<string, string> | null>(null);
@@ -73,6 +89,16 @@ export default function Features(props: { repo: RepoEntry }) {
   }, [model, query, hits, groupBy]);
   const groupTitle = (k: string) => (groupBy === "entry" ? t.entryKinds[k] ?? k : k);
 
+  // Opened from another screen: select the feature and unfold its group.
+  useEffect(() => {
+    if (!props.focus || !model) return;
+    setSelected(props.focus.id);
+    setQuery("");
+    const g = groups.find(([, items]) => items.some((f) => f.id === props.focus!.id))?.[0];
+    if (g && collapsed.has(g)) toggleGroup(g);
+    setTimeout(() => document.querySelector(".fl-item.on")?.scrollIntoView({ block: "center" }), 50);
+  }, [props.focus, model]);
+
   if (model === undefined) return null;
   if (model === null) return <Card><Title>{t.title}</Title><p className="muted">{t.empty}</p></Card>;
   if (!model.features.length) return <Card><Title>{t.title}</Title><p className="muted">{t.none}</p></Card>;
@@ -89,11 +115,17 @@ export default function Features(props: { repo: RepoEntry }) {
           value={groupBy}
           onChange={changeGroupBy}
         />
+        <div className="row fl-tools">
+          <button className="linkbtn small" onClick={() => saveCollapsed(new Set(groups.map(([g]) => g)))}>{t.collapseAll}</button>
+          <button className="linkbtn small" onClick={() => saveCollapsed(new Set())}>{t.expandAll}</button>
+        </div>
         {groups.length === 0 && <p className="muted">{t.noHits}</p>}
         {groups.map(([group, items]) => (
           <div key={group} className="fl-group">
-            <div className="fl-group-name">{groupTitle(group)} <span className="count">{items.length}</span></div>
-            {items.map((f) => {
+            <button className="fl-group-name" onClick={() => toggleGroup(group)} aria-expanded={!collapsed.has(group)}>
+              <span className="caret">{collapsed.has(group) && !query ? "▸" : "▾"}</span>{groupTitle(group)} <span className="count">{items.length}</span>
+            </button>
+            {(!collapsed.has(group) || !!query) && items.map((f) => {
               const s = statusOf(f.claims);
               return (
                 <button key={f.id} className={`fl-item ${f.id === selected ? "on" : ""}`} onClick={() => setSelected(f.id)}>

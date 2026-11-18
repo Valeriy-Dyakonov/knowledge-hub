@@ -28,6 +28,12 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("repos");
   const [selected, setSelected] = useState<string | null>(readSelected);
   const [git, setGit] = useState<GitUser>({});
+  // Feature to show when another screen (diagrams) opens one.
+  const [featureFocus, setFeatureFocus] = useState<{ id: string } | null>(null);
+  const openFeature = (id: string) => {
+    setFeatureFocus({ id });
+    setTab("features");
+  };
 
   useEffect(() => {
     if (!inTauri) return;
@@ -82,8 +88,8 @@ export default function App() {
               {tab === "repos" && <Repos settings={settings} selected={selected} onSelect={(p) => { select(p); setTab("run"); }} onSave={saveSettings} />}
               {tab !== "repos" && !repo && <NoRepo onGo={() => setTab("repos")} />}
               {tab === "run" && repo && <RunScreen repo={repo} settings={settings} />}
-              {tab === "features" && repo && <Features repo={repo} />}
-              {tab === "diagrams" && repo && <Diagrams repo={repo} />}
+              {tab === "features" && repo && <Features repo={repo} focus={featureFocus} />}
+              {tab === "diagrams" && repo && <Diagrams repo={repo} onOpenFeature={openFeature} />}
               {tab === "review" && repo && <Review repo={repo} settings={settings} reviewer={reviewerOf(settings, git)} />}
             </main>
           </div>

@@ -3,7 +3,7 @@ import type { Evidence, Feature, KnowledgeModel } from "../../types";
 import { isUnverified } from "../model/claims";
 import { statusOf } from "../model/status";
 import { flowSteps } from "../model/flow";
-import { componentsDiagram, contextDiagram, featureMapDiagram, flowDiagram } from "./mermaid";
+import { componentsDiagram, contextDiagram, expandAll, featureMapDiagram, flowDiagram } from "./mermaid";
 import { namer } from "./names";
 import type { Renderer } from "./types";
 
@@ -70,15 +70,15 @@ export function serviceMarkdown(model: KnowledgeModel, lang: string): string {
     "",
     `### ${m.contextDiagram}`,
     "",
-    fence(contextDiagram(model, lang)),
+    fence(contextDiagram(model, lang, expandAll(model)).text),
     "",
     `### ${m.featureMapDiagram}`,
     "",
-    fence(featureMapDiagram(model, lang)),
+    fence(featureMapDiagram(model, lang, expandAll(model)).text),
     "",
     `### ${m.componentsDiagram}`,
     "",
-    fence(componentsDiagram(model, lang)),
+    fence(componentsDiagram(model, lang).text),
   ];
   return out.join("\n") + "\n";
 }

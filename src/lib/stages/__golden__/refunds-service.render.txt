@@ -23,30 +23,42 @@
 ```mermaid
 flowchart LR
   n1[["Refunds<br/>фич: 7"]]:::service
-  subgraph g1["Кто обращается"]
-    n2(["Клиенты API<br/>approvals: 1<br/>ping: 1<br/>refunds: 2"]):::trigger
-    n3[/"payments.completed"/]:::queue
-    n4(["Расписание<br/>schedule 0 0 * * * * ReconciliationJob.reconcile"]):::trigger
-    n5(["Асинхронные задачи<br/>async CacheWarmer.warmUp"]):::trigger
+  subgraph g1["Клиенты API"]
+    direction TB
+    n2(["approvals<br/>фич: 1"]):::trigger
+    n3(["ping<br/>фич: 1"]):::trigger
+    n4(["refunds<br/>фич: 2"]):::trigger
   end
-  subgraph g2["С чем работает"]
-    n6[("База данных (1 табл.)<br/>Возвраты")]:::db
-    n7[/"refunds.approved"/]:::queue
-    n8[/"refunds.created"/]:::queue
-    n9{{"ledger.example.com"}}:::external
-    n10{{"payments"}}:::external
-    n11{{"notify.example.com"}}:::external
+  subgraph g2["Слушает топики"]
+    direction TB
+    n5[/"payments.completed"/]:::queue
   end
-  n2 -->|POST /api/v1/refunds/#123;id#125;/approve, GET /internal/ping, Создание возврата, ещё 1| n1
-  n3 -->|получает: kafka payments.completed| n1
-  n4 --> n1
-  n5 --> n1
-  n1 -->|пишет: POST /api/v1/refunds/#123;id#125;/approve, kafka payments.completed, ещё 1 · читает: async CacheWarmer.warmUp, kafka payments.completed, ещё 2| n6
-  n1 -->|публикует: POST /api/v1/refunds/#123;id#125;/approve| n7
-  n1 -->|публикует: Создание возврата| n8
-  n1 -->|вызывает API: schedule 0 0 * * * * ReconciliationJob.reconcile| n9
-  n1 -->|вызывает API: Создание возврата| n10
-  n1 -->|вызывает API: Создание возврата| n11
+  subgraph g3["Задачи и события"]
+    direction TB
+    n6(["async CacheWarmer.warmUp<br/>асинхронно (@Async)"]):::trigger
+    n7(["schedule 0 0 * * * * ReconciliationJob.reconcile<br/>по расписанию"]):::trigger
+  end
+  subgraph g4["База данных"]
+    direction TB
+    n8[("Возвраты")]:::db
+  end
+  subgraph g5["Публикует в топики"]
+    direction TB
+    n9[/"refunds.approved"/]:::queue
+    n10[/"refunds.created"/]:::queue
+  end
+  subgraph g6["Внешние сервисы"]
+    direction TB
+    n11{{"ledger.example.com"}}:::external
+    n12{{"notify.example.com"}}:::external
+    n13{{"payments"}}:::external
+  end
+  g1 -->|4 HTTP| n1
+  g2 -->|получает| n1
+  g3 --> n1
+  n1 -->|пишет / читает| g4
+  n1 -->|публикует| g5
+  n1 -->|вызывает API| g6
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -54,37 +66,53 @@ flowchart LR
   classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
   classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
   classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+  classDef more fill:#ffffff,stroke:#8b95a5,color:#1c2330,stroke-dasharray:4 3
 ```
 
 ### Карта фич (L2)
 
 ```mermaid
-flowchart LR
-  n8[("Возвраты<br/>таблица")]:::db
-  n9[/"refunds.approved<br/>топик"/]:::queue
-  n10[/"payments.completed<br/>топик"/]:::queue
-  n11{{"ledger.example.com<br/>внешний API"}}:::external
-  n12{{"payments<br/>внешний API"}}:::external
-  n13{{"notify.example.com<br/>внешний API"}}:::external
-  n14[/"refunds.created<br/>топик"/]:::queue
+flowchart TB
   subgraph g1["approvals"]
+    direction TB
     n1("POST /api/v1/refunds/{id}/approve<br/>HTTP API"):::feature
   end
   subgraph g2["cache-warmer"]
+    direction TB
     n2("async CacheWarmer.warmUp<br/>асинхронно (@Async)"):::feature
   end
   subgraph g3["payment-events"]
+    direction TB
     n3("kafka payments.completed<br/>сообщение"):::feature
   end
   subgraph g4["ping"]
+    direction TB
     n4("GET /internal/ping<br/>HTTP API"):::feature
   end
   subgraph g5["reconciliation"]
+    direction TB
     n5("schedule 0 0 * * * * ReconciliationJob.reconcile<br/>по расписанию"):::feature
   end
   subgraph g6["refunds"]
+    direction TB
     n6("Создание возврата<br/>HTTP API"):::feature
     n7("GET /api/v1/refunds/{id}<br/>HTTP API"):::feature
+  end
+  subgraph g7["База данных"]
+    direction LR
+    n8[("Возвраты")]:::db
+  end
+  subgraph g8["Топики и очереди"]
+    direction LR
+    n9[/"refunds.approved"/]:::queue
+    n10[/"payments.completed"/]:::queue
+    n14[/"refunds.created"/]:::queue
+  end
+  subgraph g9["Внешние сервисы"]
+    direction LR
+    n11{{"ledger.example.com"}}:::external
+    n12{{"payments"}}:::external
+    n13{{"notify.example.com"}}:::external
   end
   %% claim c-031aaff17e5ee300
   n1 -->|пишет| n8
@@ -119,6 +147,7 @@ flowchart LR
   classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
   classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
   classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+  classDef more fill:#ffffff,stroke:#8b95a5,color:#1c2330,stroke-dasharray:4 3
 ```
 
 ### Компоненты (для разработчиков)
@@ -126,36 +155,70 @@ flowchart LR
 ```mermaid
 flowchart LR
   subgraph g1["Точки входа"]
-    n1["Контроллеры (1)"]:::component
-    n2["Обработчики (2)"]:::component
+    direction TB
+    n1["RefundController"]:::component
+    n2["PaymentEventsConsumer"]:::component
+    n3["RefundEventsListener"]:::component
   end
   subgraph g2["Логика"]
-    n3["Сервисы (4)"]:::component
-    n4["Компоненты (2)"]:::component
+    direction TB
+    n4["ManualApprovalService"]:::component
+    n5["AutoApprovalService"]:::component
+    n6["CacheWarmer"]:::component
+    n7["Сервис возвратов"]:::component
+    n8["ReconciliationJob"]:::component
+    n9["NotificationService"]:::component
   end
   subgraph g3["Доступ к данным и API"]
-    n5["Репозитории (1)"]:::component
-    n6["Клиенты (1)"]:::component
+    direction TB
+    n10["RefundRepository"]:::component
+    n11["PaymentsClient"]:::component
   end
   subgraph g4["Хранилища и внешние системы"]
-    n7[("База данных (1 табл.)")]:::db
-    n8[/"Очереди и топики (2)"/]:::queue
-    n9{{"Внешние сервисы (3)"}}:::external
+    direction TB
+    n12[("Возвраты<br/>таблица")]:::db
+    n13[/"refunds.approved<br/>топик"/]:::queue
+    n14{{"ledger.example.com<br/>внешний API"}}:::external
+    n15{{"payments<br/>внешний API"}}:::external
+    n16{{"notify.example.com<br/>внешний API"}}:::external
+    n17[/"refunds.created<br/>топик"/]:::queue
   end
-  n1 -.->|вызывает| n3
-  n3 -->|пишет| n7
-  n3 -->|публикует| n8
-  n4 -->|вызывает| n5
-  n5 -->|читает| n7
-  n2 -->|вызывает| n3
-  n3 -->|вызывает| n5
-  n5 -->|пишет| n7
-  n4 -->|вызывает API| n9
-  n3 -->|вызывает| n6
-  n6 -->|вызывает API| n9
-  n3 -->|вызывает API| n9
-  n3 -.->|вызывает| n2
-  n2 -->|публикует| n8
+  %% claim c-15aec0f5d1509c01
+  n1 -.->|вызывает| n4
+  %% claim c-031aaff17e5ee300
+  n4 -->|пишет| n12
+  %% claim c-01664b64827d1904
+  n1 -.->|вызывает| n5
+  %% claim c-04f3d7945589a700
+  n5 -->|публикует| n13
+  %% claim c-1130632493a7bb17
+  n6 -->|вызывает| n10
+  %% claim c-04fb6787f3b58300
+  n10 -->|читает| n12
+  %% claim c-0a2454f33f40af01
+  n2 -->|вызывает| n7
+  %% claim c-19f33311ed75690e
+  n7 -->|вызывает| n10
+  %% claim c-12803d863b50a50e
+  n10 -->|пишет| n12
+  %% claim c-195f2b1fafba1607
+  n8 -->|вызывает API| n14
+  %% claim c-06cd6200b4ffd40b
+  n8 -->|вызывает| n10
+  %% claim c-1e367b4dee7b1210
+  n1 -->|вызывает| n7
+  %% claim c-09edb9a27f064a05
+  n7 -->|вызывает| n11
+  %% claim c-0087eb84ac7c8d02
+  n11 -->|вызывает API| n15
+  %% claim c-105727ac2c2ba206
+  n7 -->|вызывает| n9
+  %% claim c-1d9d21cc9488c713
+  n9 -->|вызывает API| n16
+  %% claim c-1d4598f3099e1007
+  n7 -.->|вызывает| n3
+  %% claim c-024d3c170906f605
+  n3 -->|публикует| n17
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -163,6 +226,7 @@ flowchart LR
   classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
   classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
   classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+  classDef more fill:#ffffff,stroke:#8b95a5,color:#1c2330,stroke-dasharray:4 3
 ```
 
 === features/approvals/approve/README.md
@@ -474,30 +538,42 @@ sequenceDiagram
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
 flowchart LR
   n1[["Refunds<br/>фич: 7"]]:::service
-  subgraph g1["Кто обращается"]
-    n2(["Клиенты API<br/>approvals: 1<br/>ping: 1<br/>refunds: 2"]):::trigger
-    n3[/"payments.completed"/]:::queue
-    n4(["Расписание<br/>schedule 0 0 * * * * ReconciliationJob.reconcile"]):::trigger
-    n5(["Асинхронные задачи<br/>async CacheWarmer.warmUp"]):::trigger
+  subgraph g1["Клиенты API"]
+    direction TB
+    n2(["approvals<br/>фич: 1"]):::trigger
+    n3(["ping<br/>фич: 1"]):::trigger
+    n4(["refunds<br/>фич: 2"]):::trigger
   end
-  subgraph g2["С чем работает"]
-    n6[("База данных (1 табл.)<br/>Возвраты")]:::db
-    n7[/"refunds.approved"/]:::queue
-    n8[/"refunds.created"/]:::queue
-    n9{{"ledger.example.com"}}:::external
-    n10{{"payments"}}:::external
-    n11{{"notify.example.com"}}:::external
+  subgraph g2["Слушает топики"]
+    direction TB
+    n5[/"payments.completed"/]:::queue
   end
-  n2 -->|POST /api/v1/refunds/#123;id#125;/approve, GET /internal/ping, Создание возврата, ещё 1| n1
-  n3 -->|получает: kafka payments.completed| n1
-  n4 --> n1
-  n5 --> n1
-  n1 -->|пишет: POST /api/v1/refunds/#123;id#125;/approve, kafka payments.completed, ещё 1 · читает: async CacheWarmer.warmUp, kafka payments.completed, ещё 2| n6
-  n1 -->|публикует: POST /api/v1/refunds/#123;id#125;/approve| n7
-  n1 -->|публикует: Создание возврата| n8
-  n1 -->|вызывает API: schedule 0 0 * * * * ReconciliationJob.reconcile| n9
-  n1 -->|вызывает API: Создание возврата| n10
-  n1 -->|вызывает API: Создание возврата| n11
+  subgraph g3["Задачи и события"]
+    direction TB
+    n6(["async CacheWarmer.warmUp<br/>асинхронно (@Async)"]):::trigger
+    n7(["schedule 0 0 * * * * ReconciliationJob.reconcile<br/>по расписанию"]):::trigger
+  end
+  subgraph g4["База данных"]
+    direction TB
+    n8[("Возвраты")]:::db
+  end
+  subgraph g5["Публикует в топики"]
+    direction TB
+    n9[/"refunds.approved"/]:::queue
+    n10[/"refunds.created"/]:::queue
+  end
+  subgraph g6["Внешние сервисы"]
+    direction TB
+    n11{{"ledger.example.com"}}:::external
+    n12{{"notify.example.com"}}:::external
+    n13{{"payments"}}:::external
+  end
+  g1 -->|4 HTTP| n1
+  g2 -->|получает| n1
+  g3 --> n1
+  n1 -->|пишет / читает| g4
+  n1 -->|публикует| g5
+  n1 -->|вызывает API| g6
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -505,35 +581,51 @@ flowchart LR
   classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
   classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
   classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+  classDef more fill:#ffffff,stroke:#8b95a5,color:#1c2330,stroke-dasharray:4 3
 
 === diagrams/features.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
-flowchart LR
-  n8[("Возвраты<br/>таблица")]:::db
-  n9[/"refunds.approved<br/>топик"/]:::queue
-  n10[/"payments.completed<br/>топик"/]:::queue
-  n11{{"ledger.example.com<br/>внешний API"}}:::external
-  n12{{"payments<br/>внешний API"}}:::external
-  n13{{"notify.example.com<br/>внешний API"}}:::external
-  n14[/"refunds.created<br/>топик"/]:::queue
+flowchart TB
   subgraph g1["approvals"]
+    direction TB
     n1("POST /api/v1/refunds/{id}/approve<br/>HTTP API"):::feature
   end
   subgraph g2["cache-warmer"]
+    direction TB
     n2("async CacheWarmer.warmUp<br/>асинхронно (@Async)"):::feature
   end
   subgraph g3["payment-events"]
+    direction TB
     n3("kafka payments.completed<br/>сообщение"):::feature
   end
   subgraph g4["ping"]
+    direction TB
     n4("GET /internal/ping<br/>HTTP API"):::feature
   end
   subgraph g5["reconciliation"]
+    direction TB
     n5("schedule 0 0 * * * * ReconciliationJob.reconcile<br/>по расписанию"):::feature
   end
   subgraph g6["refunds"]
+    direction TB
     n6("Создание возврата<br/>HTTP API"):::feature
     n7("GET /api/v1/refunds/{id}<br/>HTTP API"):::feature
+  end
+  subgraph g7["База данных"]
+    direction LR
+    n8[("Возвраты")]:::db
+  end
+  subgraph g8["Топики и очереди"]
+    direction LR
+    n9[/"refunds.approved"/]:::queue
+    n10[/"payments.completed"/]:::queue
+    n14[/"refunds.created"/]:::queue
+  end
+  subgraph g9["Внешние сервисы"]
+    direction LR
+    n11{{"ledger.example.com"}}:::external
+    n12{{"payments"}}:::external
+    n13{{"notify.example.com"}}:::external
   end
   %% claim c-031aaff17e5ee300
   n1 -->|пишет| n8
@@ -568,41 +660,76 @@ flowchart LR
   classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
   classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
   classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+  classDef more fill:#ffffff,stroke:#8b95a5,color:#1c2330,stroke-dasharray:4 3
 
 === diagrams/components.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
 flowchart LR
   subgraph g1["Точки входа"]
-    n1["Контроллеры (1)"]:::component
-    n2["Обработчики (2)"]:::component
+    direction TB
+    n1["RefundController"]:::component
+    n2["PaymentEventsConsumer"]:::component
+    n3["RefundEventsListener"]:::component
   end
   subgraph g2["Логика"]
-    n3["Сервисы (4)"]:::component
-    n4["Компоненты (2)"]:::component
+    direction TB
+    n4["ManualApprovalService"]:::component
+    n5["AutoApprovalService"]:::component
+    n6["CacheWarmer"]:::component
+    n7["Сервис возвратов"]:::component
+    n8["ReconciliationJob"]:::component
+    n9["NotificationService"]:::component
   end
   subgraph g3["Доступ к данным и API"]
-    n5["Репозитории (1)"]:::component
-    n6["Клиенты (1)"]:::component
+    direction TB
+    n10["RefundRepository"]:::component
+    n11["PaymentsClient"]:::component
   end
   subgraph g4["Хранилища и внешние системы"]
-    n7[("База данных (1 табл.)")]:::db
-    n8[/"Очереди и топики (2)"/]:::queue
-    n9{{"Внешние сервисы (3)"}}:::external
+    direction TB
+    n12[("Возвраты<br/>таблица")]:::db
+    n13[/"refunds.approved<br/>топик"/]:::queue
+    n14{{"ledger.example.com<br/>внешний API"}}:::external
+    n15{{"payments<br/>внешний API"}}:::external
+    n16{{"notify.example.com<br/>внешний API"}}:::external
+    n17[/"refunds.created<br/>топик"/]:::queue
   end
-  n1 -.->|вызывает| n3
-  n3 -->|пишет| n7
-  n3 -->|публикует| n8
-  n4 -->|вызывает| n5
-  n5 -->|читает| n7
-  n2 -->|вызывает| n3
-  n3 -->|вызывает| n5
-  n5 -->|пишет| n7
-  n4 -->|вызывает API| n9
-  n3 -->|вызывает| n6
-  n6 -->|вызывает API| n9
-  n3 -->|вызывает API| n9
-  n3 -.->|вызывает| n2
-  n2 -->|публикует| n8
+  %% claim c-15aec0f5d1509c01
+  n1 -.->|вызывает| n4
+  %% claim c-031aaff17e5ee300
+  n4 -->|пишет| n12
+  %% claim c-01664b64827d1904
+  n1 -.->|вызывает| n5
+  %% claim c-04f3d7945589a700
+  n5 -->|публикует| n13
+  %% claim c-1130632493a7bb17
+  n6 -->|вызывает| n10
+  %% claim c-04fb6787f3b58300
+  n10 -->|читает| n12
+  %% claim c-0a2454f33f40af01
+  n2 -->|вызывает| n7
+  %% claim c-19f33311ed75690e
+  n7 -->|вызывает| n10
+  %% claim c-12803d863b50a50e
+  n10 -->|пишет| n12
+  %% claim c-195f2b1fafba1607
+  n8 -->|вызывает API| n14
+  %% claim c-06cd6200b4ffd40b
+  n8 -->|вызывает| n10
+  %% claim c-1e367b4dee7b1210
+  n1 -->|вызывает| n7
+  %% claim c-09edb9a27f064a05
+  n7 -->|вызывает| n11
+  %% claim c-0087eb84ac7c8d02
+  n11 -->|вызывает API| n15
+  %% claim c-105727ac2c2ba206
+  n7 -->|вызывает| n9
+  %% claim c-1d9d21cc9488c713
+  n9 -->|вызывает API| n16
+  %% claim c-1d4598f3099e1007
+  n7 -.->|вызывает| n3
+  %% claim c-024d3c170906f605
+  n3 -->|публикует| n17
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -610,6 +737,7 @@ flowchart LR
   classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
   classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
   classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+  classDef more fill:#ffffff,stroke:#8b95a5,color:#1c2330,stroke-dasharray:4 3
 
 === features/approvals/approve/flow.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
