@@ -57,19 +57,28 @@ export const describeStage: Stage = {
       const progress = { request: String(n + 1), total: String(allowed.length), features: chunk.map((t) => t.feature.id).join(", ") };
       try {
         const waited = await limiter.acquire((seconds) => {
-          ctx.progress({ code: "llmWaiting", params: { seconds: String(seconds), perMinute: String(limits.requestsPerMinute) }, current: n, total: allowed.length });
+          ctx.progress({ code: "llmWaiting", params: { seconds: String(seconds), perMinute: String(limits.requestsPerMinute) }, current: n, total: allowed.length, since: Date.now() });
         });
         if (waited) ctx.log("detail", "llmWaited", { seconds: String(Math.round(waited / 1000)), perMinute: String(limits.requestsPerMinute) });
-        ctx.progress({ code: "llmRequest", params: progress, current: n + 1, total: allowed.length });
         const started = Date.now();
-        const text = await withRetry(() => ctx.backend.llmChat(describePrompt(lang), redact(JSON.stringify(slice))), ctx.sleep ?? sleep, (attempt, seconds) => {
+        ctx.progress({ code: "llmRequest", params: progress, current: n + 1, total: allowed.length, since: started, stream: "" });
+        // The answer streams in; the app shows it live, so the wait is visibly the model working.
+        let live = "";
+        const onDelta = (d: string) => {
+          live += d;
+          ctx.progress({ code: "llmRequest", params: progress, current: n + 1, total: allowed.length, since: started, stream: live });
+        };
+        const text = await withRetry(() => ctx.backend.llmChat(describePrompt(lang), redact(JSON.stringify(slice)), onDelta), ctx.sleep ?? sleep, (attempt, seconds) => {
           ctx.log("warn", "llmRetry", { attempt: String(attempt), seconds: String(seconds) });
         });
         const answer = parse(text);
         const before = Object.keys(result.features).length;
         for (const x of list(answer.features)) {
           const name = str(x.name);
-          if (name && ids.has(str(x.id))) result.features[str(x.id)] = { name, description: str(x.description) } satisfies FeatureDescription;
+          if (name && ids.has(str(x.id))) {
+            result.features[str(x.id)] = { name, description: str(x.description) } satisfies FeatureDescription;
+            ctx.log("detail", "llmNamed", { id: str(x.id), name });
+          }
         }
         for (const x of list(answer.components)) if (str(x.name) && components.has(str(x.id))) result.components[str(x.id)] = str(x.name);
         for (const x of list(answer.sinks)) if (str(x.name) && sinks.has(str(x.id))) result.sinks[str(x.id)] = str(x.name);

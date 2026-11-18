@@ -47,7 +47,8 @@ export interface Backend {
   loadCheckpoint(serviceId: string, runId: string): Promise<unknown | null>;
   appendRunLog(serviceId: string, runId: string, entries: LogEntry[]): Promise<void>;
   indexService(serviceId: string): Promise<number>;
-  llmChat(system: string, user: string): Promise<string>;
+  /** With `onDelta` the answer streams: each piece of text arrives as the LLM writes it. */
+  llmChat(system: string, user: string, onDelta?: (text: string) => void): Promise<string>;
 }
 
 export const api = {
@@ -96,7 +97,19 @@ export const api = {
   search: (query: string, serviceId?: string, limit?: number) => call<SearchHit[]>("search", { query, serviceId, limit }),
   mcpCommand: () => call<string>("mcp_command"),
 
-  llmChat: (system: string, user: string) => call<string>("llm_chat", { system, user }),
+  llmChat: async (system: string, user: string, onDelta?: (text: string) => void) => {
+    if (!onDelta) return call<string>("llm_chat", { system, user });
+    const requestId = `llm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const { listen } = await import("@tauri-apps/api/event");
+    const unlisten = await listen<{ requestId: string; delta: string }>("llm-delta", (e) => {
+      if (e.payload.requestId === requestId) onDelta(e.payload.delta);
+    });
+    try {
+      return await call<string>("llm_chat_stream", { requestId, system, user });
+    } finally {
+      unlisten();
+    }
+  },
 };
 
 export const reviewBackend: ReviewBackend = api;

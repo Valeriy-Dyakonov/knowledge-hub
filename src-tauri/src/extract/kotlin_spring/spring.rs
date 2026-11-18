@@ -220,7 +220,12 @@ impl<'a> Analysis<'a> {
                     method: String::new(),
                     reason: "PARSE_ERROR".into(),
                     detail: format!("line {}: `{}`", e.line, e.near),
-                    attributes: BTreeMap::from([("context".to_string(), e.context.clone()), ("pattern".to_string(), e.pattern.clone())]),
+                    attributes: BTreeMap::from([
+                        ("context".to_string(), e.context.clone()),
+                        ("pattern".to_string(), e.pattern.clone()),
+                        ("unparsed".to_string(), e.unparsed.clone()),
+                        ("first".to_string(), e.first.to_string()),
+                    ]),
                     evidence: ev,
                 });
             }

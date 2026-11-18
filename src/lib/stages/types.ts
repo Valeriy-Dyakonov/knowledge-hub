@@ -33,7 +33,16 @@ export interface RunState {
 }
 
 /** What a stage is doing right now; not saved, only shown ("Сейчас: …" with a progress bar). */
-export interface Activity { code: string; params?: Record<string, string>; current?: number; total?: number }
+export interface Activity {
+  code: string;
+  params?: Record<string, string>;
+  current?: number;
+  total?: number;
+  /** When the activity started (ms), for an elapsed-time counter. */
+  since?: number;
+  /** Live text of a streaming LLM answer. */
+  stream?: string;
+}
 
 /** Shared state of one analysis run, handed to every stage. */
 export interface RunContext {

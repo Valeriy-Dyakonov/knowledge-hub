@@ -7,9 +7,9 @@ import { analyse, scan } from "../testing/fixture";
 import { describeStage, parse, RateLimiter } from "./describe";
 import { discover } from "./discover";
 import { Tracer } from "./trace";
-import type { RunContext, RunState } from "./types";
+import type { Activity, RunContext, RunState } from "./types";
 
-function context(llm: (system: string, user: string) => Promise<string>, previous: KnowledgeModel | null = null) {
+function context(llm: (system: string, user: string, onDelta?: (d: string) => void) => Promise<string>, previous: KnowledgeModel | null = null) {
   const candidates = discover(scan.facts, scan.context, previous);
   const tracer = new Tracer(scan.facts, scan.context);
   const traced = candidates.map((c) => tracer.trace(c));
@@ -22,17 +22,18 @@ function context(llm: (system: string, user: string) => Promise<string>, previou
   const warnings: LogEntry[] = [];
   const requests: string[] = [];
   const slept: number[] = [];
+  const activities: Activity[] = [];
   const ctx = {
     options: { serviceId: "refunds", serviceName: "Refunds", repoPath: "/r", language: "ru", describe: true },
-    backend: { llmChat: (s: string, u: string) => { requests.push(u); return llm(s, u); } } as unknown as Backend,
+    backend: { llmChat: (s: string, u: string, d?: (x: string) => void) => { requests.push(u); return llm(s, u, d); } } as unknown as Backend,
     state, previous, versions: {}, warnings,
     log: () => {},
     warn: (code: string, params?: Record<string, string>) => warnings.push({ at: "", level: "warn", code, params }),
-    progress: () => {},
+    progress: (a: Activity | null) => { if (a) activities.push(a); },
     sleep: async (ms: number) => { slept.push(ms); },
     now: () => "",
   } as unknown as RunContext;
-  return { ctx, warnings, requests, slept };
+  return { ctx, warnings, requests, slept, activities };
 }
 
 /** Names every feature, component and sink it was asked about. */
@@ -111,6 +112,19 @@ describe("describe stage", () => {
     expect(slept).toContain(15_000);
     expect(warnings).toEqual([]);
     expect(Object.keys(ctx.state.descriptions!.features)).toHaveLength(7);
+  });
+
+  it("shows the streamed answer while it arrives", async () => {
+    const { ctx, activities } = context(async (s, u, onDelta) => {
+      const full = await echo(s, u);
+      for (let i = 0; i < full.length; i += 40) onDelta?.(full.slice(i, i + 40));
+      return full;
+    });
+    await describeStage.run(ctx);
+    const streamed = activities.filter((a) => a.code === "llmRequest" && a.stream);
+    expect(streamed.length).toBeGreaterThan(2);
+    expect(streamed[streamed.length - 1].stream).toContain("features");
+    expect(streamed[0].since).toBeTypeOf("number");
   });
 
   it("parses JSON wrapped in prose", () => {

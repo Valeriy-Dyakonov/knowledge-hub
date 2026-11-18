@@ -24,8 +24,12 @@ pub struct ParseError {
     pub near: String,
     /// Grammar nodes around the error, outermost first: "class_declaration › class_body".
     pub context: String,
-    /// The surrounding lines with every project name, literal and comment removed.
+    /// The surrounding lines with every project name, literal and comment removed; the error line is marked.
     pub pattern: String,
+    /// The text the grammar could not parse, anonymised (first lines).
+    pub unparsed: String,
+    /// The first error of the file: later ones are often only its consequences.
+    pub first: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -152,7 +156,34 @@ impl KtClass {
     }
 }
 
-pub fn parse(path: &str, source: &str) -> KtFile {
+/// Multi-dollar strings (`$$"…"`, Kotlin 2.1+) are not in the grammar: the extra `$` signs become spaces before
+/// parsing (same length, so positions and lines stay). Templates inside are then read as ordinary `$x` ones.
+fn sanitize(source: &str) -> String {
+    let b = source.as_bytes();
+    let mut out = b.to_vec();
+    let mut i = 0;
+    while i < b.len() {
+        if b[i] == b'$' {
+            let start = i;
+            while i < b.len() && b[i] == b'$' {
+                i += 1;
+            }
+            let prev_ident = start > 0 && (b[start - 1].is_ascii_alphanumeric() || b[start - 1] == b'_');
+            if i - start >= 2 && i < b.len() && b[i] == b'"' && !prev_ident {
+                for k in start..i {
+                    out[k] = b' ';
+                }
+            }
+        } else {
+            i += 1;
+        }
+    }
+    String::from_utf8(out).unwrap_or_else(|_| source.to_string())
+}
+
+pub fn parse(path: &str, original: &str) -> KtFile {
+    let sanitized = sanitize(original);
+    let source = sanitized.as_str();
     let mut parser = Parser::new();
     parser.set_language(&tree_sitter_kotlin_ng::LANGUAGE.into()).expect("kotlin grammar");
     let Some(tree) = parser.parse(source, None) else { return KtFile { path: path.into(), ..Default::default() } };
@@ -172,7 +203,11 @@ pub fn parse(path: &str, source: &str) -> KtFile {
         }
     }
     if root.has_error() {
-        collect_errors(root, source, &mut Vec::new(), &mut file.parse_errors);
+        // Reports show the original code (with `$$`), not the sanitized one.
+        collect_errors(root, original, &mut Vec::new(), &mut file.parse_errors);
+        if let Some(e) = file.parse_errors.first_mut() {
+            e.first = true;
+        }
     }
     let prefix = if file.package.is_empty() { String::new() } else { format!("{}.", file.package) };
     w.declarations(root, &prefix, &mut file);
@@ -186,11 +221,14 @@ fn collect_errors<'a>(n: Node<'a>, source: &str, path: &mut Vec<&'static str>, o
         let near = if text.chars().count() > 80 { text.chars().take(80).collect::<String>() + "…" } else { text.to_string() };
         let mut context: Vec<&str> = path.iter().rev().take(4).rev().copied().collect();
         context.push(if n.is_missing() { "MISSING" } else { "ERROR" });
+        let unparsed: String = source[n.byte_range()].lines().take(4).collect::<Vec<_>>().join("\n");
         out.push(ParseError {
             line: line(n),
             near: if n.is_missing() { format!("missing {}", n.kind()) } else { near },
             context: context.join(" › "),
             pattern: pattern(source, line(n), end_line(n)),
+            unparsed: if n.is_missing() { String::new() } else { super::anon::anonymise(&dedent(&unparsed)) },
+            first: false,
         });
         return;
     }
@@ -204,15 +242,27 @@ fn collect_errors<'a>(n: Node<'a>, source: &str, path: &mut Vec<&'static str>, o
     path.pop();
 }
 
-/// One line before the error to three after it (at most eight), dedented and anonymised.
+fn dedent(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let indent = lines.iter().skip(1).chain(lines.first()).filter(|l| !l.trim().is_empty()).map(|l| l.len() - l.trim_start().len()).min().unwrap_or(0);
+    lines.iter().map(|l| if l.len() >= indent && l.is_char_boundary(indent) { &l[indent..] } else { l.trim_start() }).collect::<Vec<_>>().join("\n")
+}
+
+pub const ERROR_MARK: &str = "// <-- parse error";
+
+/// Three lines before the error to three after its end (at most twelve), dedented, anonymised, error line marked.
 fn pattern(source: &str, from: u32, to: u32) -> String {
     let all: Vec<&str> = source.lines().collect();
-    let start = from.saturating_sub(2) as usize;
-    let end = (to.min(from + 3) as usize).min(all.len()).min(start + 8);
-    let lines = &all[start.min(end)..end];
-    let indent = lines.iter().filter(|l| !l.trim().is_empty()).map(|l| l.len() - l.trim_start().len()).min().unwrap_or(0);
-    let text = lines.iter().map(|l| if l.len() >= indent { &l[indent..] } else { l.trim_start() }).collect::<Vec<_>>().join("\n");
-    super::anon::anonymise(&text)
+    let start = from.saturating_sub(4) as usize;
+    let end = ((to.max(from) + 3) as usize).min(all.len()).min(start + 12);
+    let window = all[start.min(end)..end].join("\n");
+    let text = super::anon::anonymise(&dedent(&window));
+    let mark = (from as usize).saturating_sub(1).saturating_sub(start);
+    text.lines()
+        .enumerate()
+        .map(|(i, l)| if i == mark { format!("{l}  {ERROR_MARK}") } else { l.to_string() })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 fn named(n: Node) -> Vec<Node> {
@@ -255,6 +305,8 @@ impl<'s> Walker<'s> {
         for n in named(parent) {
             match n.kind() {
                 "annotated_expression" => self.detached_annotations(n, &mut detached),
+                // Recovery: whatever the grammar could still parse inside an error is kept.
+                "ERROR" => self.declarations(n, prefix, file),
                 "class_declaration" | "object_declaration" | "companion_object" => {
                     let before = file.classes.len();
                     self.class(n, prefix, file);
@@ -328,6 +380,16 @@ impl<'s> Walker<'s> {
                 match m.kind() {
                     "function_declaration" => class.functions.push(self.function(m)),
                     "property_declaration" => class.properties.push(self.property(m)),
+                    // Recovery: members the grammar still recognised inside a broken part of the body.
+                    "ERROR" => {
+                        for x in named(m) {
+                            match x.kind() {
+                                "function_declaration" => class.functions.push(self.function(x)),
+                                "property_declaration" => class.properties.push(self.property(x)),
+                                _ => {}
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -665,6 +727,17 @@ object Topics { const val X = "x.topic" }
         assert_eq!(e.line, 1);
         assert!(e.near.contains("companion object"), "{e:?}");
         assert!(e.context.ends_with("ERROR"), "{e:?}");
-        assert_eq!(e.pattern, "class A1 { companion object { val A2 = 0 } }");
+        assert_eq!(e.pattern, "class A1 { companion object { val A2 = 0 } }  // <-- parse error");
+        assert!(e.first);
+    }
+
+    #[test]
+    fn parses_multi_dollar_strings() {
+        let src = "@Service\nclass Json {\n    val body = $$\"\"\"{\"id\": \"$$id\"}\"\"\"\n    fun send() {}\n}\n";
+        let f = parse("J.kt", src);
+        assert!(f.parse_errors.is_empty(), "{:?}", f.parse_errors);
+        let c = f.classes.iter().find(|c| c.name == "Json").unwrap();
+        assert_eq!(c.functions[0].name, "send");
+        assert_eq!(c.annotations[0].name, "Service");
     }
 }

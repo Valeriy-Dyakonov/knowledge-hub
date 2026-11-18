@@ -58,7 +58,8 @@ pub fn run() {
             search::index_service,
             search::search,
             search::mcp_command,
-            llm_cmd::llm_chat
+            llm_cmd::llm_chat,
+            llm_cmd::llm_chat_stream
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

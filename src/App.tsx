@@ -7,6 +7,7 @@ import Review from "./components/review/Review";
 import RunScreen from "./components/run/RunScreen";
 import Settings from "./components/settings/Settings";
 import TitleBar from "./components/TitleBar";
+import { useRunning } from "./components/run/runStore";
 import { useLocale, useT } from "./i18n";
 import { defaultSettings, reviewerOf, type GitUser, type RepoEntry, type Settings as S } from "./types";
 
@@ -57,6 +58,7 @@ export default function App() {
   };
 
   const repo: RepoEntry | undefined = settings.repos.find((r) => r.path === selected);
+  const running = useRunning();
   if (!ready) return null;
 
   return (
@@ -79,7 +81,10 @@ export default function App() {
           <nav className="sidenav">
             {repo && <div className="sn-repo" title={repo.path}>{repo.name}</div>}
             {TABS.map((id) => (
-              <button key={id} className={tab === id ? "on" : ""} onClick={() => setTab(id)}>{t.shell.nav[id]}</button>
+              <button key={id} className={tab === id ? "on" : ""} onClick={() => setTab(id)}>
+                {t.shell.nav[id]}
+                {id === "run" && repo && running.includes(repo.serviceId) && <span className="spin dark nav-spin" title={t.run.running} />}
+              </button>
             ))}
           </nav>
           <div className="scroll">
