@@ -8,6 +8,9 @@ import org.springframework.stereotype.Component
 class CacheWarmer(private val repository: RefundRepository) {
     private val warmed = mutableMapOf<String, Boolean>()
 
+    // Raw string whose text ends with quotes: Kotlin closes it at the last three.
+    private val emptyStatus = """"status": """""
+
     @Async
     fun warmUp() {
         repository.findAllByStatus("NEW")

@@ -5,7 +5,7 @@ CALL com.example.refunds.jobs.ReconciliationJob.reconcile -> com.example.refunds
 CALL com.example.refunds.messaging.PaymentEventsConsumer.audit -> com.example.refunds.messaging.PaymentEventsConsumer.table @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:21-21
 CALL com.example.refunds.messaging.PaymentEventsConsumer.onPaymentCompleted -> com.example.refunds.messaging.PaymentEventsConsumer.audit @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:17-17
 CALL com.example.refunds.messaging.PaymentEventsConsumer.onPaymentCompleted -> com.example.refunds.service.RefundService.markPaid @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:16-16
-CALL com.example.refunds.notify.CacheWarmer.warmUp -> com.example.refunds.persistence.RefundRepository.findAllByStatus @src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:13-13
+CALL com.example.refunds.notify.CacheWarmer.warmUp -> com.example.refunds.persistence.RefundRepository.findAllByStatus @src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:16-16
 CALL com.example.refunds.service.RefundService.create -> com.example.refunds.client.PaymentsClient.reserve @src/main/kotlin/com/example/refunds/service/RefundService.kt:24-24
 CALL com.example.refunds.service.RefundService.create -> com.example.refunds.notify.NotificationService.notifyCustomer @src/main/kotlin/com/example/refunds/service/RefundService.kt:26-26
 CALL com.example.refunds.service.RefundService.create -> com.example.refunds.persistence.RefundRepository.save @src/main/kotlin/com/example/refunds/service/RefundService.kt:23-23
@@ -47,7 +47,7 @@ SINK com.example.refunds.persistence.RefundRepository.findById READ DB_TABLE:ref
 SINK com.example.refunds.persistence.RefundRepository.save WRITE DB_TABLE:refunds operation=save @src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:6-6
 SINK com.example.refunds.service.AutoApprovalService.approve PUBLISH TOPIC:refunds.approved operation=send @src/main/kotlin/com/example/refunds/service/ApprovalService.kt:23-23
 SINK com.example.refunds.service.ManualApprovalService.approve WRITE DB_TABLE:refunds operation=update @src/main/kotlin/com/example/refunds/service/ApprovalService.kt:16-16
-TRIGGER ASYNC com.example.refunds.notify.CacheWarmer.warmUp @src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:11-12
+TRIGGER ASYNC com.example.refunds.notify.CacheWarmer.warmUp @src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:14-15
 TRIGGER ASYNC com.example.refunds.notify.NotificationService.notifyCustomer @src/main/kotlin/com/example/refunds/notify/NotificationService.kt:10-11
 TRIGGER EVENT com.example.refunds.events.RefundEventsListener.onCreated eventType=com.example.refunds.domain.RefundCreated @src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt:14-15
 TRIGGER HTTP com.example.refunds.api.HealthController.ping httpMethod=GET path=/internal/ping @src/main/kotlin/com/example/refunds/api/HealthController.kt:8-9

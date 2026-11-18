@@ -167,7 +167,8 @@ impl KtClass {
 
 /// Rewrites what the grammar does not know into what it does, keeping every byte position (so lines and columns
 /// stay): the extra `$` of multi-dollar strings (`$$"…"`, Kotlin 2.1+) become spaces, and so does a trailing comma
-/// before `]` (`map[\n key,\n]`, allowed by Kotlin, unknown to the grammar). Strings and comments are left alone.
+/// before `]` (`map[\n key,\n]`, allowed by Kotlin, unknown to the grammar), and so do quotes ending the text of a
+/// raw string (`"""…"""""`). Otherwise strings and comments are left alone.
 pub(super) fn sanitize(source: &str) -> String {
     let b = source.as_bytes();
     let mut out = b.to_vec();
@@ -181,10 +182,13 @@ pub(super) fn sanitize(source: &str) -> String {
         if let Some(&(raw, dollars)) = strings.last().filter(|_| templates.len() < strings.len()) {
             // Inside string text.
             if raw && b[i..].starts_with(b"\"\"\"") {
-                i += 3;
-                while i < b.len() && b[i] == b'"' {
-                    i += 1;
+                // In Kotlin the last three quotes of a run close the string and the ones before are text
+                // (`"""{"k": ""}"""""`); the grammar closes at the first three. The text quotes become spaces.
+                let run = b[i..].iter().take_while(|&&c| c == b'"').count();
+                for k in i..i + run - 3 {
+                    out[k] = b' ';
                 }
+                i += run;
                 strings.pop();
                 continue;
             }
@@ -907,6 +911,16 @@ object Topics { const val X = "x.topic" }
         assert!(e.context.ends_with("ERROR"), "{e:?}");
         assert_eq!(e.pattern, "class A1 { companion object { val A2 = 0 } }  // <-- parse error");
         assert!(e.first);
+    }
+
+    #[test]
+    fn parses_raw_strings_ending_with_quotes() {
+        // JSON with an empty value at the end: `"k": ""` followed by the closing `"""`.
+        let src = "class A {\n    fun f(c: C) = listOf(\n        { r: R -> r.copy(body = \"\"\"\"inn\": \"\"\"\"\") },\n        { r: R -> r.copy(body = \"\"\"\"inn\": \"x\"\"\"\") },\n    )\n\n    fun g() = 1\n}\n";
+        let f = parse("A.kt", src);
+        assert!(f.parse_errors.is_empty(), "{:?}", f.parse_errors.first().map(|e| &e.pattern));
+        assert_eq!(f.classes[0].functions.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), ["f", "g"]);
+        assert_eq!(sanitize(src).len(), src.len());
     }
 
     #[test]
