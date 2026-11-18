@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Backend } from "../api";
 import type { KnowledgeModel, LogEntry, RunOptions, RunRecord } from "../types";
 import { HubError } from "./errors";
-import { resumeRun, runAnalysis } from "./pipeline";
+import { describeRun, resumeRun, runAnalysis } from "./pipeline";
 import type { Stage } from "./stages";
 
 function fakeBackend() {
@@ -81,5 +81,23 @@ describe("runAnalysis", () => {
     expect(resumed.status).toBe("COMPLETED");
     expect(resumed.completedStages).toEqual(["a", "b"]);
     expect(seen[1]).toEqual([]); // state of stage "a" came from the checkpoint
+  });
+
+  it("describes the result of a finished static run without scanning again", async () => {
+    const f = fakeBackend();
+    const ran: string[] = [];
+    const stages: Stage[] = ["scan", "discover", "trace", "describe", "assemble"].map((id) =>
+      stage(id, async (ctx) => {
+        ran.push(id);
+        if (id === "trace") ctx.state.traced = [];
+      }));
+    const base = await runAnalysis({ ...options, mode: "static" }, { backend: f.backend, stages });
+    ran.length = 0;
+    const llm = await describeRun(base, { language: "ru" }, { backend: f.backend, stages });
+    expect(ran).toEqual(["describe", "assemble"]);
+    expect(llm).toMatchObject({ status: "COMPLETED", basedOn: base.id, commit: base.commit });
+    expect(llm.options).toMatchObject({ mode: "llm", describe: true });
+    expect(f.logs.some((l) => l.code === "runBasedOn" && l.params?.basedOn === base.id)).toBe(true);
+    await expect(describeRun({ ...base, status: "FAILED" }, { language: "ru" }, { backend: f.backend, stages })).rejects.toThrow("baseRunNotCompleted");
   });
 });

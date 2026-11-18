@@ -310,7 +310,10 @@ export type RunStatus = "RUNNING" | "COMPLETED" | "FAILED";
 
 export interface LlmLimits { requestsPerMinute: number; maxRequests: number }
 
-export interface RunOptions { serviceId: ServiceId; serviceName: string; repoPath: string; language: string; describe: boolean; llm?: LlmLimits }
+/** static: code and configuration only; llm: business names on top of a finished static run; full: both in one run. */
+export type RunMode = "static" | "llm" | "full";
+
+export interface RunOptions { serviceId: ServiceId; serviceName: string; repoPath: string; language: string; describe: boolean; llm?: LlmLimits; mode?: RunMode }
 
 export interface RunRecord {
   id: string;
@@ -323,7 +326,12 @@ export interface RunRecord {
   startedAt: string;
   finishedAt?: string;
   error?: { code: string; params?: Record<string, unknown> };
+  /** For an LLM run: the static run whose result it describes. */
+  basedOn?: string;
 }
+
+/** Mode of a run, also for runs saved before modes existed. */
+export const runMode = (r: RunRecord): RunMode => r.options.mode ?? (r.options.describe ? "full" : "static");
 
 // ---- Review (docs/04-review.md) ----
 

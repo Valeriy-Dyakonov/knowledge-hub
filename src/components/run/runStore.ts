@@ -42,12 +42,6 @@ export function useRunning(): string[] {
 }
 const runningKey = () => [...views.entries()].filter(([, v]) => v.busy).map(([k]) => k).join("|");
 
-/** Shows a finished run (its saved log) when nothing is running. */
-export function showRun(serviceId: string, run: RunRecord, log: LogEntry[]) {
-  if (views.get(serviceId)?.busy) return;
-  update(serviceId, { current: run, log, error: "", activity: null, stream: "" });
-}
-
 /** Runs an analysis (new or resumed) for a service; a second start while one runs is ignored. */
 export async function startRun(serviceId: string, action: (h: RunHandlers) => Promise<RunRecord>, onDone?: () => void) {
   if (views.get(serviceId)?.busy) return;

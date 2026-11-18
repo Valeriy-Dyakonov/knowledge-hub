@@ -42,6 +42,36 @@ export async function runAnalysis(options: RunOptions, deps: PipelineDeps, h: Ru
   return execute(run, {}, deps, h);
 }
 
+/** Stages an LLM run takes from its static run: their results come from that run's checkpoint. */
+export const STATIC_STAGES = ["scan", "discover", "trace"];
+
+/**
+ * An LLM run: business names and descriptions for the result of a finished static run, then the model, views and
+ * index are rebuilt. The code is not scanned again, so the run describes exactly what that static run found.
+ */
+export async function describeRun(base: RunRecord, options: Pick<RunOptions, "language" | "llm">, deps: PipelineDeps, h: RunHandlers = {}): Promise<RunRecord> {
+  if (base.status !== "COMPLETED") throw new HubError("baseRunNotCompleted", { runId: base.id });
+  const saved = (await deps.backend.loadCheckpoint(base.options.serviceId, base.id)) as RunState | null;
+  if (!saved?.traced) throw new HubError("baseRunNoResult", { runId: base.id });
+  const state: RunState = { scan: saved.scan, candidates: saved.candidates, traced: saved.traced, catalogComponents: saved.catalogComponents, catalogSinks: saved.catalogSinks };
+  const now = deps.now ?? nowIso;
+  const startedAt = now();
+  const run: RunRecord = {
+    id: newRunId(startedAt),
+    options: { ...base.options, ...options, describe: true, mode: "llm" },
+    commit: base.commit,
+    branch: base.branch,
+    status: "RUNNING",
+    completedStages: STATIC_STAGES.filter((s) => base.completedStages.includes(s)),
+    versions: Object.fromEntries(Object.entries(base.versions).filter(([k]) => !k.startsWith("prompt."))),
+    startedAt,
+    basedOn: base.id,
+  };
+  await deps.backend.saveRun(run);
+  await deps.backend.saveCheckpoint(run.options.serviceId, run.id, state);
+  return execute(run, state, deps, h);
+}
+
 /** Continues a failed run from its first unfinished stage, using the saved checkpoint. */
 export async function resumeRun(run: RunRecord, deps: PipelineDeps, h: RunHandlers = {}): Promise<RunRecord> {
   if (run.status === "COMPLETED") throw new HubError("runAlreadyCompleted", { runId: run.id });
@@ -95,7 +125,8 @@ async function execute(initial: RunRecord, state: RunState, deps: PipelineDeps, 
     now,
   };
 
-  log("info", "runStarted", { runId: run.id, commit: run.commit, resumedAfter: run.completedStages.join(", ") });
+  if (run.basedOn && run.completedStages.length === STATIC_STAGES.length) log("info", "runBasedOn", { runId: run.id, basedOn: run.basedOn, commit: run.commit });
+  else log("info", "runStarted", { runId: run.id, commit: run.commit, resumedAfter: run.completedStages.join(", ") });
   for (const s of stages) {
     if (run.completedStages.includes(s.id)) continue;
     stage = s.id;

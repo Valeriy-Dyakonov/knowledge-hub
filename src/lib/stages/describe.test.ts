@@ -20,6 +20,7 @@ function context(llm: (system: string, user: string, onDelta?: (d: string) => vo
     catalogSinks: [...new Map(traced.flatMap((t) => t.sinks).map((x) => [x.id, x])).values()],
   };
   const warnings: LogEntry[] = [];
+  const logs: LogEntry[] = [];
   const requests: string[] = [];
   const slept: number[] = [];
   const activities: Activity[] = [];
@@ -27,13 +28,13 @@ function context(llm: (system: string, user: string, onDelta?: (d: string) => vo
     options: { serviceId: "refunds", serviceName: "Refunds", repoPath: "/r", language: "ru", describe: true },
     backend: { llmChat: (s: string, u: string, d?: (x: string) => void) => { requests.push(u); return llm(s, u, d); } } as unknown as Backend,
     state, previous, versions: {}, warnings,
-    log: () => {},
+    log: (level: string, code: string, params?: Record<string, string>) => logs.push({ at: "", level, code, params } as LogEntry),
     warn: (code: string, params?: Record<string, string>) => warnings.push({ at: "", level: "warn", code, params }),
     progress: (a: Activity | null) => { if (a) activities.push(a); },
     sleep: async (ms: number) => { slept.push(ms); },
     now: () => "",
   } as unknown as RunContext;
-  return { ctx, warnings, requests, slept, activities };
+  return { ctx, warnings, logs, requests, slept, activities };
 }
 
 /** Names every feature, component and sink it was asked about. */
@@ -130,5 +131,23 @@ describe("describe stage", () => {
   it("parses JSON wrapped in prose", () => {
     expect(parse('Here: {"a": 1} done')).toEqual({ a: 1 });
     expect(() => parse("{oops")).toThrow();
+  });
+
+  it("keeps an answer it could not understand in the journal", async () => {
+    const { ctx, logs } = context(async () => "Извините, я не могу помочь с этим.");
+    await describeStage.run(ctx);
+    const unclear = logs.find((l) => l.code === "llmUnclearAnswer")!;
+    expect(unclear.level).toBe("warn");
+    expect(unclear.params).toMatchObject({ reason: "noJson", text: "Извините, я не могу помочь с этим." });
+    expect(logs.some((l) => l.code === "llmRequestText" && l.params?.text?.includes("refunds/create-refund"))).toBe(true);
+  });
+
+  it("reports features the answer left without a name", async () => {
+    const { ctx, logs } = context(async () => JSON.stringify({ features: [{ id: "refunds/create-refund", name: "Создание" }, { id: "made-up", name: "X" }] }));
+    await describeStage.run(ctx);
+    const partial = logs.find((l) => l.code === "llmIncomplete")!;
+    expect(partial.params?.unknown).toBe("made-up");
+    expect(partial.params?.unnamed).toContain("approvals/approve");
+    expect(partial.params?.text).toContain("made-up");
   });
 });

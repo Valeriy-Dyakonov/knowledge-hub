@@ -17,7 +17,7 @@ const reviewed = (c: Claim, lang: string) => c.kind === "DESCRIBES" && c.payload
 export const describeStage: Stage = {
   id: "describe",
   required: false,
-  skipReason: (ctx) => (ctx.options.describe ? null : "disabledByOption"),
+  skipReason: (ctx) => (ctx.options.describe ? null : ctx.options.mode === "static" ? "staticRun" : "disabledByOption"),
   async run(ctx) {
     ctx.versions["prompt.describe"] = PROMPT_VERSION;
     const lang = ctx.options.language;
@@ -55,6 +55,10 @@ export const describeStage: Stage = {
         sinks: usedSinks.map((id) => ({ id, name: sinks.get(id)!.technicalName, kind: sinks.get(id)!.kind })),
       };
       const progress = { request: String(n + 1), total: String(allowed.length), features: chunk.map((t) => t.feature.id).join(", ") };
+      const request = redact(JSON.stringify(slice));
+      // What went out and what came back stay in the journal: an odd answer can be understood afterwards.
+      ctx.log("detail", "llmRequestText", { request: progress.request, total: progress.total, text: clip(JSON.stringify(slice, null, 2)) });
+      let text = "";
       try {
         const waited = await limiter.acquire((seconds) => {
           ctx.progress({ code: "llmWaiting", params: { seconds: String(seconds), perMinute: String(limits.requestsPerMinute) }, current: n, total: allowed.length, since: Date.now() });
@@ -68,17 +72,24 @@ export const describeStage: Stage = {
           live += d;
           ctx.progress({ code: "llmRequest", params: progress, current: n + 1, total: allowed.length, since: started, stream: live });
         };
-        const text = await withRetry(() => ctx.backend.llmChat(describePrompt(lang), redact(JSON.stringify(slice)), onDelta), ctx.sleep ?? sleep, (attempt, seconds) => {
+        text = await withRetry(() => ctx.backend.llmChat(describePrompt(lang), request, onDelta), ctx.sleep ?? sleep, (attempt, seconds) => {
           ctx.log("warn", "llmRetry", { attempt: String(attempt), seconds: String(seconds) });
         });
         const answer = parse(text);
         const before = Object.keys(result.features).length;
+        const unknown: string[] = [];
         for (const x of list(answer.features)) {
           const name = str(x.name);
           if (name && ids.has(str(x.id))) {
             result.features[str(x.id)] = { name, description: str(x.description) } satisfies FeatureDescription;
             ctx.log("detail", "llmNamed", { id: str(x.id), name });
-          }
+          } else unknown.push(str(x.id) || "?");
+        }
+        const unnamed = chunk.map((t) => t.feature.id).filter((id) => !result.features[id]);
+        if (unnamed.length || unknown.length) {
+          ctx.log("warn", "llmIncomplete", { ...progress, unnamed: unnamed.join(", "), unknown: unknown.join(", "), text: clip(text) });
+        } else {
+          ctx.log("detail", "llmAnswerText", { request: progress.request, total: progress.total, text: clip(text) });
         }
         for (const x of list(answer.components)) if (str(x.name) && components.has(str(x.id))) result.components[str(x.id)] = str(x.name);
         for (const x of list(answer.sinks)) if (str(x.name) && sinks.has(str(x.id))) result.sinks[str(x.id)] = str(x.name);
@@ -87,6 +98,7 @@ export const describeStage: Stage = {
         failed++;
         const { code, params } = errorInfo(e);
         ctx.warn(code, params);
+        if (text) ctx.log("warn", "llmUnclearAnswer", { request: progress.request, total: progress.total, reason: String(params.reason ?? code), text: clip(text) });
         // The LLM is not configured or unreachable: no point in asking again for every chunk.
         if (code === "llmNotConfigured" || code === "service") break;
       }
@@ -99,6 +111,10 @@ export const describeStage: Stage = {
 };
 
 export const DEFAULT_LIMITS = { requestsPerMinute: 6, maxRequests: 20 };
+
+/** Long texts in the journal are cut: the start is what explains an odd answer. */
+const CLIP = 20_000;
+const clip = (s: string) => (s.length > CLIP ? `${s.slice(0, CLIP)}\n… (+${s.length - CLIP})` : s);
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 

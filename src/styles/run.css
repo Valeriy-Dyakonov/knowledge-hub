@@ -34,3 +34,16 @@
 .live pre { margin: 4px 0 0; max-height: 140px; overflow: auto; font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; word-break: break-word; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 8px; }
 .caret-blink { animation: blink 1s steps(1) infinite; color: var(--accent); }
 @keyframes blink { 50% { opacity: 0; } }
+
+/* runs: mode tag, result stats, LLM texts in the journal */
+.mode-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: var(--r-pill); border: 1px solid var(--line); color: var(--muted); vertical-align: middle; }
+.mode-tag.llm { color: var(--accent); border-color: var(--accent); }
+.mode-tag.full { color: var(--good); border-color: var(--good); }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.stat { display: flex; flex-direction: column; min-width: 96px; padding: 8px 12px; border-radius: var(--r-md); background: var(--bg); }
+.stat b { font-size: 20px; }
+.stat span { font-size: 12px; color: var(--muted); }
+.stat.warn b { color: var(--warn); }
+.names li + li { margin-top: 6px; }
+.rl-more summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+.rl-more pre { max-height: 320px; overflow: auto; margin: 4px 0; padding: 8px; background: var(--bg); border-radius: var(--r); font-size: 12px; white-space: pre-wrap; color: var(--text); }
