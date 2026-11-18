@@ -1,161 +1,110 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { api } from "../../api";
-import { LOCALES, setLocale, useLocale, useT, type Locale } from "../../i18n";
-import { setTheme, THEMES, themeText, useTheme, type ThemeId } from "../../theme";
-import type { Settings as S } from "../../types";
-import { Button, Card, Field, InfoTip, Segmented } from "../ui";
+import { useT } from "../../i18n";
+import { readTheme, themeText, useTheme } from "../../theme";
+import { reviewerOf, type GitUser, type Settings as S } from "../../types";
+import { Button } from "../ui";
+import { AppearanceSection, KnowledgeSection, LLM_SECRET, LlmSection, McpSection, ReviewSection, type SectionProps } from "./sections";
 
-export const LLM_SECRET = "llm_key";
+type SectionId = "knowledge" | "llm" | "review" | "mcp" | "appearance";
+interface SectionStatus { ok: boolean; sub: string; required?: boolean }
 
-interface SectionProps { form: S; set: (patch: Partial<S>) => void }
+interface Section {
+  id: SectionId;
+  status: (p: SectionProps) => SectionStatus;
+  Component: ComponentType<SectionProps>;
+}
 
-/** Settings sections in display order; a new section is a component plus an entry here. */
-const SECTIONS: { id: "knowledge" | "llm" | "review" | "mcp" | "appearance"; Body: (p: SectionProps) => ReactNode }[] = [
-  { id: "knowledge", Body: KnowledgeSection },
-  { id: "llm", Body: LlmSection },
-  { id: "review", Body: ReviewSection },
-  { id: "mcp", Body: McpSection },
-  { id: "appearance", Body: AppearanceSection },
-];
+/** Side menu and content of the settings page, in display order; a new section is a component plus an entry here. */
+function sections(t: ReturnType<typeof useT>["settings"]): Section[] {
+  return [
+    { id: "knowledge", status: (p) => ({ ok: true, sub: p.form.knowledgeDir || p.knowledgeDir }), Component: KnowledgeSection },
+    {
+      id: "llm",
+      status: (p) => {
+        const ok = !!p.form.llmBaseUrl.trim() && !!p.form.llmModel.trim();
+        return { ok, sub: ok ? p.form.llmModel : `${t.status.optional} · ${t.status.llmOff}` };
+      },
+      Component: LlmSection,
+    },
+    {
+      id: "review",
+      status: (p) => {
+        const name = reviewerOf(p.form, p.git);
+        return { ok: !!name, required: !name, sub: name ? t.status.reviewer(name, t.policies[p.form.reviewPolicy] ?? p.form.reviewPolicy) : t.status.noReviewer };
+      },
+      Component: ReviewSection,
+    },
+    { id: "mcp", status: () => ({ ok: true, sub: t.status.mcp }), Component: McpSection },
+    { id: "appearance", status: () => ({ ok: true, sub: themeText(readTheme()).label }), Component: AppearanceSection },
+  ];
+}
 
-export default function Settings(props: { settings: S; onSave: (s: S) => Promise<void> }) {
-  const t = useT();
+export default function Settings(props: { settings: S; git: GitUser; onSave: (s: S) => Promise<void> }) {
+  const { settings: t, common } = useT();
+  useTheme(); // the appearance status follows the theme
   const [form, setForm] = useState<S>(props.settings);
+  const [active, setActive] = useState<SectionId>("knowledge");
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
-  useEffect(() => setForm(props.settings), [props.settings]);
+  const [knowledgeDir, setKnowledgeDir] = useState("");
+  const [keyStored, setKeyStored] = useState(false);
 
+  const refreshKey = () => api.secretsStatus().then((s) => setKeyStored(!!s[LLM_SECRET])).catch(() => {});
+  useEffect(() => { setForm(props.settings); }, [props.settings]);
+  useEffect(() => {
+    api.knowledgeDir().then(setKnowledgeDir).catch(() => {});
+    refreshKey();
+  }, []);
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(props.settings);
   const save = async () => {
     try {
       await props.onSave(form);
-      setStatus({ ok: true, text: t.common.saved });
+      setStatus({ ok: true, text: common.saved });
+      api.knowledgeDir().then(setKnowledgeDir).catch(() => {});
     } catch (e) {
       setStatus({ ok: false, text: String(e) });
     }
   };
-
-  return (
-    <>
-      {SECTIONS.map(({ id, Body }) => (
-        <Card key={id}>
-          <h3>{t.settings.sections[id]}</h3>
-          <Body form={form} set={(patch) => { setForm((f) => ({ ...f, ...patch })); setStatus(null); }} />
-        </Card>
-      ))}
-      <div className="row">
-        <Button variant="primary" onClick={save}>{t.common.save}</Button>
-        {status && <span className={`status ${status.ok ? "ok" : "err"}`}>{status.text}</span>}
-      </div>
-    </>
-  );
-}
-
-function KnowledgeSection({ form, set }: SectionProps) {
-  const t = useT().settings;
-  const [effective, setEffective] = useState("");
-  useEffect(() => { api.knowledgeDir().then(setEffective).catch(() => {}); }, []);
-  const browse = async () => {
-    const { open } = await import("@tauri-apps/plugin-dialog");
-    const picked = await open({ directory: true, title: t.knowledgeDir });
-    if (typeof picked === "string") set({ knowledgeDir: picked });
+  const sectionProps: SectionProps = {
+    form,
+    set: (patch) => { setForm((f) => ({ ...f, ...patch })); setStatus(null); },
+    git: props.git,
+    knowledgeDir,
+    keyStored,
+    onKeyChanged: refreshKey,
   };
-  return (
-    <Field label={t.knowledgeDir} tip={t.knowledgeDirTip} hint={form.knowledgeDir ? undefined : t.knowledgeDirDefault(effective)}>
-      <div className="row">
-        <input value={form.knowledgeDir} placeholder={effective} onChange={(e) => set({ knowledgeDir: e.target.value })} />
-        <Button onClick={browse}>{t.browse}</Button>
-      </div>
-    </Field>
-  );
-}
+  const list = sections(t);
 
-function LlmSection({ form, set }: SectionProps) {
-  const { settings: t, common } = useT();
-  const [stored, setStored] = useState(false);
-  const [key, setKey] = useState("");
-  const [error, setError] = useState("");
-  useEffect(() => { api.secretsStatus().then((s) => setStored(!!s[LLM_SECRET])).catch(() => {}); }, []);
-  const saveKey = async () => {
-    try {
-      await api.setSecret(LLM_SECRET, key);
-      setStored(!!key);
-      setKey("");
-      setError("");
-    } catch (e) {
-      setError(String(e));
-    }
-  };
   return (
-    <>
-      <Field label={t.llmUrl} hint={t.llmUrlHint}>
-        <input value={form.llmBaseUrl} onChange={(e) => set({ llmBaseUrl: e.target.value })} />
-      </Field>
-      <Field label={t.llmModel}>
-        <input value={form.llmModel} onChange={(e) => set({ llmModel: e.target.value })} />
-      </Field>
-      <Field label={t.llmKey} tip={t.llmKeyTip} hint={stored ? t.llmKeyStored : undefined}>
-        <div className="row">
-          <input type="password" value={key} placeholder={stored ? t.llmKeyPlaceholder : ""} onChange={(e) => setKey(e.target.value)} />
-          <Button onClick={saveKey}>{common.save}</Button>
+    <div className="settings-layout">
+      <nav className="settings-nav">
+        {list.map((sec) => {
+          const st = sec.status(sectionProps);
+          const mark = st.ok ? "ok" : st.required ? "req" : "off";
+          return (
+            <button key={sec.id} className={`sideitem ${active === sec.id ? "active" : ""}`} onClick={() => setActive(sec.id)}>
+              <span className={`mark ${mark}`}>{st.ok ? "✓" : st.required ? "!" : "○"}</span>
+              <span className="lbl">{t.nav[sec.id]}<small>{st.sub}</small></span>
+            </button>
+          );
+        })}
+        <p className="side-note">{t.readOnlyNote}</p>
+        <div className="side-note secure">
+          <svg viewBox="0 0 16 16"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></svg>
+          <span>{t.secure.before}<b>{t.secure.store}</b>{t.secure.after}</span>
         </div>
-      </Field>
-      {error && <p className="error">{error}</p>}
-    </>
-  );
-}
-
-function ReviewSection({ form, set }: SectionProps) {
-  const t = useT().settings;
-  return (
-    <>
-      <Field label={t.reviewer} tip={t.reviewerTip}>
-        <input value={form.reviewer} onChange={(e) => set({ reviewer: e.target.value })} />
-      </Field>
-      <Field label={t.ideUrl} tip={t.ideUrlTip}>
-        <input value={form.ideUrl} onChange={(e) => set({ ideUrl: e.target.value })} />
-      </Field>
-      <Field label={t.reviewPolicy} tip={t.policyTip}>
-        <Segmented
-          options={Object.entries(t.policies).map(([value, label]) => ({ value, label }))}
-          value={form.reviewPolicy}
-          onChange={(v) => set({ reviewPolicy: v })}
-        />
-      </Field>
-    </>
-  );
-}
-
-function McpSection(_: SectionProps) {
-  const t = useT().settings;
-  const [exe, setExe] = useState("");
-  const [copied, setCopied] = useState(false);
-  useEffect(() => { api.mcpCommand().then(setExe).catch(() => {}); }, []);
-  const config = JSON.stringify({ mcpServers: { "knowledge-hub": { command: exe, args: ["mcp"] } } }, null, 2);
-  const copy = async () => {
-    await navigator.clipboard.writeText(config);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-  return (
-    <>
-      <p className="muted">{t.mcpText} <InfoTip wide>{t.mcpTip}</InfoTip></p>
-      <pre className="mmd-src">{config}</pre>
-      <Button size="small" onClick={copy}>{copied ? t.copied : t.copy}</Button>
-    </>
-  );
-}
-
-function AppearanceSection(_: SectionProps) {
-  const t = useT().settings;
-  const locale = useLocale();
-  const theme = useTheme();
-  return (
-    <>
-      <Field label={t.language} tip={t.languageTip}>
-        <Segmented<Locale> options={LOCALES.map((l) => ({ value: l.id, label: l.label }))} value={locale} onChange={setLocale} />
-      </Field>
-      <Field label={t.theme}>
-        <Segmented<ThemeId> options={THEMES.map((x) => ({ value: x.id, label: themeText(x.id).label }))} value={theme} onChange={setTheme} />
-      </Field>
-    </>
+      </nav>
+      <div className="settings-main">
+        {list.map(({ id, Component }) => (
+          <div key={id} hidden={active !== id}><Component {...sectionProps} /></div>
+        ))}
+        <div className="savebar">
+          <Button variant="primary" onClick={save} disabled={!dirty}>{common.save}</Button>
+          {dirty && <span className="status">{t.unsaved}</span>}
+          {status && <span className={`status ${status.ok ? "ok" : "err"}`}>{status.text}</span>}
+        </div>
+      </div>
+    </div>
   );
 }

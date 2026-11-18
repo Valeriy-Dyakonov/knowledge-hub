@@ -338,10 +338,14 @@ export interface Settings {
   llmBaseUrl: string;
   llmModel: string;
   reviewPolicy: string;
+  /** Overrides the reviewer name; empty = `user.name` from the global git config. */
   reviewer: string;
-  /** Link that opens a file in the IDE; `{path}` and `{line}` are substituted. Empty = no button. */
-  ideUrl: string;
 }
+
+export interface GitUser { name?: string; email?: string }
+
+/** Who signs review decisions: the name from Settings, otherwise the git user. */
+export const reviewerOf = (s: Settings, git: GitUser): string => s.reviewer.trim() || git.name || git.email || "";
 
 export const defaultSettings: Settings = {
   knowledgeDir: "",
@@ -350,7 +354,6 @@ export const defaultSettings: Settings = {
   llmModel: "",
   reviewPolicy: "strict",
   reviewer: "",
-  ideUrl: "vscode://file/{path}:{line}",
 };
 
 export interface SearchHit { service: ServiceId; featureId: FeatureId; title: string; snippet: string; status: FeatureStatus; score: number }

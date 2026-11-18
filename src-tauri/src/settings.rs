@@ -31,9 +31,8 @@ pub struct Settings {
     pub llm_base_url: String,
     pub llm_model: String,
     pub review_policy: String,
+    /// Overrides the reviewer name; empty = `user.name` from the global git config.
     pub reviewer: String,
-    /// Link that opens a file in the IDE; `{path}` and `{line}` are substituted. Empty = no button.
-    pub ide_url: String,
 }
 
 impl Default for Settings {
@@ -45,7 +44,6 @@ impl Default for Settings {
             llm_model: String::new(),
             review_policy: "strict".into(),
             reviewer: String::new(),
-            ide_url: "vscode://file/{path}:{line}".into(),
         }
     }
 }

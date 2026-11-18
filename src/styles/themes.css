@@ -115,3 +115,34 @@
   --grad-from: #0040a8;
   --grad-to: #0040a8;
 }
+
+/* Code viewer colours (review evidence). Light themes share one palette, dark themes another. */
+:root, [data-theme="light"], [data-theme="sepia"], [data-theme="contrast"] {
+  --code-keyword: #7c3aed;
+  --code-string: #0a7d32;
+  --code-comment: #6b7686;
+  --code-number: #b45309;
+  --code-type: #1d4ed8;
+  --code-annotation: #a16207;
+  --code-property: #0e7490;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --code-keyword: #c4a5ff;
+    --code-string: #7ee2a8;
+    --code-comment: #8b95a5;
+    --code-number: #f5b36b;
+    --code-type: #8ab4ff;
+    --code-annotation: #e8c26a;
+    --code-property: #6fd3e6;
+  }
+}
+[data-theme="dark"], [data-theme="graphite"] {
+  --code-keyword: #c4a5ff;
+  --code-string: #7ee2a8;
+  --code-comment: #8b95a5;
+  --code-number: #f5b36b;
+  --code-type: #8ab4ff;
+  --code-annotation: #e8c26a;
+  --code-property: #6fd3e6;
+}

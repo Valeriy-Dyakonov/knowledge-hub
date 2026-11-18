@@ -37,7 +37,7 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
   - `render/` — `Renderer`s (`markdown.ts`, `mermaid.ts` with L1–L3), registry `RENDERERS`; `render.test.ts` runs under jsdom and checks every diagram with `mermaid.parse`.
   - `testing/fixture.ts` — the fixture service (Rust scan JSON) run through stages 2–5, shared by tests.
   - `prompt.ts` — LLM prompts per language.
-- `components/` — `ui/` (kit), one folder per screen: `repos/`, `run/`, `features/`, `diagrams/` (`Diagram.tsx` renders Mermaid lazily), `review/`, `settings/`.
+- `components/` — `ui/` (kit), `code/CodeView.tsx` (read-only CodeMirror viewer), one folder per screen: `repos/`, `run/`, `features/`, `diagrams/` (`Diagram.tsx` renders Mermaid lazily), `review/`, `settings/` (`Settings.tsx` side menu + registry, `sections.tsx`).
 - `styles/` — all CSS; colors only in `tokens.css`/`themes.css`.
 
 ### Backend `src-tauri/src/`

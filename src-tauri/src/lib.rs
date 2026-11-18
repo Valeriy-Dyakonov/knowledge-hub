@@ -25,13 +25,13 @@ pub fn run_mcp(args: &[String]) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             config::load_settings,
             config::save_settings,
             config::knowledge_dir,
             config::set_secret,
             config::secrets_status,
+            config::git_user,
             repo_cmd::inspect_repo,
             repo_cmd::scan_repo,
             repo_cmd::read_repo_file,

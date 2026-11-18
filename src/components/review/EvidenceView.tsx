@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../../api";
 import { useT } from "../../i18n";
 import type { Evidence } from "../../types";
+import { CodeView } from "../code/CodeView";
 import { Button } from "../ui";
 
-const CONTEXT = 3;
 const cache = new Map<string, Promise<string>>();
 
 function read(repo: string, path: string): Promise<string> {
@@ -18,11 +18,12 @@ function read(repo: string, path: string): Promise<string> {
   return p;
 }
 
-/** Visible evidence: the code fragment with its lines highlighted, the path, and a link into the IDE. */
-export function EvidenceView(props: { evidence: Evidence; repoPath: string; ideUrl: string }) {
+/** Visible evidence: the whole file in a read-only viewer, scrolled to the claimed lines, which are highlighted. */
+export function EvidenceView(props: { evidence: Evidence; repoPath: string }) {
   const t = useT().review;
   const { evidence: e } = props;
   const [text, setText] = useState<string | null | undefined>(undefined);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -30,35 +31,20 @@ export function EvidenceView(props: { evidence: Evidence; repoPath: string; ideU
     return () => { live = false; };
   }, [props.repoPath, e.path]);
 
-  const start = e.lines?.start ?? 1;
+  const start = e.lines?.start;
   const end = e.lines?.end ?? start;
-  const lines = text?.split(/\r?\n/) ?? [];
-  const from = Math.max(1, start - CONTEXT);
-  const to = Math.min(lines.length, end + CONTEXT);
-
-  const open = async () => {
-    const abs = `${props.repoPath.replace(/\\/g, "/").replace(/\/$/, "")}/${e.path}`;
-    const { openUrl } = await import("@tauri-apps/plugin-opener");
-    await openUrl(props.ideUrl.replace("{path}", abs).replace("{line}", String(start)));
-  };
 
   return (
     <div className="evidence">
       <div className="ev-head">
-        <code>{e.path}{e.lines ? `:${start}${end !== start ? `-${end}` : ""}` : ""}</code>
+        <code>{e.path}{start ? `:${start}${end !== start ? `-${end}` : ""}` : ""}</code>
         <span className="hint">@{e.commit.slice(0, 7)}</span>
         <span className="spacer" />
-        {props.ideUrl && <Button size="small" variant="ghost" onClick={open}>{t.openInIde}</Button>}
+        <span className="hint">{t.searchHint}</span>
+        {text && <Button size="small" variant="ghost" onClick={() => setExpanded(!expanded)}>{expanded ? t.collapse : t.expand}</Button>}
       </div>
-      {text === null && <p className="hint">{t.codeUnavailable}</p>}
-      {text && (
-        <pre className="code">
-          {lines.slice(from - 1, to).map((l, i) => {
-            const n = from + i;
-            return <div key={n} className={n >= start && n <= end ? "hl" : ""}><span className="ln">{n}</span>{l || " "}</div>;
-          })}
-        </pre>
-      )}
+      {text === null && <p className="hint ev-missing">{t.codeUnavailable}</p>}
+      {text && <CodeView text={text} path={e.path} lines={start ? { start, end: end ?? start } : undefined} height={expanded ? 620 : 260} />}
     </div>
   );
 }

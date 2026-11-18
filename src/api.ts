@@ -3,7 +3,7 @@ import { t } from "./i18n";
 import type { ErrorParams } from "./i18n/messages/ru/errors";
 import type { ReviewBackend } from "./lib/review/service";
 import type {
-  GeneratedFile, JournalEntry, KnowledgeModel, LogEntry, RepoInfo, ReviewAnswer, ReviewBatch, ReviewQuestion, RunRecord, ScanResult, SearchHit, Settings, StoredBatch,
+  GeneratedFile, JournalEntry, KnowledgeModel, LogEntry, RepoInfo, ReviewAnswer, ReviewBatch, ReviewQuestion, RunRecord, ScanResult, SearchHit, Settings, StoredBatch, GitUser,
 } from "./types";
 
 /** A backend failure worded in the UI language; `String(e)` gives just the message. */
@@ -56,6 +56,7 @@ export const api = {
   setSecret: (name: string, value: string) => call<void>("set_secret", { name, value }),
   secretsStatus: () => call<Record<string, boolean>>("secrets_status"),
   knowledgeDir: () => call<string>("knowledge_dir"),
+  gitUser: () => call<GitUser>("git_user"),
 
   inspectRepo: (path: string) => call<RepoInfo>("inspect_repo", { path }),
   scanRepo: (path: string) => call<ScanResult>("scan_repo", { path }),

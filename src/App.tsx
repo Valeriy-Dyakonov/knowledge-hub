@@ -8,7 +8,7 @@ import RunScreen from "./components/run/RunScreen";
 import Settings from "./components/settings/Settings";
 import TitleBar from "./components/TitleBar";
 import { useLocale, useT } from "./i18n";
-import { defaultSettings, type RepoEntry, type Settings as S } from "./types";
+import { defaultSettings, reviewerOf, type GitUser, type RepoEntry, type Settings as S } from "./types";
 
 type Tab = "repos" | "run" | "features" | "diagrams" | "review";
 const TABS: Tab[] = ["repos", "run", "features", "diagrams", "review"];
@@ -27,9 +27,11 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("repos");
   const [selected, setSelected] = useState<string | null>(readSelected);
+  const [git, setGit] = useState<GitUser>({});
 
   useEffect(() => {
     if (!inTauri) return;
+    api.gitUser().then(setGit).catch(() => {});
     api.loadSettings()
       .then((s) => {
         setSettings({ ...defaultSettings, ...s });
@@ -63,7 +65,7 @@ export default function App() {
               </button>
               <h2>{t.settings.title}</h2>
             </header>
-            {inTauri ? <Settings settings={settings} onSave={saveSettings} /> : <p className="muted">{t.common.desktopOnly}</p>}
+            {inTauri ? <Settings settings={settings} git={git} onSave={saveSettings} /> : <p className="muted">{t.common.desktopOnly}</p>}
           </div>
         </div>
       ) : (
@@ -82,7 +84,7 @@ export default function App() {
               {tab === "run" && repo && <RunScreen repo={repo} settings={settings} />}
               {tab === "features" && repo && <Features repo={repo} />}
               {tab === "diagrams" && repo && <Diagrams repo={repo} />}
-              {tab === "review" && repo && <Review repo={repo} settings={settings} />}
+              {tab === "review" && repo && <Review repo={repo} settings={settings} reviewer={reviewerOf(settings, git)} />}
             </main>
           </div>
         </div>

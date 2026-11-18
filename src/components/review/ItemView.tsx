@@ -27,7 +27,6 @@ export function ItemView(props: {
   model: KnowledgeModel;
   answer?: ReviewAnswer;
   repoPath: string;
-  ideUrl: string;
   onAnswer: (a: Omit<ReviewAnswer, "answeredAt" | "itemId">) => Promise<void>;
 }) {
   const t = useT().review;
@@ -73,7 +72,7 @@ export function ItemView(props: {
       {c.conflict && <p className="note warn">{t.conflict(conflictText)}</p>}
 
       {c.evidence.length === 0 && <p className="note warn">{t.noEvidence}</p>}
-      {c.evidence.map((e, i) => <EvidenceView key={i} evidence={e} repoPath={props.repoPath} ideUrl={props.ideUrl} />)}
+      {c.evidence.map((e, i) => <EvidenceView key={i} evidence={e} repoPath={props.repoPath} />)}
 
       {item.options ? (
         <div className="options">

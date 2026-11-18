@@ -8,9 +8,9 @@ import { SUMMARY_ITEM, type KnowledgeModel, type RepoEntry, type ReviewQuestion,
 import { Badge, Button, Card, Title } from "../ui";
 import { ItemView } from "./ItemView";
 
-export default function Review(props: { repo: RepoEntry; settings: Settings }) {
+export default function Review(props: { repo: RepoEntry; settings: Settings; reviewer: string }) {
   const { review: t, settings: st } = useT();
-  const { repo, settings } = props;
+  const { repo, settings, reviewer } = props;
   const [model, setModel] = useState<KnowledgeModel | null | undefined>(undefined);
   const [stored, setStored] = useState<StoredBatch | null>(null);
   const [index, setIndex] = useState(0);
@@ -19,16 +19,16 @@ export default function Review(props: { repo: RepoEntry; settings: Settings }) {
   const [error, setError] = useState("");
 
   const service = useMemo(
-    () => new ReviewService({ backend: reviewBackend, serviceId: repo.serviceId, policy: policyById(settings.reviewPolicy), reviewer: settings.reviewer.trim(), language: getLocale() }),
-    [repo.serviceId, settings.reviewPolicy, settings.reviewer],
+    () => new ReviewService({ backend: reviewBackend, serviceId: repo.serviceId, policy: policyById(settings.reviewPolicy), reviewer, language: getLocale() }),
+    [repo.serviceId, settings.reviewPolicy, reviewer],
   );
 
   const reload = useCallback(async () => {
     setModel(await api.loadModel(repo.serviceId).catch(() => null));
     setQuestions(await api.reviewQuestions(repo.serviceId).catch(() => []));
     const open = await api.openBatches(repo.serviceId).catch(() => []);
-    setStored(open.find((b) => b.batch.reviewer === settings.reviewer.trim()) ?? null);
-  }, [repo.serviceId, settings.reviewer]);
+    setStored(open.find((b) => b.batch.reviewer === reviewer) ?? null);
+  }, [repo.serviceId, reviewer]);
 
   useEffect(() => { reload(); setResult(null); setIndex(0); }, [reload]);
 
@@ -56,7 +56,7 @@ export default function Review(props: { repo: RepoEntry; settings: Settings }) {
     }
   });
 
-  if (!settings.reviewer.trim()) return <Card><Title>{t.title}</Title><p className="muted">{t.noReviewer}</p></Card>;
+  if (!reviewer) return <Card><Title>{t.title}</Title><p className="muted">{t.noReviewer}</p></Card>;
   if (model === undefined) return null;
   if (model === null) return <Card><Title>{t.title}</Title><p className="muted">{t.noModel}</p></Card>;
 
@@ -69,7 +69,7 @@ export default function Review(props: { repo: RepoEntry; settings: Settings }) {
       <Card>
         <div className="row wrap">
           <Title tip={t.tip}>{t.title}</Title>
-          <span className="hint">{t.policy(st.policies[settings.reviewPolicy] ?? settings.reviewPolicy)}</span>
+          <span className="hint">{t.reviewerIs(reviewer)} · {t.policy(st.policies[settings.reviewPolicy] ?? settings.reviewPolicy)}</span>
           <span className="spacer" />
           {!stored && pending.length > 0 && <Button variant="primary" onClick={take}>{t.take}</Button>}
         </div>
@@ -104,7 +104,6 @@ export default function Review(props: { repo: RepoEntry; settings: Settings }) {
               model={model}
               answer={answers.get(item.id)}
               repoPath={repo.path}
-              ideUrl={settings.ideUrl}
               onAnswer={(a) => run(async () => {
                 await service.answer(stored.batch.id, { ...a, itemId: item.id, answeredAt: new Date().toISOString() });
                 await refreshBatch(stored.batch.id);
