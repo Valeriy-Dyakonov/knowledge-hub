@@ -13,7 +13,7 @@ Harness получает знания по MCP и ничего не знает �
 | `list_features(service?)` | список фич: id, бизнес-название, одна строка, статус ревью |
 | `get_feature(id, depth)` | описание фичи; `depth`: `summary` / `flow` / `full` |
 | `get_flow(id)` | поток от триггера до стоков (шаги с evidence) |
-| `get_diagram(id\|level, format)` | диаграмма (Mermaid или SVG) |
+| `get_diagram(id\|level, format)` | диаграмма Mermaid: `level` = `context` (L1), `features` (L2, карта фич), `components` (технические слои) или `id` фичи (L3) |
 | `search(query, limit)` | поиск по знаниям (FTS, позже гибридный) |
 | `who_touches(sink)` | какие фичи пишут/читают таблицу, топик или внешний сервис |
 | `freshness(id?)` | статус ревью, коммит подтверждения, причины устаревания |

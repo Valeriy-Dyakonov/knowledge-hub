@@ -2,11 +2,28 @@ import type { diagrams as ru } from "../ru/diagrams";
 
 export const diagrams: typeof ru = {
   title: "Service diagrams",
-  context: "Context (L1)",
-  contextTip: "The whole service: who triggers it and what it reaches outside. For everyone, including non-technical readers.",
-  components: "Components (L2)",
-  componentsTip: "Main building blocks and the stores, queues and external APIs they use. Over 12 nodes they are grouped by kind.",
+  levels: { context: "Context", features: "Feature map", components: "Components" },
+  lead: {
+    context: "The whole service: who calls it and which systems it works with. Edges say which features do it.",
+    features: "Features by area and the systems each one works with. Topics show how features connect: one publishes, another consumes.",
+    components: "Technical view for developers: classes by layer — entry points, logic, data access — and what they reach.",
+  },
+  tips: {
+    context: "L1. For everyone, including non-technical readers. Feature names are business names when the LLM proposed them or a reviewer entered them; technical otherwise.",
+    features: "L2. Over 12 features they collapse into areas; many systems are grouped by kind.",
+    components: "Over 12 nodes, components collapse by kind (Controllers, Services…).",
+  },
   empty: "Diagrams appear after the first analysis.",
   renderError: (e) => `Could not draw the diagram: ${e}`,
   source: "Mermaid source",
+  legend: { trigger: "who calls", feature: "feature", component: "component", db: "database", queue: "topic / queue", external: "external service", inferred: "inferred, needs review" },
+  interactions: "Who it talks to, and why",
+  interactionsTip: "The same picture as the diagrams, as a table: every external party, what the service does with it and for which features.",
+  cols: { system: "System", how: "How", why: "For (features)" },
+  kinds: { CLIENTS: "API clients", SCHEDULE: "Schedule", EVENT: "Events", STARTUP: "Startup", DB_TABLE: "Table", TOPIC: "Topic", QUEUE: "Queue", EXTERNAL_HTTP: "External API", FILE: "File" },
+  incoming: { CLIENTS: "call the service HTTP API", TOPIC: "the service receives messages", QUEUE: "the service receives messages", SCHEDULE: "starts background jobs", EVENT: "the service reacts to events", STARTUP: "runs at startup" },
+  actions: { READ: "reads", WRITE: "writes", PUBLISH: "publishes", HTTP_CALL: "calls API", CALL: "calls", CONSUME: "consumes" },
+  areas: "What the service does",
+  areasTip: "Features by area. Descriptions appear after the Describe stage (LLM) and are checked in review.",
+  noNames: "No business names or descriptions yet: turn on \"Business names via LLM\" in the analysis or set them in review.",
 };

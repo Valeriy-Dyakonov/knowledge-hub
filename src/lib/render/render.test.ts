@@ -9,7 +9,7 @@ import { mergeModels } from "../model/merge";
 import { reject } from "../model/claims";
 import { analyse, scan } from "../testing/fixture";
 import { RENDERERS } from ".";
-import { componentsDiagram, contextDiagram, flowDiagram, MAX_NODES } from "./mermaid";
+import { componentsDiagram, contextDiagram, featureMapDiagram, flowDiagram, MAX_NODES } from "./mermaid";
 
 const descriptions = {
   language: "ru",
@@ -19,7 +19,7 @@ const descriptions = {
 };
 const model = mergeModels(null, analyse(scan, null, descriptions));
 const render = (m: KnowledgeModel, lang = "ru") => RENDERERS.flatMap((r) => r.render(m, { language: lang }));
-const nodeCount = (diagram: string) => diagram.split("\n").filter((l) => /^ {2}n\d+[[({/]/.test(l)).length;
+const nodeCount = (diagram: string) => diagram.split("\n").filter((l) => /^\s+n\d+[[({/]/.test(l)).length;
 
 describe("renderers", () => {
   it("match the golden output for the fixture service", () => {
@@ -37,7 +37,7 @@ describe("renderers", () => {
 
   it("produce diagrams that Mermaid parses", async () => {
     const diagrams = render(model).filter((f) => f.relativePath.endsWith(".mmd"));
-    expect(diagrams.length).toBe(2 + model.features.length);
+    expect(diagrams.length).toBe(3 + model.features.length);
     for (const d of diagrams) await expect(mermaid.parse(d.content), d.relativePath).resolves.toBeTruthy();
   });
 
@@ -78,7 +78,7 @@ describe("renderers", () => {
         ],
       })),
     };
-    for (const d of [contextDiagram(big, "ru"), componentsDiagram(big, "ru")]) {
+    for (const d of [contextDiagram(big, "ru"), featureMapDiagram(big, "ru"), componentsDiagram(big, "ru")]) {
       expect(nodeCount(d)).toBeLessThanOrEqual(MAX_NODES);
       await expect(mermaid.parse(d)).resolves.toBeTruthy();
     }

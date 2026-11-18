@@ -192,7 +192,9 @@ class Walk {
 
   edge(from: NodeRef, to: NodeRef, kind: EdgeKind, label: string, origin: Origin, confidence: Confidence, evidence?: Evidence, stepComponent?: string, stepAction?: string) {
     const id = edgeId(from.type, from.id, to.type, to.id, kind, label);
-    if (!this.edges.has(id)) this.edges.set(id, { id, from, to, kind, label, origin, confidence, evidence });
+    // The same call made twice (or reached twice) is one step of the flow, not two.
+    if (this.edges.has(id)) return;
+    this.edges.set(id, { id, from, to, kind, label, origin, confidence, evidence });
     if (stepComponent && stepAction) this.steps.push({ order: this.steps.length + 1, componentId: stepComponent, action: stepAction, edgeId: id });
     for (const n of [from, to]) if (n.type === "COMPONENT") this.componentIds.add(n.id);
   }

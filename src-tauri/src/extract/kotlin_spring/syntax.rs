@@ -12,8 +12,8 @@ pub struct KtFile {
     pub classes: Vec<KtClass>,
     /// `const val` values addressable as `NAME` and `Owner.NAME`.
     pub constants: BTreeMap<String, String>,
-    /// Lines where the grammar could not parse the code; declarations there may be missing.
-    pub parse_errors: Vec<u32>,
+    /// Where the grammar could not parse the code (line, start of the unparsed text); declarations there may be missing.
+    pub parse_errors: Vec<(u32, String)>,
 }
 
 #[derive(Debug, Clone)]
@@ -160,21 +160,25 @@ pub fn parse(path: &str, source: &str) -> KtFile {
         }
     }
     if root.has_error() {
-        collect_errors(root, &mut file.parse_errors);
+        collect_errors(root, source, &mut file.parse_errors);
     }
     let prefix = if file.package.is_empty() { String::new() } else { format!("{}.", file.package) };
     w.declarations(root, &prefix, &mut file);
     file
 }
 
-fn collect_errors(n: Node, out: &mut Vec<u32>) {
+fn collect_errors(n: Node, source: &str, out: &mut Vec<(u32, String)>) {
     if n.is_error() || n.is_missing() {
-        out.push(line(n));
+        // The first line of the unparsed text tells a developer where the grammar gave up.
+        let text = source[n.byte_range()].lines().find(|l| !l.trim().is_empty()).unwrap_or("").trim();
+        let near = if text.chars().count() > 80 { text.chars().take(80).collect::<String>() + "…" } else { text.to_string() };
+        out.push((line(n), if n.is_missing() { format!("missing {}", n.kind()) } else { near }));
         return;
     }
-    for c in named(n) {
-        if c.has_error() {
-            collect_errors(c, out);
+    let mut c = n.walk();
+    for ch in n.children(&mut c) {
+        if ch.has_error() || ch.is_missing() {
+            collect_errors(ch, source, out);
         }
     }
 }
@@ -624,6 +628,8 @@ object Topics { const val X = "x.topic" }
     fn reports_lines_the_grammar_cannot_parse() {
         let f = parse("E.kt", "class E { companion object { val T = 1 } }
 ");
-        assert_eq!(f.parse_errors, vec![1]);
+        assert_eq!(f.parse_errors.len(), 1);
+        assert_eq!(f.parse_errors[0].0, 1);
+        assert!(f.parse_errors[0].1.contains("companion object"), "{:?}", f.parse_errors);
     }
 }

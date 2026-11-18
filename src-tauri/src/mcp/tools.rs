@@ -21,8 +21,8 @@ pub fn definitions() -> Value {
           "inputSchema": s(json!({ "id": { "type": "string" }, "depth": { "type": "string", "enum": ["summary", "flow", "full"] }, "service": service }), &["id"]) },
         { "name": "get_flow", "description": "The flow of a feature from its trigger to databases, queues and external APIs, step by step with file:lines evidence and the places where static analysis was unsure.",
           "inputSchema": s(json!({ "id": { "type": "string" }, "service": service }), &["id"]) },
-        { "name": "get_diagram", "description": "A Mermaid diagram: level 'context' (L1) or 'components' (L2) of the service, or the flow (L3) of a feature id.",
-          "inputSchema": s(json!({ "id": { "type": "string", "description": "Feature id for a flow diagram" }, "level": { "type": "string", "enum": ["context", "components"] }, "format": { "type": "string", "enum": ["mermaid", "svg"] }, "service": service }), &[]) },
+        { "name": "get_diagram", "description": "A Mermaid diagram: level 'context' (L1: who calls the service, which systems it uses and for which features), 'features' (L2: features by area and the systems each touches, chains through topics), 'components' (technical layers), or the flow (L3) of a feature id.",
+          "inputSchema": s(json!({ "id": { "type": "string", "description": "Feature id for a flow diagram" }, "level": { "type": "string", "enum": ["context", "features", "components"] }, "format": { "type": "string", "enum": ["mermaid", "svg"] }, "service": service }), &[]) },
         { "name": "search", "description": "Full-text search over features: names, descriptions, endpoints, topics, tables, components.",
           "inputSchema": s(json!({ "query": { "type": "string" }, "limit": { "type": "integer", "minimum": 1, "maximum": 50 }, "service": service }), &["query"]) },
         { "name": "who_touches", "description": "Which features read, write, publish to or call a table, topic/queue or external service (by name or id, e.g. 'refunds' or 'topic:refunds.created').",
@@ -216,7 +216,7 @@ impl Tools {
             (m.service.id.clone(), format!("features/{}/flow.mmd", f.id), f.claims.clone())
         } else {
             let level = arg(args, "level").unwrap_or("context");
-            if level != "context" && level != "components" {
+            if !matches!(level, "context" | "features" | "components") {
                 return Err(AppError::new("invalidArgument").with("name", "level"));
             }
             let m = self.models(arg(args, "service"))?.into_iter().next().unwrap();

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, backend } from "../../api";
 import { getLocale, useT } from "../../i18n";
+import { parseDetail, parseReport } from "../../lib/parseReport";
 import { resumeRun, runAnalysis } from "../../lib/pipeline";
 import { STAGES, type Activity } from "../../lib/stages";
 import type { LogEntry, RepoEntry, RunRecord, Settings } from "../../types";
@@ -120,6 +121,8 @@ export default function RunScreen(props: { repo: RepoEntry; settings: Settings }
         {error && <p className="error">{error}</p>}
       </Card>
 
+      <ParseProblems log={log} repo={repo} run={current} />
+
       {log.length > 0 && (
         <Card>
           <div className="row">
@@ -147,6 +150,42 @@ export default function RunScreen(props: { repo: RepoEntry; settings: Settings }
         </ul>
       </Card>
     </>
+  );
+}
+
+/** Files the grammar could not fully parse, with a ready-to-paste report for improving the parser. */
+function ParseProblems(props: { log: LogEntry[]; repo: RepoEntry; run: RunRecord | null }) {
+  const t = useT().run;
+  const [copied, setCopied] = useState(false);
+  const problems = props.log.filter((e) => e.code === "parseError" && e.params?.file).map((e) => ({ file: e.params!.file, detail: e.params!.detail ?? "" }));
+  if (!problems.length) return null;
+  const copy = async () => {
+    const text = await parseReport(problems, (f) => api.readRepoFile(props.repo.path, f), {
+      extractor: "kotlin-spring",
+      version: props.run?.versions["extractor.kotlin-spring"],
+      commit: props.run?.commit,
+    });
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <Card>
+      <div className="row wrap">
+        <h3 className="warn-title">{t.parseProblems(problems.length)}</h3>
+        <span className="spacer" />
+        <Button variant="primary" onClick={copy}>{copied ? t.copied : t.copyReport}</Button>
+      </div>
+      <p className="muted">{t.parseProblemsText}</p>
+      <ul className="plain">
+        {problems.map((p) => (
+          <li key={p.file}>
+            <code>{p.file}</code>
+            {parseDetail(p.detail).slice(0, 3).map(([l, near]) => <span key={l} className="hint"> · {l}: {near}</span>)}
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 

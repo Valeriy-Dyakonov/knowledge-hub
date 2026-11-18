@@ -2,8 +2,9 @@ import { messagesFor } from "../../i18n";
 import type { Evidence, Feature, KnowledgeModel } from "../../types";
 import { isUnverified } from "../model/claims";
 import { statusOf } from "../model/status";
-import { componentsDiagram, contextDiagram, flowDiagram } from "./mermaid";
-import { activeEdges, namer } from "./names";
+import { flowSteps } from "../model/flow";
+import { componentsDiagram, contextDiagram, featureMapDiagram, flowDiagram } from "./mermaid";
+import { namer } from "./names";
 import type { Renderer } from "./types";
 
 const loc = (e?: Evidence) => (e ? ` — \`${e.path}${e.lines ? `:${e.lines.start}` : ""}\`` : "");
@@ -15,7 +16,6 @@ export function featureMarkdown(model: KnowledgeModel, f: Feature, lang: string)
   const n = namer(model, lang);
   const status = statusOf(f.claims);
   const unverified = f.claims.filter(isUnverified).length;
-  const edges = new Map(activeEdges(f).map((e) => [e.id, e]));
   const out = [
     `<!-- ${m.header} -->`,
     `# ${md(n.feature(f))}`,
@@ -32,12 +32,11 @@ export function featureMarkdown(model: KnowledgeModel, f: Feature, lang: string)
     "",
     `## ${m.flow}`,
     "",
-    ...f.steps.flatMap((s) => {
-      const e = s.edgeId ? edges.get(s.edgeId) : undefined;
-      if (!e) return [];
-      const from = e.from.type === "TRIGGER" ? f.triggers.find((t) => t.id === e.from.id)?.technicalName ?? e.from.id : e.from.type === "SINK" ? n.sink(e.from.id) : n.component(e.from.id);
-      const to = e.to.type === "SINK" ? n.sink(e.to.id) : n.component(e.to.id);
-      return [`${s.order}. ${md(from)} ${m.edges[e.kind] ?? e.kind} **${md(to)}** (\`${e.label}\`)${e.origin === "INFERRED" ? ` ${m.inferredMark}` : ""}${loc(e.evidence)}`];
+    ...flowSteps(model, f).map((s, i) => {
+      const from = s.from.type === "TRIGGER" ? f.triggers.find((t) => t.id === s.from.id)?.technicalName ?? s.from.id : s.from.type === "SINK" ? n.sink(s.from.id) : n.component(s.from.id);
+      const to = s.to.type === "SINK" ? n.sink(s.to.id) : n.component(s.to.id);
+      const via = s.via ? ` ${m.via(n.component(s.via.componentId))}` : "";
+      return `${i + 1}. ${md(from)} ${m.edges[s.kind] ?? s.kind} **${md(to)}** (\`${s.label}\`)${via}${s.origin === "INFERRED" ? ` ${m.inferredMark}` : ""}${loc(s.evidence)}`;
     }),
     "",
     fence(flowDiagram(model, f, lang)),
@@ -72,6 +71,10 @@ export function serviceMarkdown(model: KnowledgeModel, lang: string): string {
     `### ${m.contextDiagram}`,
     "",
     fence(contextDiagram(model, lang)),
+    "",
+    `### ${m.featureMapDiagram}`,
+    "",
+    fence(featureMapDiagram(model, lang)),
     "",
     `### ${m.componentsDiagram}`,
     "",

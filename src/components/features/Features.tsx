@@ -2,23 +2,43 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../../api";
 import { getLocale, useT } from "../../i18n";
 import { isUnverified } from "../../lib/model/claims";
+import { flowSteps } from "../../lib/model/flow";
 import { simpleName } from "../../lib/model/ids";
 import { statusOf } from "../../lib/model/status";
 import { flowDiagram } from "../../lib/render/mermaid";
 import { Diagram } from "../diagrams/Diagram";
 import type { Evidence, Feature, KnowledgeModel, RepoEntry } from "../../types";
-import { Badge, Card, Title } from "../ui";
+import { Badge, Card, Segmented, Title } from "../ui";
 
 const tone = { REVIEWED: "good", DRAFT: "warn", STALE: "bad" } as const;
 
 export const featureName = (f: Feature) => f.businessName[getLocale()] ?? Object.values(f.businessName)[0] ?? f.technicalName;
 const loc = (e?: Evidence) => (e ? `${e.path}${e.lines ? `:${e.lines.start}` : ""}` : "");
 
+type GroupBy = "entry" | "area" | "class";
+const GROUP_KEY = "hub.features.groupBy";
+const readGroupBy = (): GroupBy => {
+  try { const v = localStorage.getItem(GROUP_KEY); return v === "area" || v === "class" ? v : "entry"; } catch { return "entry"; }
+};
+const ENTRY_ORDER = ["HTTP", "MESSAGE:kafka", "MESSAGE:rabbit", "MESSAGE:jms", "MESSAGE:sqs", "MESSAGE", "SCHEDULE", "EVENT", "STARTUP", "CLI"];
+
+/** How a feature is entered: HTTP controller, Kafka listener, scheduled job... (message triggers split by broker). */
+function entryKey(f: Feature): string {
+  const t = f.triggers[0];
+  if (!t) return "CLI";
+  return t.type === "MESSAGE" && t.attributes.broker ? `MESSAGE:${t.attributes.broker}` : t.type;
+}
+
 export default function Features(props: { repo: RepoEntry }) {
   const t = useT().features;
   const [model, setModel] = useState<KnowledgeModel | null | undefined>(undefined);
   const [selected, setSelected] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [groupBy, setGroupBy] = useState<GroupBy>(readGroupBy);
+  const changeGroupBy = (g: GroupBy) => {
+    setGroupBy(g);
+    try { localStorage.setItem(GROUP_KEY, g); } catch { /* remembered until restart */ }
+  };
 
   useEffect(() => {
     setSelected(null);
@@ -43,10 +63,15 @@ export default function Features(props: { repo: RepoEntry }) {
     const q = query.trim().toLowerCase();
     const list = (model?.features ?? []).filter((f) =>
       !q || (hits ? hits.has(f.id) : `${f.id} ${f.technicalName} ${featureName(f)}`.toLowerCase().includes(q)));
+    const key = (f: Feature) => (groupBy === "entry" ? entryKey(f) : groupBy === "class" ? simpleName(f.triggers[0]?.componentId ?? f.group) : f.group);
     const m = new Map<string, Feature[]>();
-    for (const f of list) m.set(f.group, [...(m.get(f.group) ?? []), f]);
-    return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [model, query, hits]);
+    for (const f of list) m.set(key(f), [...(m.get(key(f)) ?? []), f]);
+    const rank = (k: string) => (groupBy === "entry" ? ENTRY_ORDER.indexOf(k) : 0);
+    return [...m.entries()]
+      .map(([k, items]) => [k, [...items].sort((a, b) => a.group.localeCompare(b.group) || featureName(a).localeCompare(featureName(b)))] as [string, Feature[]])
+      .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b));
+  }, [model, query, hits, groupBy]);
+  const groupTitle = (k: string) => (groupBy === "entry" ? t.entryKinds[k] ?? k : k);
 
   if (model === undefined) return null;
   if (model === null) return <Card><Title>{t.title}</Title><p className="muted">{t.empty}</p></Card>;
@@ -57,17 +82,24 @@ export default function Features(props: { repo: RepoEntry }) {
     <div className="features">
       <Card className="fl-list">
         <input className="fl-search" placeholder={t.search} value={query} onChange={(e) => setQuery(e.target.value)} />
+        <Segmented<GroupBy>
+          size="small"
+          title={t.groupByTip}
+          options={[{ value: "entry", label: t.groupBy.entry }, { value: "area", label: t.groupBy.area }, { value: "class", label: t.groupBy.class }]}
+          value={groupBy}
+          onChange={changeGroupBy}
+        />
         {groups.length === 0 && <p className="muted">{t.noHits}</p>}
         {groups.map(([group, items]) => (
           <div key={group} className="fl-group">
-            <div className="fl-group-name">{group}</div>
+            <div className="fl-group-name">{groupTitle(group)} <span className="count">{items.length}</span></div>
             {items.map((f) => {
               const s = statusOf(f.claims);
               return (
                 <button key={f.id} className={`fl-item ${f.id === selected ? "on" : ""}`} onClick={() => setSelected(f.id)}>
                   <span className="fl-name">{featureName(f)}</span>
                   <span className={`dot ${tone[s]}`} title={s} />
-                  <span className="hint">{hits?.get(f.id) || f.technicalName}</span>
+                  <span className="hint">{hits?.get(f.id) || (groupBy === "entry" ? `${f.group} · ${f.technicalName}` : f.technicalName)}</span>
                 </button>
               );
             })}
@@ -87,7 +119,6 @@ function FeatureView({ feature: f, model }: { feature: Feature; model: Knowledge
   const unverified = f.claims.filter(isUnverified).length;
   const components = new Map(model.catalog.components.map((c) => [c.id, c]));
   const sinks = new Map(model.catalog.sinks.map((s) => [s.id, s]));
-  const edges = new Map(f.edges.map((e) => [e.id, e]));
   const lang = getLocale();
   const nodeName = (id: string, type: string) => {
     if (type === "SINK") {
@@ -125,23 +156,15 @@ function FeatureView({ feature: f, model }: { feature: Feature; model: Knowledge
       <Card>
         <Title tip={t.flowTip}>{t.flow}</Title>
         <ol className="flow">
-          {f.steps.map((s) => {
-            const e = s.edgeId ? edges.get(s.edgeId) : undefined;
-            return (
-              <li key={s.order} className={e?.origin === "INFERRED" ? "inferred" : ""}>
-                {e ? (
-                  <>
-                    <b>{nodeName(e.from.id, e.from.type)}</b> <span className="muted">{t.edgeKinds[e.kind] ?? e.kind}</span> <b>{nodeName(e.to.id, e.to.type)}</b>
-                    <span className="muted"> · {s.action}</span>
-                    {e.origin === "INFERRED" && <Badge tone="warn">{t.inferred}</Badge>}
-                    <span className="hint flow-loc">{loc(e.evidence)}</span>
-                  </>
-                ) : (
-                  <b>{simpleName(s.componentId)}.{s.action}</b>
-                )}
-              </li>
-            );
-          })}
+          {flowSteps(model, f).map((s, i) => (
+            <li key={i} className={s.origin === "INFERRED" ? "inferred" : ""}>
+              <b>{nodeName(s.from.id, s.from.type)}</b> <span className="muted">{t.edgeKinds[s.kind] ?? s.kind}</span> <b>{nodeName(s.to.id, s.to.type)}</b>
+              <span className="muted"> · {s.label}</span>
+              {s.via && <span className="muted"> · {t.via(nodeName(s.via.componentId, "COMPONENT"))}</span>}
+              {s.origin === "INFERRED" && <Badge tone="warn">{t.inferred}</Badge>}
+              <span className="hint flow-loc">{loc(s.evidence)}</span>
+            </li>
+          ))}
         </ol>
       </Card>
       <Card>

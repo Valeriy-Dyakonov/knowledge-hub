@@ -17,7 +17,10 @@
 /* Features */
 .features { display: grid; grid-template-columns: minmax(260px, 340px) 1fr; gap: 14px; align-items: start; }
 .fl-list { position: sticky; top: 0; max-height: calc(100vh - 90px); overflow: auto; padding: 12px; }
-.fl-search { width: 100%; margin-bottom: 10px; }
+.fl-search { width: 100%; margin-bottom: 8px; }
+.fl-list .seg { display: flex; margin-bottom: 10px; }
+.fl-list .seg button { flex: 1; }
+.fl-group-name .count { margin-left: 4px; }
 .fl-group + .fl-group { margin-top: 10px; }
 .fl-group-name { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 4px 8px; }
 .fl-item { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; text-align: left; border: 0; background: transparent; color: var(--text); font: inherit; padding: 7px 8px; border-radius: var(--r); }
@@ -59,3 +62,25 @@ code { font-family: var(--font-mono); font-size: 12.5px; }
 .edit select, .edit textarea { width: 100%; }
 .meter.grow { flex: 1; }
 .meter.grow i { background: var(--accent); }
+
+/* Diagram legend and the text next to the diagrams */
+.legend-row { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.lg-item { display: inline-flex; align-items: center; gap: 6px; }
+.lg-item i { width: 18px; height: 12px; border: 1.5px solid; border-radius: 3px; }
+.lg-trigger i { background: var(--dg-trigger); border-color: var(--dg-trigger-line); border-radius: 6px; }
+.lg-feature i { background: var(--dg-feature); border-color: var(--dg-feature-line); border-radius: 6px; }
+.lg-component i { background: var(--dg-component); border-color: var(--dg-component-line); }
+.lg-db i { background: var(--dg-db); border-color: var(--dg-db-line); border-radius: 3px / 6px; }
+.lg-queue i { background: var(--dg-queue); border-color: var(--dg-queue-line); transform: skewX(-15deg); }
+.lg-external i { background: var(--dg-external); border-color: var(--dg-external-line); }
+.lg-dashed i { border: 0; border-top: 2px dashed var(--muted); height: 0; border-radius: 0; }
+table.grid { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.grid th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+table.grid td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.kind-chip { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: var(--r-pill); background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.k-DB_TABLE { border-color: var(--node-db); color: var(--node-db); }
+.k-TOPIC, .k-QUEUE { border-color: var(--node-queue); color: var(--node-queue); }
+.k-EXTERNAL_HTTP { border-color: var(--node-external); color: var(--node-external); }
+.k-CLIENTS, .k-SCHEDULE, .k-EVENT, .k-STARTUP { border-color: var(--node-trigger); color: var(--node-trigger); }
+.areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px 20px; }
+.area h4 { margin: 4px 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }

@@ -206,10 +206,11 @@ impl<'a> Analysis<'a> {
 
     fn run(&mut self) {
         for f in self.index.files {
-            if let Some(first) = f.parse_errors.first() {
-                let lines: Vec<String> = f.parse_errors.iter().map(|l| l.to_string()).collect();
+            if let Some((first, _)) = f.parse_errors.first() {
+                // "line 12: `companion object { val T = 1 }`; line 15: …" — parsed back by the UI for the report.
+                let lines: Vec<String> = f.parse_errors.iter().take(10).map(|(l, near)| format!("line {l}: `{near}`")).collect();
                 let ev = self.ev(f, *first, *first);
-                self.facts.unresolved.push(UnresolvedFact { component_id: f.path.clone(), method: String::new(), reason: "PARSE_ERROR".into(), detail: format!("lines {}", lines.join(",")), evidence: ev });
+                self.facts.unresolved.push(UnresolvedFact { component_id: f.path.clone(), method: String::new(), reason: "PARSE_ERROR".into(), detail: lines.join("; "), evidence: ev });
             }
         }
         let beans = self.beans();

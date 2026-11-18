@@ -40,6 +40,21 @@ export const run: typeof ru = {
     indexing: () => "Updating the search index",
   },
   reasons: { disabledByOption: "turned off", notImplemented: "not implemented yet", noRenderers: "no renderers", llmNotConfigured: "LLM not configured" },
+  parseProblems: (n) => `Parse problems: ${n}`,
+  parseProblemsText: "The Kotlin grammar could not parse part of the code in these files, so declarations there may be missing from the analysis. Copy the report and send it to the hub developer or an AI assistant: it has the files, lines, code fragments (secrets removed) and where the parser lives.",
+  copyReport: "Copy report for chat",
+  copied: "Copied",
+  parseReport: {
+    intro: (extractor, version, commit) => [
+      "Knowledge Hub: the extractor could not fully parse some Kotlin files.",
+      `Extractor: ${extractor} ${version} (tree-sitter, tree-sitter-kotlin-ng grammar), commit ${commit}.`,
+      "Parser code: src-tauri/src/extract/kotlin_spring/syntax.rs (tree-sitter tree → Kotlin model), including recovery from grammar errors.",
+      "Needed: find which Kotlin construct is not parsed, teach syntax.rs to parse or skip it, add an example to the fixture src-tauri/tests/fixtures/refunds-service and the golden test.",
+    ],
+    lines: (list) => `Lines with parse errors: ${list}`,
+    unreadable: "_(could not read the file)_",
+    more: (n) => `…and ${n} more files.`,
+  },
   grouping: { openApiTag: "by OpenAPI tag", path: "by path", class: "by class", previousModel: "as in the previous analysis" },
   codes: {
     runStarted: (p) => `Run ${p.runId} at commit ${(p.commit ?? "").slice(0, 7)}${p.resumedAfter ? ` (resumed after: ${p.resumedAfter})` : ""}`,

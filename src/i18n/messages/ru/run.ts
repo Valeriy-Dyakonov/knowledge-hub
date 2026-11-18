@@ -39,6 +39,21 @@ export const run = {
     indexing: () => "Обновление поискового индекса",
   } as Record<string, (p: P) => string>,
   reasons: { disabledByOption: "выключено", notImplemented: "ещё не реализовано", noRenderers: "нет генераторов", llmNotConfigured: "LLM не настроена" } as P,
+  parseProblems: (n: number) => `Проблемы разбора: ${n}`,
+  parseProblemsText: "Грамматика Kotlin не смогла разобрать часть кода в этих файлах — объявления там могли не попасть в анализ. Скопируйте отчёт и отправьте его в чат разработчику хаба или ИИ-ассистенту: в нём файлы, строки и фрагменты кода (секреты вырезаны) и где лежит парсер.",
+  copyReport: "Скопировать отчёт для чата",
+  copied: "Скопировано",
+  parseReport: {
+    intro: (extractor: string, version: string, commit: string) => [
+      "Knowledge Hub: экстрактор не смог полностью разобрать файлы Kotlin.",
+      `Экстрактор: ${extractor} ${version} (tree-sitter, грамматика tree-sitter-kotlin-ng), коммит ${commit}.`,
+      "Код разбора: src-tauri/src/extract/kotlin_spring/syntax.rs (дерево tree-sitter → модель Kotlin), там же восстановление после ошибок грамматики.",
+      "Нужно: понять, какая конструкция Kotlin не разбирается, научить syntax.rs её разбирать или обходить, добавить пример в фикстуру src-tauri/tests/fixtures/refunds-service и в golden-тест.",
+    ],
+    lines: (list: string) => `Строки с ошибкой разбора: ${list}`,
+    unreadable: "_(файл не удалось прочитать)_",
+    more: (n: number) => `…и ещё файлов: ${n}.`,
+  },
   grouping: { openApiTag: "по тегу OpenAPI", path: "по пути", class: "по классу", previousModel: "как в прошлом анализе" } as P,
   codes: {
     runStarted: (p: P) => `Запуск ${p.runId} на коммите ${(p.commit ?? "").slice(0, 7)}${p.resumedAfter ? ` (продолжение после: ${p.resumedAfter})` : ""}`,

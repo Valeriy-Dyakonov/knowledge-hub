@@ -20,6 +20,14 @@
   --node-queue: #c27c0e;
   --node-external: #e24329;
 
+  /* Diagram node fills/strokes; the same values are in the Mermaid classDefs (lib/render/mermaid.ts). */
+  --dg-trigger: #2f6fed; --dg-trigger-line: #1f4fb8;
+  --dg-feature: #e8f0fe; --dg-feature-line: #2f6fed;
+  --dg-component: #ede7f9; --dg-component-line: #8e63d8;
+  --dg-db: #e3f5ea; --dg-db-line: #1f9d55;
+  --dg-queue: #fbf0dc; --dg-queue-line: #c27c0e;
+  --dg-external: #fde5e0; --dg-external-line: #e24329;
+
   --grad-from: #7c3aed;
   --grad-to: #06b6d4;
   --win-close: #e81123;
