@@ -35,3 +35,8 @@
 .flow li.inferred { border-left-style: dashed; border-left-color: var(--warn); }
 .flow-loc { display: block; }
 code { font-family: var(--font-mono); font-size: 12.5px; }
+
+/* Diagrams */
+.diagram { overflow: auto; padding: 8px 0; }
+.diagram svg { max-width: 100%; height: auto; }
+.mmd-src { font-family: var(--font-mono); font-size: 12px; white-space: pre; overflow: auto; max-height: 300px; margin: 8px 0 0; }

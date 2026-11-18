@@ -1,0 +1,540 @@
+=== README.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# Сервис Refunds
+
+Проанализированный коммит: `unknown`
+
+## Фичи
+
+| Фича | Группа | Статус |
+|---|---|---|
+| [POST /api/v1/refunds/{id}/approve](features/approvals/approve/README.md) | `approvals` | черновик: есть непроверенные утверждения |
+| [kafka payments.completed](features/payment-events/on-payment-completed/README.md) | `payment-events` | черновик: есть непроверенные утверждения |
+| [GET /internal/ping](features/ping/list/README.md) | `ping` | черновик: есть непроверенные утверждения |
+| [schedule 0 0 \* \* \* \* ReconciliationJob.reconcile](features/reconciliation/reconcile/README.md) | `reconciliation` | черновик: есть непроверенные утверждения |
+| [Создание возврата](features/refunds/create-refund/README.md) | `refunds` | черновик: есть непроверенные утверждения |
+| [GET /api/v1/refunds/{id}](features/refunds/get-refund/README.md) | `refunds` | черновик: есть непроверенные утверждения |
+
+## Диаграммы
+
+### Контекст (L1)
+
+```mermaid
+flowchart LR
+  n1[["Refunds"]]:::service
+  n2(["Клиенты API"]):::trigger
+  n3[/"payments.completed"/]:::queue
+  n4(["Расписание"]):::trigger
+  n5[("База данных (1 табл.)")]:::db
+  n6[/"refunds.approved"/]:::queue
+  n7[/"refunds.created"/]:::queue
+  n8{{"ledger.example.com"}}:::external
+  n9{{"payments"}}:::external
+  n2 -->|4 HTTP| n1
+  n3 -->|получает| n1
+  n4 -->|1| n1
+  n1 -->|читает / пишет| n5
+  n1 -->|публикует| n6
+  n1 -->|публикует| n7
+  n1 -->|вызывает API| n8
+  n1 -->|вызывает API| n9
+  classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
+  classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
+  classDef service fill:#8e63d8,stroke:#5e3aa6,color:#fff
+  classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
+  classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
+  classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+```
+
+### Компоненты (L2)
+
+```mermaid
+flowchart LR
+  n1["RefundController"]:::component
+  n2["ManualApprovalService"]:::component
+  n3[("База данных (1 табл.)")]:::db
+  n4["AutoApprovalService"]:::component
+  n5[/"Очереди и топики (2)"/]:::queue
+  n6["PaymentEventsConsumer"]:::component
+  n7["Сервис возвратов"]:::component
+  n8["RefundRepository"]:::component
+  n9["ReconciliationJob"]:::component
+  n10{{"Внешние сервисы (2)"}}:::external
+  n11["PaymentsClient"]:::component
+  n12["RefundEventsListener"]:::component
+  n1 -.->|вызывает| n2
+  n2 -->|пишет| n3
+  n1 -.->|вызывает| n4
+  n4 -->|публикует| n5
+  n6 -->|вызывает| n7
+  n7 -->|вызывает| n8
+  n8 -->|читает| n3
+  n8 -->|пишет| n3
+  n9 -->|вызывает API| n10
+  n9 -->|вызывает| n8
+  n1 -->|вызывает| n7
+  n7 -->|вызывает| n11
+  n11 -->|вызывает API| n10
+  n7 -.->|вызывает| n12
+  n12 -->|публикует| n5
+  classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
+  classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
+  classDef service fill:#8e63d8,stroke:#5e3aa6,color:#fff
+  classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
+  classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
+  classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+```
+
+=== features/approvals/approve/README.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# POST /api/v1/refunds/{id}/approve
+
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 7.
+- Группа: `approvals` · `approvals/approve`
+- Владелец: @team-refunds
+
+_Описание ещё не составлено._
+
+## Что запускает
+
+- `POST /api/v1/refunds/{id}/approve` — `src/main/kotlin/com/example/refunds/api/RefundController.kt:24`
+
+## Поток
+
+1. POST /api/v1/refunds/{id}/approve вызывает **RefundController** (`approve`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:24`
+2. RefundController вызывает **ManualApprovalService** (`approve`) (выведено, требует проверки) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:26`
+3. ManualApprovalService пишет **Возвраты** (`update`) — `src/main/kotlin/com/example/refunds/service/ApprovalService.kt:16`
+4. RefundController вызывает **AutoApprovalService** (`approve`) (выведено, требует проверки) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:26`
+5. AutoApprovalService публикует **refunds.approved** (`send`) — `src/main/kotlin/com/example/refunds/service/ApprovalService.kt:23`
+
+```mermaid
+sequenceDiagram
+  actor p1 as POST /api/v1/refunds/{id}/approve
+  participant p2 as RefundController
+  participant p3 as ManualApprovalService
+  participant p4 as AutoApprovalService
+  participant p5 as таблица Возвраты
+  participant p6 as топик refunds.approved
+  %% claim c-1b3854e6c0caf517
+  p1->>p2: approve
+  %% claim c-15aec0f5d1509c01
+  p2-->>p3: approve (выведено, требует проверки)
+  %% claim c-031aaff17e5ee300
+  p3->>p5: пишет: update
+  %% claim c-01664b64827d1904
+  p2-->>p4: approve (выведено, требует проверки)
+  %% claim c-04f3d7945589a700
+  p4->>p6: публикует: send
+```
+
+## Куда пишет и откуда читает
+
+- таблица **Возвраты**
+- топик **refunds.approved**
+
+## Где анализ не уверен
+
+- несколько реализаций интерфейса: `RefundController.approve` com.example.refunds.service.ApprovalService — `src/main/kotlin/com/example/refunds/api/RefundController.kt:26`
+
+=== features/payment-events/on-payment-completed/README.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# kafka payments.completed
+
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 9.
+- Группа: `payment-events` · `payment-events/on-payment-completed`
+- Владелец: @team-refunds
+
+_Описание ещё не составлено._
+
+## Что запускает
+
+- `kafka payments.completed` — `src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:14`
+
+## Поток
+
+1. kafka payments.completed вызывает **PaymentEventsConsumer** (`onPaymentCompleted`) — `src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:14`
+2. PaymentEventsConsumer вызывает **Сервис возвратов** (`markPaid`) — `src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:16`
+3. Сервис возвратов вызывает **RefundRepository** (`findById`) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:30`
+4. RefundRepository читает **Возвраты** (`findById`) — `src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:6`
+5. Сервис возвратов вызывает **RefundRepository** (`save`) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:32`
+6. RefundRepository пишет **Возвраты** (`save`) — `src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:6`
+
+```mermaid
+sequenceDiagram
+  participant p1 as топик payments.completed
+  participant p2 as PaymentEventsConsumer
+  participant p3 as Сервис возвратов
+  participant p4 as RefundRepository
+  participant p5 as таблица Возвраты
+  %% claim c-17b5c3ce03122e03
+  p1->>p2: onPaymentCompleted
+  %% claim c-0a2454f33f40af01
+  p2->>p3: markPaid
+  %% claim c-19f33311ed75690e
+  p3->>p4: findById
+  %% claim c-1b0ee75a39f6491f
+  p4->>p5: читает: findById
+  %% claim c-1f8b4962e56bba00
+  p3->>p4: save
+  %% claim c-12803d863b50a50e
+  p4->>p5: пишет: save
+```
+
+## Куда пишет и откуда читает
+
+- топик **payments.completed**
+- таблица **Возвраты**
+
+## Где анализ не уверен
+
+- динамический SQL: `PaymentEventsConsumer.audit` jdbcTemplate.update — `src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:22`
+
+=== features/ping/list/README.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# GET /internal/ping
+
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 3.
+- Группа: `ping` · `ping/list`
+- Владелец: @team-refunds
+
+_Описание ещё не составлено._
+
+## Что запускает
+
+- `GET /internal/ping` — `src/main/kotlin/com/example/refunds/api/HealthController.kt:8`
+
+## Поток
+
+1. GET /internal/ping вызывает **HealthController** (`ping`) — `src/main/kotlin/com/example/refunds/api/HealthController.kt:8`
+
+```mermaid
+sequenceDiagram
+  actor p1 as GET /internal/ping
+  participant p2 as HealthController
+  %% claim c-14fa0d215d3fa00b
+  p1->>p2: ping
+```
+
+## Куда пишет и откуда читает
+
+
+=== features/reconciliation/reconcile/README.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# schedule 0 0 \* \* \* \* ReconciliationJob.reconcile
+
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 6.
+- Группа: `reconciliation` · `reconciliation/reconcile`
+- Владелец: @team-ledger
+
+_Описание ещё не составлено._
+
+## Что запускает
+
+- `schedule 0 0 * * * * ReconciliationJob.reconcile` — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:13`
+
+## Поток
+
+1. schedule 0 0 \* \* \* \* ReconciliationJob.reconcile вызывает **ReconciliationJob** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:13`
+2. ReconciliationJob вызывает API **ledger.example.com** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:16`
+3. ReconciliationJob вызывает **RefundRepository** (`findAllByStatus`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:15`
+4. RefundRepository читает **Возвраты** (`findAllByStatus`) — `src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:7`
+
+```mermaid
+sequenceDiagram
+  participant p1 as schedule 0 0 * * * * ReconciliationJob.reconcile
+  participant p2 as ReconciliationJob
+  participant p3 as RefundRepository
+  participant p4 as внешний API ledger.example.com
+  participant p5 as таблица Возвраты
+  %% claim c-1a9dee328ab9391d
+  p1->>p2: reconcile
+  %% claim c-195f2b1fafba1607
+  p2->>p4: вызывает API: reconcile
+  %% claim c-06cd6200b4ffd40b
+  p2->>p3: findAllByStatus
+  %% claim c-0e96e0157abb2303
+  p3->>p5: читает: findAllByStatus
+```
+
+## Куда пишет и откуда читает
+
+- внешний API **ledger.example.com**
+- таблица **Возвраты**
+
+=== features/refunds/create-refund/README.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# Создание возврата
+
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 12.
+- Группа: `refunds` · `refunds/create-refund`
+- Владелец: @team-refunds
+
+Клиент создаёт возврат; он сохраняется и резервируется в платежах.
+
+## Что запускает
+
+- `POST /api/v1/refunds` — `src/main/kotlin/com/example/refunds/api/RefundController.kt:16`
+
+## Поток
+
+1. POST /api/v1/refunds вызывает **RefundController** (`create`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:16`
+2. RefundController вызывает **Сервис возвратов** (`create`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:17`
+3. Сервис возвратов вызывает **RefundRepository** (`save`) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:21`
+4. RefundRepository пишет **Возвраты** (`save`) — `src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:6`
+5. Сервис возвратов вызывает **PaymentsClient** (`reserve`) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:22`
+6. PaymentsClient вызывает API **payments** (`reserve`) — `src/main/kotlin/com/example/refunds/client/PaymentsClient.kt:11`
+7. Сервис возвратов вызывает **RefundEventsListener** (`event:RefundCreated -> onCreated`) (выведено, требует проверки) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:23`
+8. RefundEventsListener публикует **refunds.created** (`send`) — `src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt:16`
+
+```mermaid
+sequenceDiagram
+  actor p1 as POST /api/v1/refunds
+  participant p2 as RefundController
+  participant p3 as Сервис возвратов
+  participant p4 as RefundRepository
+  participant p5 as PaymentsClient
+  participant p6 as RefundEventsListener
+  participant p7 as таблица Возвраты
+  participant p8 as внешний API payments
+  participant p9 as топик refunds.created
+  %% claim c-093eaecdbc291d14
+  p1->>p2: create
+  %% claim c-1e367b4dee7b1210
+  p2->>p3: create
+  %% claim c-0a5cc52a5037fd1c
+  p3->>p4: save
+  %% claim c-02fc26133e7b940e
+  p4->>p7: пишет: save
+  %% claim c-09edb9a27f064a05
+  p3->>p5: reserve
+  %% claim c-0087eb84ac7c8d02
+  p5->>p8: вызывает API: reserve
+  %% claim c-1d4598f3099e1007
+  p3-->>p6: event:RefundCreated → onCreated (выведено, требует проверки)
+  %% claim c-024d3c170906f605
+  p6->>p9: публикует: send
+```
+
+## Куда пишет и откуда читает
+
+- таблица **Возвраты**
+- внешний API **payments**
+- топик **refunds.created**
+
+=== features/refunds/get-refund/README.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# GET /api/v1/refunds/{id}
+
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 6.
+- Группа: `refunds` · `refunds/get-refund`
+- Владелец: @team-refunds
+
+_Описание ещё не составлено._
+
+## Что запускает
+
+- `GET /api/v1/refunds/{id}` — `src/main/kotlin/com/example/refunds/api/RefundController.kt:19`
+
+## Поток
+
+1. GET /api/v1/refunds/{id} вызывает **RefundController** (`get`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:19`
+2. RefundController вызывает **Сервис возвратов** (`get`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:21`
+3. Сервис возвратов вызывает **RefundRepository** (`findById`) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:27`
+4. RefundRepository читает **Возвраты** (`findById`) — `src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:6`
+
+```mermaid
+sequenceDiagram
+  actor p1 as GET /api/v1/refunds/{id}
+  participant p2 as RefundController
+  participant p3 as Сервис возвратов
+  participant p4 as RefundRepository
+  participant p5 as таблица Возвраты
+  %% claim c-08e01883484c9203
+  p1->>p2: get
+  %% claim c-0c38b7783cf00602
+  p2->>p3: get
+  %% claim c-1633e71e0f8c5417
+  p3->>p4: findById
+  %% claim c-0f71f9f289845d0d
+  p4->>p5: читает: findById
+```
+
+## Куда пишет и откуда читает
+
+- таблица **Возвраты**
+
+=== diagrams/context.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+flowchart LR
+  n1[["Refunds"]]:::service
+  n2(["Клиенты API"]):::trigger
+  n3[/"payments.completed"/]:::queue
+  n4(["Расписание"]):::trigger
+  n5[("База данных (1 табл.)")]:::db
+  n6[/"refunds.approved"/]:::queue
+  n7[/"refunds.created"/]:::queue
+  n8{{"ledger.example.com"}}:::external
+  n9{{"payments"}}:::external
+  n2 -->|4 HTTP| n1
+  n3 -->|получает| n1
+  n4 -->|1| n1
+  n1 -->|читает / пишет| n5
+  n1 -->|публикует| n6
+  n1 -->|публикует| n7
+  n1 -->|вызывает API| n8
+  n1 -->|вызывает API| n9
+  classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
+  classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
+  classDef service fill:#8e63d8,stroke:#5e3aa6,color:#fff
+  classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
+  classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
+  classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+
+=== diagrams/components.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+flowchart LR
+  n1["RefundController"]:::component
+  n2["ManualApprovalService"]:::component
+  n3[("База данных (1 табл.)")]:::db
+  n4["AutoApprovalService"]:::component
+  n5[/"Очереди и топики (2)"/]:::queue
+  n6["PaymentEventsConsumer"]:::component
+  n7["Сервис возвратов"]:::component
+  n8["RefundRepository"]:::component
+  n9["ReconciliationJob"]:::component
+  n10{{"Внешние сервисы (2)"}}:::external
+  n11["PaymentsClient"]:::component
+  n12["RefundEventsListener"]:::component
+  n1 -.->|вызывает| n2
+  n2 -->|пишет| n3
+  n1 -.->|вызывает| n4
+  n4 -->|публикует| n5
+  n6 -->|вызывает| n7
+  n7 -->|вызывает| n8
+  n8 -->|читает| n3
+  n8 -->|пишет| n3
+  n9 -->|вызывает API| n10
+  n9 -->|вызывает| n8
+  n1 -->|вызывает| n7
+  n7 -->|вызывает| n11
+  n11 -->|вызывает API| n10
+  n7 -.->|вызывает| n12
+  n12 -->|публикует| n5
+  classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
+  classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
+  classDef service fill:#8e63d8,stroke:#5e3aa6,color:#fff
+  classDef db fill:#e3f5ea,stroke:#1f9d55,color:#123d24
+  classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
+  classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
+
+=== features/approvals/approve/flow.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+sequenceDiagram
+  actor p1 as POST /api/v1/refunds/{id}/approve
+  participant p2 as RefundController
+  participant p3 as ManualApprovalService
+  participant p4 as AutoApprovalService
+  participant p5 as таблица Возвраты
+  participant p6 as топик refunds.approved
+  %% claim c-1b3854e6c0caf517
+  p1->>p2: approve
+  %% claim c-15aec0f5d1509c01
+  p2-->>p3: approve (выведено, требует проверки)
+  %% claim c-031aaff17e5ee300
+  p3->>p5: пишет: update
+  %% claim c-01664b64827d1904
+  p2-->>p4: approve (выведено, требует проверки)
+  %% claim c-04f3d7945589a700
+  p4->>p6: публикует: send
+
+=== features/payment-events/on-payment-completed/flow.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+sequenceDiagram
+  participant p1 as топик payments.completed
+  participant p2 as PaymentEventsConsumer
+  participant p3 as Сервис возвратов
+  participant p4 as RefundRepository
+  participant p5 as таблица Возвраты
+  %% claim c-17b5c3ce03122e03
+  p1->>p2: onPaymentCompleted
+  %% claim c-0a2454f33f40af01
+  p2->>p3: markPaid
+  %% claim c-19f33311ed75690e
+  p3->>p4: findById
+  %% claim c-1b0ee75a39f6491f
+  p4->>p5: читает: findById
+  %% claim c-1f8b4962e56bba00
+  p3->>p4: save
+  %% claim c-12803d863b50a50e
+  p4->>p5: пишет: save
+
+=== features/ping/list/flow.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+sequenceDiagram
+  actor p1 as GET /internal/ping
+  participant p2 as HealthController
+  %% claim c-14fa0d215d3fa00b
+  p1->>p2: ping
+
+=== features/reconciliation/reconcile/flow.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+sequenceDiagram
+  participant p1 as schedule 0 0 * * * * ReconciliationJob.reconcile
+  participant p2 as ReconciliationJob
+  participant p3 as RefundRepository
+  participant p4 as внешний API ledger.example.com
+  participant p5 as таблица Возвраты
+  %% claim c-1a9dee328ab9391d
+  p1->>p2: reconcile
+  %% claim c-195f2b1fafba1607
+  p2->>p4: вызывает API: reconcile
+  %% claim c-06cd6200b4ffd40b
+  p2->>p3: findAllByStatus
+  %% claim c-0e96e0157abb2303
+  p3->>p5: читает: findAllByStatus
+
+=== features/refunds/create-refund/flow.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+sequenceDiagram
+  actor p1 as POST /api/v1/refunds
+  participant p2 as RefundController
+  participant p3 as Сервис возвратов
+  participant p4 as RefundRepository
+  participant p5 as PaymentsClient
+  participant p6 as RefundEventsListener
+  participant p7 as таблица Возвраты
+  participant p8 as внешний API payments
+  participant p9 as топик refunds.created
+  %% claim c-093eaecdbc291d14
+  p1->>p2: create
+  %% claim c-1e367b4dee7b1210
+  p2->>p3: create
+  %% claim c-0a5cc52a5037fd1c
+  p3->>p4: save
+  %% claim c-02fc26133e7b940e
+  p4->>p7: пишет: save
+  %% claim c-09edb9a27f064a05
+  p3->>p5: reserve
+  %% claim c-0087eb84ac7c8d02
+  p5->>p8: вызывает API: reserve
+  %% claim c-1d4598f3099e1007
+  p3-->>p6: event:RefundCreated → onCreated (выведено, требует проверки)
+  %% claim c-024d3c170906f605
+  p6->>p9: публикует: send
+
+=== features/refunds/get-refund/flow.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+sequenceDiagram
+  actor p1 as GET /api/v1/refunds/{id}
+  participant p2 as RefundController
+  participant p3 as Сервис возвратов
+  participant p4 as RefundRepository
+  participant p5 as таблица Возвраты
+  %% claim c-08e01883484c9203
+  p1->>p2: get
+  %% claim c-0c38b7783cf00602
+  p2->>p3: get
+  %% claim c-1633e71e0f8c5417
+  p3->>p4: findById
+  %% claim c-0f71f9f289845d0d
+  p4->>p5: читает: findById

@@ -11,6 +11,8 @@ export const features: typeof ru = {
   unverified: (n) => `unverified claims: ${n}`,
   triggers: "Triggered by",
   flow: "Flow",
+  flowDiagram: "Flow diagram",
+  flowDiagramTip: "Sequence from the trigger to the sinks. Dashed arrows are inferred links that need review.",
   flowTip: "Steps from the trigger to the sinks in traversal order. Dashed means the link was inferred heuristically (INFERRED) and needs review.",
   sinks: "Writes to and reads from",
   breaks: "Breaks",

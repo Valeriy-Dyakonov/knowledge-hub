@@ -5,38 +5,13 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Backend } from "../../api";
-import type { KnowledgeModel, ScanResult } from "../../types";
+import type { KnowledgeModel } from "../../types";
 import { confirm } from "../model/claims";
 import { mergeModels } from "../model/merge";
 import { runAnalysis } from "../pipeline";
 import { simpleName } from "../model/ids";
-import { assemble } from "./assemble";
-import { discover } from "./discover";
-import { Tracer } from "./trace";
-import type { RunContext, RunState } from "./types";
 
-const root = resolve(__dirname, "../../../src-tauri/tests/fixtures");
-const scan = JSON.parse(readFileSync(resolve(root, "refunds-service.scan.json"), "utf8")) as ScanResult;
-
-export function analyse(s: ScanResult, previous: KnowledgeModel | null = null): KnowledgeModel {
-  const candidates = discover(s.facts, s.context, previous);
-  const tracer = new Tracer(s.facts, s.context);
-  const traced = candidates.map((c) => tracer.trace(c));
-  const state: RunState = {
-    scan: s,
-    candidates,
-    traced: traced.map(({ candidate, feature }) => ({ candidate, feature })),
-    catalogComponents: tracer.catalogComponents(),
-    catalogSinks: [...new Map(traced.flatMap((t) => t.sinks).map((x) => [x.id, x])).values()],
-  };
-  const ctx = {
-    options: { serviceId: "refunds", serviceName: "Refunds", repoPath: "/repo", language: "ru", describe: false },
-    state,
-    previous,
-    versions: { "extractor.kotlin-spring": "0.1.0" },
-  } as unknown as RunContext;
-  return assemble(ctx);
-}
+import { analyse, root, scan } from "../testing/fixture";
 
 const short = (id: string) => (id.includes(":") ? id : simpleName(id));
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, inTauri } from "./api";
+import Diagrams from "./components/diagrams/Diagrams";
 import Features from "./components/features/Features";
 import Repos from "./components/repos/Repos";
 import Review from "./components/review/Review";
@@ -9,8 +10,8 @@ import TitleBar from "./components/TitleBar";
 import { useLocale, useT } from "./i18n";
 import { defaultSettings, type RepoEntry, type Settings as S } from "./types";
 
-type Tab = "repos" | "run" | "features" | "review";
-const TABS: Tab[] = ["repos", "run", "features", "review"];
+type Tab = "repos" | "run" | "features" | "diagrams" | "review";
+const TABS: Tab[] = ["repos", "run", "features", "diagrams", "review"];
 const REPO_KEY = "hub.repo";
 
 function readSelected(): string | null {
@@ -80,6 +81,7 @@ export default function App() {
               {tab !== "repos" && !repo && <NoRepo onGo={() => setTab("repos")} />}
               {tab === "run" && repo && <RunScreen repo={repo} settings={settings} />}
               {tab === "features" && repo && <Features repo={repo} />}
+              {tab === "diagrams" && repo && <Diagrams repo={repo} />}
               {tab === "review" && repo && <Review />}
             </main>
           </div>

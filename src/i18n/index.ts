@@ -6,6 +6,9 @@ export type Messages = typeof ru;
 
 const CATALOG: Record<Locale, Messages> = { ru, en };
 
+/** Messages of a given language (generated documents are written in the analysis language). */
+export const messagesFor = (lang: string): Messages => CATALOG[lang as Locale] ?? CATALOG.ru;
+
 /** Messages of the current locale, for code outside React (analysis, exports). */
 export const t = (): Messages => CATALOG[getLocale()];
 

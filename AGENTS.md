@@ -15,7 +15,7 @@ Design docs live in `docs/` (Russian); read `docs/00-vision.md` and `docs/01-arc
 | Frontend tests | `npm test` (vitest, `src/**/*.test.ts`) |
 | Frontend build | `npx vite build` |
 | Rust tests | `cargo test` in `src-tauri/` |
-| Regenerate golden files | `UPDATE_GOLDEN=1 cargo test` in `src-tauri/` (scan facts, scan JSON), then `UPDATE_GOLDEN=1 npm test` (features, model JSON); review the diffs |
+| Regenerate golden files | `UPDATE_GOLDEN=1 cargo test` in `src-tauri/` (scan facts, scan JSON), then `UPDATE_GOLDEN=1 npm test` (features, rendered views, model JSON); review the diffs |
 | Print the tree-sitter tree of a Kotlin file | `cargo run --example sexp -- File.kt` in `src-tauri/` |
 
 On this Windows machine cargo may be missing from PATH in Git Bash: prefix with `PATH="$HOME/.cargo/bin:$PATH"`.
@@ -33,9 +33,10 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
   - `stages/` — one file per stage (`scan`, `discover`, `trace`, `describe`, `assemble`, `render`, `index`), registry `STAGES`.
   - `model/` — `ids.ts` (stable ids), `claims.ts` (claim creation and review transitions), `merge.ts` (merge with the previous model + projection of names), `placeholders.ts`, `status.ts`.
   - `review/` — `ReviewPolicy` implementations (strict, lenient), registry, review use-cases.
-  - `render/` — `Renderer`s (markdown, Mermaid L1–L3), registry `RENDERERS`.
+  - `render/` — `Renderer`s (`markdown.ts`, `mermaid.ts` with L1–L3), registry `RENDERERS`; `render.test.ts` runs under jsdom and checks every diagram with `mermaid.parse`.
+  - `testing/fixture.ts` — the fixture service (Rust scan JSON) run through stages 2–5, shared by tests.
   - `prompt.ts` — LLM prompts per language.
-- `components/` — `ui/` (kit), one folder per screen: `repos/`, `run/`, `features/`, `diagrams/`, `review/`, `settings/`.
+- `components/` — `ui/` (kit), one folder per screen: `repos/`, `run/`, `features/`, `diagrams/` (`Diagram.tsx` renders Mermaid lazily), `review/`, `settings/`.
 - `styles/` — all CSS; colors only in `tokens.css`/`themes.css`.
 
 ### Backend `src-tauri/src/`

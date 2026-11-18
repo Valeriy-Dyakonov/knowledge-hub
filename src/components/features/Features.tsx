@@ -4,6 +4,8 @@ import { getLocale, useT } from "../../i18n";
 import { isUnverified } from "../../lib/model/claims";
 import { simpleName } from "../../lib/model/ids";
 import { statusOf } from "../../lib/model/status";
+import { flowDiagram } from "../../lib/render/mermaid";
+import { Diagram } from "../diagrams/Diagram";
 import type { Evidence, Feature, KnowledgeModel, RepoEntry } from "../../types";
 import { Badge, Card, Title } from "../ui";
 
@@ -99,6 +101,10 @@ function FeatureView({ feature: f, model }: { feature: Feature; model: Knowledge
             <li key={tr.id}><Badge>{t.triggerTypes[tr.type] ?? tr.type}</Badge> <code>{tr.technicalName}</code> <span className="hint">{loc(tr.evidence)}</span></li>
           ))}
         </ul>
+      </Card>
+      <Card>
+        <Title tip={t.flowDiagramTip}>{t.flowDiagram}</Title>
+        <Diagram text={flowDiagram(model, f, lang)} />
       </Card>
       <Card>
         <Title tip={t.flowTip}>{t.flow}</Title>
