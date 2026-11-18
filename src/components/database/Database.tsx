@@ -6,10 +6,12 @@ import { erDiagram } from "../../lib/render/reference";
 import type { Evidence, KnowledgeModel, RepoEntry, TableInfo } from "../../types";
 import { Diagram } from "../diagrams/Diagram";
 import { featureName } from "../features/Features";
-import { Badge, Card, Title } from "../ui";
+import { Badge, Card, InfoTip, Title } from "../ui";
 
 const loc = (e?: Evidence) => (e ? `${e.path}${e.lines ? `:${e.lines.start}` : ""}` : "");
 const tone = { migration: undefined, both: "good", entity: "warn", code: "bad" } as const;
+/** Tables of different stores may share a name: the key carries the store. */
+const keyOf = (t: { store: string; name: string }) => `${t.store}:${t.name}`;
 /** Larger schemas are drawn per table only: a full ER diagram stops being readable. */
 const FULL_ER_LIMIT = 25;
 
@@ -27,13 +29,18 @@ export default function Database(props: { repo: RepoEntry; onOpenFeature: (id: s
   const db = model?.database;
   const tables = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (db?.tables ?? []).filter((x) => !q || x.name.includes(q) || x.columns.some((c) => c.name.includes(q)) || (x.entity ?? "").toLowerCase().includes(q));
+    const list = (db?.tables ?? []).filter((x) => !q || x.name.toLowerCase().includes(q) || x.columns.some((c) => c.name.toLowerCase().includes(q)) || (x.entity ?? "").toLowerCase().includes(q));
+    const groups = new Map<string, TableInfo[]>();
+    for (const x of list) groups.set(x.store, [...(groups.get(x.store) ?? []), x]);
+    return [...groups.entries()];
   }, [db, query]);
 
   if (model === undefined) return null;
   if (!model || !db) return <Card><Title>{t.title}</Title><p className="muted">{model ? t.reanalyse : t.empty}</p></Card>;
   if (!db.tables.length && !db.datasources.length) return <Card><Title>{t.title}</Title><p className="muted">{t.none}</p></Card>;
-  const table = db.tables.find((x) => x.name === selected);
+  const table = db.tables.find((x) => keyOf(x) === selected);
+  const sqlCount = db.tables.filter((x) => x.store === "sql").length;
+  const selectSql = (name: string) => setSelected(`sql:${name}`);
 
   return (
     <div className="features">
@@ -50,26 +57,33 @@ export default function Database(props: { repo: RepoEntry; onOpenFeature: (id: s
             ))}
           </div>
         )}
-        <div className="fl-group">
-          <button className={`fl-group-name ${selected === null ? "on" : ""}`} onClick={() => setSelected(null)}>
-            {t.tables} <span className="count">{db.tables.length}</span>
-          </button>
-          {tables.length === 0 && <p className="muted">{t.noHits}</p>}
-          {tables.map((x) => (
-            <button key={x.name} className={`fl-item ${x.name === selected ? "on" : ""}`} onClick={() => setSelected(x.name)}>
-              <span className="fl-name">{x.name}</span>
-              <span className={`dot ${tone[x.source] ?? ""}`} title={t.sources[x.source]} />
-              <span className="hint">{x.columns.length ? t.columnCount(x.columns.length) : t.sources[x.source]}{x.entity ? ` · ${x.entity.split(".").pop()}` : ""}</span>
-            </button>
-          ))}
+        <div className="row fl-tools">
+          <button className={`linkbtn small ${selected === null ? "on" : ""}`} onClick={() => setSelected(null)}>{t.schema}</button>
+          <InfoTip>{t.storesTip}</InfoTip>
         </div>
+        {tables.length === 0 && <p className="muted">{t.noHits}</p>}
+        {tables.map(([store, items]) => (
+          <div key={store} className="fl-group">
+            <div className="fl-group-name">{t.stores[store] ?? store} <span className="count">{items.length}</span></div>
+            {items.map((x) => (
+              <button key={keyOf(x)} className={`fl-item ${keyOf(x) === selected ? "on" : ""}`} onClick={() => setSelected(keyOf(x))}>
+                <span className="fl-name">{x.name}</span>
+                <span className={`dot ${tone[x.source] ?? ""}`} title={t.sources[x.source]} />
+                <span className="hint">
+                  {x.columns.length ? (x.store === "sql" ? t.columnCount(x.columns.length) : t.fields(x.columns.length)) : t.sources[x.source]}
+                  {x.entity ? ` · ${x.entity.split(".").pop()}` : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+        ))}
       </Card>
       <div className="fl-detail">
-        {table ? <TableView table={table} model={model} onSelect={setSelected} onOpenFeature={props.onOpenFeature} /> : (
+        {table ? <TableView table={table} model={model} onSelect={selectSql} onOpenFeature={props.onOpenFeature} /> : (
           <Card>
             <Title tip={t.schemaTip}>{t.schema}</Title>
-            {db.tables.length > FULL_ER_LIMIT ? <p className="muted">{t.tooLarge(db.tables.length)}</p> : db.tables.length ? (
-              <ErView model={model} onSelect={setSelected} />
+            {sqlCount > FULL_ER_LIMIT ? <p className="muted">{t.tooLarge(sqlCount)}</p> : sqlCount ? (
+              <ErView model={model} onSelect={selectSql} />
             ) : <p className="muted">{t.noTables}</p>}
           </Card>
         )}
@@ -92,6 +106,7 @@ function TableView({ table, model, onSelect, onOpenFeature }: { table: TableInfo
       <Card>
         <div className="row wrap">
           <h3 className="fv-title">{table.name}</h3>
+          <Badge>{t.stores[table.store] ?? table.store}</Badge>
           <Badge tone={tone[table.source]}>{t.sources[table.source]}</Badge>
         </div>
         {table.entity && <p className="hint">{t.entity}: <code>{table.entity}</code></p>}
@@ -139,7 +154,7 @@ function TableView({ table, model, onSelect, onOpenFeature }: { table: TableInfo
           </ul>
         )}
       </Card>
-      {table.columns.length > 0 && (
+      {table.columns.length > 0 && table.store === "sql" && (
         <Card>
           <Title tip={t.relationsTip}>{t.relations}</Title>
           <ErView model={model} focus={table.name} onSelect={onSelect} />

@@ -27,7 +27,7 @@ pub fn definitions() -> Value {
           "inputSchema": s(json!({ "query": { "type": "string" }, "limit": { "type": "integer", "minimum": 1, "maximum": 50 }, "service": service }), &["query"]) },
         { "name": "who_touches", "description": "Which features read, write, publish to or call a table, topic/queue or external service (by name or id, e.g. 'refunds' or 'topic:refunds.created').",
           "inputSchema": s(json!({ "sink": { "type": "string" }, "service": service }), &["sink"]) },
-        { "name": "get_schema", "description": "Database schema of a service: without 'table' the datasources and the list of tables; with 'table' its columns (type, PK, FK, mapped entity field), the tables referencing it and the features reading or writing it. Structure comes from migrations and JPA entities.",
+        { "name": "get_schema", "description": "Database schema of a service: without 'table' the datasources and the list of tables; with 'table' its columns (type, PK, FK, mapped entity field), the tables referencing it and the features reading or writing it. Covers SQL tables (migrations, @Entity, Spring Data @Table), MongoDB collections, Redis hashes, Elasticsearch indices and other Spring Data stores; each table has a 'store'.",
           "inputSchema": s(json!({ "table": { "type": "string" }, "service": service }), &[]) },
         { "name": "config_usage", "description": "Configuration properties: without 'key' all of them (value, profiles, how many places read them, missing ones); with 'key' (exact key or a prefix such as 'payments.topics') the values per profile, the code reading it (@Value, annotations, Environment, @ConfigurationProperties) and the features going through that code. Secrets are masked.",
           "inputSchema": s(json!({ "key": { "type": "string" }, "service": service }), &[]) },
@@ -309,7 +309,7 @@ impl Tools {
         let Some(name) = arg(args, "table") else {
             let list: Vec<Value> = tables
                 .iter()
-                .map(|t| json!({ "name": t["name"], "source": t["source"], "entity": t["entity"], "columns": t["columns"].as_array().map_or(0, Vec::len) }))
+                .map(|t| json!({ "name": t["name"], "store": t["store"], "source": t["source"], "entity": t["entity"], "columns": t["columns"].as_array().map_or(0, Vec::len) }))
                 .collect();
             return Ok(json!({ "data": { "service": m.service.id, "datasources": db["datasources"], "tables": list }, "meta": Self::facts_meta(&m) }));
         };

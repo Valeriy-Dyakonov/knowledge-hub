@@ -85,17 +85,23 @@
       "payments.topics.completed": "payments.completed",
       "refunds.topics.created": "refunds.created",
       "spring.application.name": "refunds",
+      "spring.data.mongodb.uri": "mongodb://mongo:27017/refunds",
+      "spring.data.redis.host": "redis",
+      "spring.data.redis.port": "6379",
       "spring.datasource.password": "***",
       "spring.datasource.url": "jdbc:postgresql://db:5432/refunds",
       "spring.datasource.username": "refunds"
     },
     "propertySources": {
-      "clients.payments.api-key": "src/main/resources/application.yml:17",
+      "clients.payments.api-key": "src/main/resources/application.yml:23",
       "clients.payments.url": "src/main/resources/application.yml:5",
-      "payments.topics.completed": "src/main/resources/application.yml:10",
+      "payments.topics.completed": "src/main/resources/application.yml:16",
       "refunds.limits.max-amount": "src/main/resources/application-prod.yml:9",
-      "refunds.topics.created": "src/main/resources/application.yml:13",
+      "refunds.topics.created": "src/main/resources/application.yml:19",
       "spring.application.name": "src/main/resources/application.yml:3",
+      "spring.data.mongodb.uri": "src/main/resources/application.yml:13",
+      "spring.data.redis.host": "src/main/resources/application.yml:10",
+      "spring.data.redis.port": "src/main/resources/application.yml:11",
       "spring.datasource.password": "src/main/resources/application.yml:7",
       "spring.datasource.url": "src/main/resources/application.yml:5",
       "spring.datasource.username": "src/main/resources/application.yml:6"
@@ -362,8 +368,8 @@
           "commit": "unknown",
           "fingerprint": "99ba9073c65b7bdd",
           "lines": {
-            "end": 23,
-            "start": 23
+            "end": 26,
+            "start": 26
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -378,8 +384,8 @@
           "commit": "unknown",
           "fingerprint": "3e817def1d58d2e2",
           "lines": {
-            "end": 24,
-            "start": 24
+            "end": 27,
+            "start": 27
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -394,8 +400,8 @@
           "commit": "unknown",
           "fingerprint": "8afc7e23505f3f13",
           "lines": {
-            "end": 26,
-            "start": 26
+            "end": 29,
+            "start": 29
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -410,8 +416,8 @@
           "commit": "unknown",
           "fingerprint": "f7ee265797b35ea8",
           "lines": {
-            "end": 27,
-            "start": 27
+            "end": 30,
+            "start": 30
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -426,8 +432,8 @@
           "commit": "unknown",
           "fingerprint": "0f8775034bcf03bc",
           "lines": {
-            "end": 30,
-            "start": 30
+            "end": 33,
+            "start": 33
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -442,8 +448,8 @@
           "commit": "unknown",
           "fingerprint": "0f8775034bcf03bc",
           "lines": {
-            "end": 30,
-            "start": 30
+            "end": 33,
+            "start": 33
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -456,10 +462,26 @@
       {
         "evidence": {
           "commit": "unknown",
+          "fingerprint": "e0d566fa32392901",
+          "lines": {
+            "end": 36,
+            "start": 36
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "markPaid",
+        "targetMethod": "save",
+        "targetType": "com.example.refunds.persistence.RefundLockRepository"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
           "fingerprint": "69a98913fdec70eb",
           "lines": {
-            "end": 33,
-            "start": 33
+            "end": 37,
+            "start": 37
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -474,8 +496,8 @@
           "commit": "unknown",
           "fingerprint": "6a99814813c88b38",
           "lines": {
-            "end": 35,
-            "start": 35
+            "end": 39,
+            "start": 39
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -882,6 +904,54 @@
       },
       {
         "attributes": {
+          "table": "payouts"
+        },
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "11eaf94fff76e8fe",
+          "lines": {
+            "end": 17,
+            "start": 17
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/PayoutRecord.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.PayoutRepository",
+        "injected": {},
+        "isInterface": true,
+        "kind": "REPOSITORY",
+        "methods": [],
+        "simpleName": "PayoutRepository",
+        "supertypes": [
+          "org.springframework.data.repository.CrudRepository"
+        ]
+      },
+      {
+        "attributes": {
+          "table": "refund-locks"
+        },
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "95a82889b91e60d4",
+          "lines": {
+            "end": 16,
+            "start": 16
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundLock.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.RefundLockRepository",
+        "injected": {},
+        "isInterface": true,
+        "kind": "REPOSITORY",
+        "methods": [],
+        "simpleName": "RefundLockRepository",
+        "supertypes": [
+          "org.springframework.data.repository.CrudRepository"
+        ]
+      },
+      {
+        "attributes": {
           "table": "refunds"
         },
         "evidence": {
@@ -917,6 +987,54 @@
           }
         ],
         "simpleName": "RefundRepository",
+        "supertypes": [
+          "org.springframework.data.jpa.repository.JpaRepository"
+        ]
+      },
+      {
+        "attributes": {
+          "table": "refund_snapshots"
+        },
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "ab50a9356ee33f19",
+          "lines": {
+            "end": 15,
+            "start": 15
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundSnapshot.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.RefundSnapshotRepository",
+        "injected": {},
+        "isInterface": true,
+        "kind": "REPOSITORY",
+        "methods": [],
+        "simpleName": "RefundSnapshotRepository",
+        "supertypes": [
+          "org.springframework.data.mongodb.repository.MongoRepository"
+        ]
+      },
+      {
+        "attributes": {
+          "table": "refund_note"
+        },
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "7465ddfed828d968",
+          "lines": {
+            "end": 20,
+            "start": 20
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundSnapshot.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.RefundNoteRepository",
+        "injected": {},
+        "isInterface": true,
+        "kind": "REPOSITORY",
+        "methods": [],
+        "simpleName": "RefundNoteRepository",
         "supertypes": [
           "org.springframework.data.jpa.repository.JpaRepository"
         ]
@@ -1007,10 +1125,10 @@
         "attributes": {},
         "evidence": {
           "commit": "unknown",
-          "fingerprint": "6acffbba207e6416",
+          "fingerprint": "89ab727e02c7a60f",
           "lines": {
-            "end": 21,
-            "start": 15
+            "end": 24,
+            "start": 17
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -1018,6 +1136,7 @@
         "id": "com.example.refunds.service.RefundService",
         "injected": {
           "events": "org.springframework.context.ApplicationEventPublisher",
+          "locks": "com.example.refunds.persistence.RefundLockRepository",
           "notifications": "com.example.refunds.notify.NotificationService",
           "paymentsClient": "com.example.refunds.client.PaymentsClient",
           "repository": "com.example.refunds.persistence.RefundRepository"
@@ -1030,8 +1149,8 @@
               "commit": "unknown",
               "fingerprint": "87074399944e7a41",
               "lines": {
-                "end": 28,
-                "start": 22
+                "end": 31,
+                "start": 25
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -1046,8 +1165,8 @@
               "commit": "unknown",
               "fingerprint": "0f8775034bcf03bc",
               "lines": {
-                "end": 30,
-                "start": 30
+                "end": 33,
+                "start": 33
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -1060,10 +1179,10 @@
           {
             "evidence": {
               "commit": "unknown",
-              "fingerprint": "71f4523dfe80f9dd",
+              "fingerprint": "4535b835e35c5c62",
               "lines": {
-                "end": 36,
-                "start": 32
+                "end": 40,
+                "start": 35
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -1078,8 +1197,8 @@
               "commit": "unknown",
               "fingerprint": "4a37d959b894e1f3",
               "lines": {
-                "end": 38,
-                "start": 38
+                "end": 42,
+                "start": 42
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -1241,6 +1360,44 @@
           {
             "column": "id",
             "field": "id",
+            "kotlinType": "Long",
+            "nullable": false,
+            "primaryKey": true
+          },
+          {
+            "column": "refund_id",
+            "field": "refundId",
+            "kotlinType": "UUID",
+            "nullable": false,
+            "primaryKey": false
+          },
+          {
+            "column": "amount_cents",
+            "field": "amountCents",
+            "kotlinType": "Long",
+            "nullable": false,
+            "primaryKey": false
+          }
+        ],
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "1062f223f6f0dc9c",
+          "lines": {
+            "end": 15,
+            "start": 10
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/PayoutRecord.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.PayoutRecord",
+        "store": "sql",
+        "table": "payouts"
+      },
+      {
+        "columns": [
+          {
+            "column": "id",
+            "field": "id",
             "kotlinType": "UUID",
             "nullable": false,
             "primaryKey": true
@@ -1271,6 +1428,7 @@
           "repo": "refunds-service"
         },
         "id": "com.example.refunds.persistence.RefundEntity",
+        "store": "sql",
         "table": "refunds"
       },
       {
@@ -1323,7 +1481,108 @@
           "repo": "refunds-service"
         },
         "id": "com.example.refunds.persistence.RefundItemEntity",
+        "store": "sql",
         "table": "refund_items"
+      },
+      {
+        "columns": [
+          {
+            "column": "refundId",
+            "field": "refundId",
+            "kotlinType": "String",
+            "nullable": false,
+            "primaryKey": true
+          },
+          {
+            "column": "owner",
+            "field": "owner",
+            "kotlinType": "String",
+            "nullable": false,
+            "primaryKey": false
+          },
+          {
+            "column": "ttlSeconds",
+            "field": "ttlSeconds",
+            "kotlinType": "Long",
+            "nullable": false,
+            "primaryKey": false
+          }
+        ],
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "da440539fadb626e",
+          "lines": {
+            "end": 14,
+            "start": 9
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundLock.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.RefundLock",
+        "store": "redis",
+        "table": "refund-locks"
+      },
+      {
+        "columns": [
+          {
+            "column": "_id",
+            "field": "id",
+            "kotlinType": "String",
+            "nullable": false,
+            "primaryKey": true
+          },
+          {
+            "column": "payload",
+            "field": "body",
+            "kotlinType": "String",
+            "nullable": false,
+            "primaryKey": false
+          }
+        ],
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "d493abc439a41855",
+          "lines": {
+            "end": 13,
+            "start": 9
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundSnapshot.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.RefundSnapshot",
+        "store": "mongo",
+        "table": "refund_snapshots"
+      },
+      {
+        "columns": [
+          {
+            "column": "id",
+            "field": "id",
+            "kotlinType": "Long",
+            "nullable": false,
+            "primaryKey": false
+          },
+          {
+            "column": "text",
+            "field": "text",
+            "kotlinType": "String",
+            "nullable": false,
+            "primaryKey": false
+          }
+        ],
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "1c946ffbd70ad6e5",
+          "lines": {
+            "end": 18,
+            "start": 18
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundSnapshot.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.RefundNote",
+        "store": "sql",
+        "table": "refund_note"
       }
     ],
     "events": [
@@ -1334,8 +1593,8 @@
           "commit": "unknown",
           "fingerprint": "29de02b910d40882",
           "lines": {
-            "end": 25,
-            "start": 25
+            "end": 28,
+            "start": 28
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -1481,6 +1740,28 @@
         "origin": "STATIC",
         "sinkKind": "TOPIC",
         "sinkName": "refunds.approved"
+      },
+      {
+        "attributes": {
+          "operation": "save"
+        },
+        "componentId": "com.example.refunds.persistence.RefundLockRepository",
+        "confidence": "HIGH",
+        "edgeKind": "WRITE",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "95a82889b91e60d4",
+          "lines": {
+            "end": 16,
+            "start": 16
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/RefundLock.kt",
+          "repo": "refunds-service"
+        },
+        "method": "save",
+        "origin": "STATIC",
+        "sinkKind": "DB_TABLE",
+        "sinkName": "refund-locks"
       },
       {
         "attributes": {
@@ -1739,11 +2020,11 @@
       "kind": "extractor",
       "millis": 0,
       "stats": {
-        "calls": 16,
-        "components": 12,
+        "calls": 17,
+        "components": 16,
         "events": 1,
-        "files": 16,
-        "sinkAccesses": 9,
+        "files": 19,
+        "sinkAccesses": 10,
         "triggers": 9,
         "unresolved": 1
       },
@@ -1757,7 +2038,7 @@
       "stats": {
         "apiOperations": 0,
         "ownership": 0,
-        "properties": 8,
+        "properties": 11,
         "tables": 0
       },
       "status": "done"

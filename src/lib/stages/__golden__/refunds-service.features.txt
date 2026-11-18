@@ -43,15 +43,18 @@ FEATURE approvals/approve group=approvals owner=@team-refunds :: POST /api/v1/re
 FEATURE payment-events/on-payment-completed group=payment-events owner=@team-refunds :: kafka payments.completed
   STEP 1 PaymentEventsConsumer.onPaymentCompleted [message:payments.completed:com.example.refunds.messaging.PaymentEventsConsumer.onPaymentCompleted -CALL-> PaymentEventsConsumer STATIC/HIGH]
   STEP 2 RefundService.markPaid [PaymentEventsConsumer -CALL-> RefundService STATIC/HIGH]
-  STEP 3 RefundRepository.findById [RefundService -CALL-> RefundRepository STATIC/HIGH]
-  STEP 4 RefundRepository.findById [RefundRepository -READ-> db_table:refunds STATIC/HIGH]
-  STEP 5 RefundRepository.save [RefundService -CALL-> RefundRepository STATIC/HIGH]
-  STEP 6 RefundRepository.save [RefundRepository -WRITE-> db_table:refunds STATIC/HIGH]
+  STEP 3 RefundLockRepository.save [RefundService -CALL-> RefundLockRepository STATIC/HIGH]
+  STEP 4 RefundLockRepository.save [RefundLockRepository -WRITE-> db_table:refund-locks STATIC/MEDIUM]
+  STEP 5 RefundRepository.findById [RefundService -CALL-> RefundRepository STATIC/HIGH]
+  STEP 6 RefundRepository.findById [RefundRepository -READ-> db_table:refunds STATIC/HIGH]
+  STEP 7 RefundRepository.save [RefundService -CALL-> RefundRepository STATIC/HIGH]
+  STEP 8 RefundRepository.save [RefundRepository -WRITE-> db_table:refunds STATIC/HIGH]
   CONSUME topic:payments.completed -> PaymentEventsConsumer
   SINK topic:payments.completed
+  SINK db_table:refund-locks
   SINK db_table:refunds
   BREAK DYNAMIC_SQL PaymentEventsConsumer.audit jdbcTemplate.update
-  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=4 CONSUMES/STATIC/HIGH=1 EXISTS/STATIC/HIGH=1 READS/STATIC/HIGH=1 WRITES_TO/STATIC/HIGH=1
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=5 CONSUMES/STATIC/HIGH=1 EXISTS/STATIC/HIGH=1 READS/STATIC/HIGH=1 WRITES_TO/STATIC/HIGH=1 WRITES_TO/STATIC/MEDIUM=1
 FEATURE reconciliation/reconcile group=reconciliation owner=@team-ledger :: schedule 0 0 * * * * ReconciliationJob.reconcile
   STEP 1 ReconciliationJob.reconcile [schedule:com.example.refunds.jobs.ReconciliationJob.reconcile -CALL-> ReconciliationJob STATIC/HIGH]
   STEP 2 ReconciliationJob.reconcile [ReconciliationJob -HTTP_CALL-> external_http:ledger.example.com STATIC/HIGH]
@@ -60,4 +63,4 @@ FEATURE reconciliation/reconcile group=reconciliation owner=@team-ledger :: sche
   SINK external_http:ledger.example.com
   SINK db_table:refunds
   CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=2 EXISTS/STATIC/HIGH=1 HTTP_CALLS/STATIC/HIGH=1 READS/STATIC/HIGH=1
-CATALOG components=12 sinks=db_table:refunds,external_http:payments,external_http:notify.example.com,topic:refunds.created,topic:refunds.approved,topic:payments.completed,external_http:ledger.example.com
+CATALOG components=16 sinks=db_table:refunds,external_http:payments,external_http:notify.example.com,topic:refunds.created,topic:refunds.approved,topic:payments.completed,db_table:refund-locks,external_http:ledger.example.com

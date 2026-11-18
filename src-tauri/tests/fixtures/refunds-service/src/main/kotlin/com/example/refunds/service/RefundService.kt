@@ -7,6 +7,8 @@ import com.example.refunds.domain.Refund
 import com.example.refunds.domain.RefundCreated
 import com.example.refunds.notify.NotificationService
 import com.example.refunds.persistence.RefundEntity
+import com.example.refunds.persistence.RefundLock
+import com.example.refunds.persistence.RefundLockRepository
 import com.example.refunds.persistence.RefundRepository
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -18,6 +20,7 @@ class RefundService(
     private val paymentsClient: PaymentsClient,
     private val events: ApplicationEventPublisher,
     private val notifications: NotificationService,
+    private val locks: RefundLockRepository,
 ) {
     fun create(request: CreateRefund): Refund {
         val entity = repository.save(RefundEntity(UUID.randomUUID(), request.amount, "NEW"))
@@ -30,6 +33,7 @@ class RefundService(
     fun get(id: UUID): Refund = toRefund(repository.findById(id).orElseThrow())
 
     fun markPaid(id: UUID) {
+        locks.save(RefundLock(id.toString(), "payments", 30))
         val entity = repository.findById(id).orElseThrow()
         entity.status = "PAID"
         repository.save(entity)

@@ -46,6 +46,10 @@ export const render = {
   datasources: "Источники данных",
   profile: (p: string) => `профиль ${p}`,
   tables: "Таблицы",
+  stores: {
+    sql: "Таблицы (SQL)", mongo: "Коллекции MongoDB", redis: "Redis (@RedisHash)", elasticsearch: "Индексы Elasticsearch",
+    cassandra: "Таблицы Cassandra", neo4j: "Узлы Neo4j", unknown: "Хранилище не определено (тип репозитория без аннотации)",
+  } as Record<string, string>,
   noTables: "Таблицы не найдены.",
   tableSource: "Откуда известна структура",
   tableSources: { migration: "миграции", entity: "JPA-сущность", both: "миграции и JPA-сущность", code: "только упоминание в коде" } as Record<string, string>,

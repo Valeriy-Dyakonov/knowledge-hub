@@ -159,6 +159,8 @@ export interface ColumnInfo {
 
 export interface TableInfo {
   name: string;
+  /** SQL table, MongoDB collection, Redis keyspace, Elasticsearch index... */
+  store: DataStore;
   columns: ColumnInfo[];
   /** JPA entity mapped to the table (FQN). */
   entity?: string;
@@ -239,7 +241,10 @@ export interface UnresolvedFact { componentId: string; method: string; reason: B
 
 export interface EntityColumnFact { field: string; column: string; kotlinType: string; nullable: boolean; primaryKey: boolean; referencesEntity?: string }
 
-export interface EntityFact { id: string; table: string; columns: EntityColumnFact[]; evidence?: Evidence }
+/** Where a stored class lives. */
+export type DataStore = "sql" | "mongo" | "redis" | "elasticsearch" | "cassandra" | "neo4j" | "unknown";
+
+export interface EntityFact { id: string; store?: DataStore; table: string; columns: EntityColumnFact[]; evidence?: Evidence }
 
 /** A place where code reads configuration; `key` ends with `.*` for a whole prefix. */
 export interface ConfigUsageFact { key: string; componentId: string; method?: string; kind: string; default?: string; evidence?: Evidence }

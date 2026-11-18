@@ -41,17 +41,18 @@ flowchart LR
   subgraph g4["База данных"]
     direction TB
     n8[("Возвраты")]:::db
+    n9[("refund-locks")]:::db
   end
   subgraph g5["Публикует в топики"]
     direction TB
-    n9[/"refunds.approved"/]:::queue
-    n10[/"refunds.created"/]:::queue
+    n10[/"refunds.approved"/]:::queue
+    n11[/"refunds.created"/]:::queue
   end
   subgraph g6["Внешние сервисы"]
     direction TB
-    n11{{"ledger.example.com"}}:::external
-    n12{{"notify.example.com"}}:::external
-    n13{{"payments"}}:::external
+    n12{{"ledger.example.com"}}:::external
+    n13{{"notify.example.com"}}:::external
+    n14{{"payments"}}:::external
   end
   g1 -->|4 HTTP| n1
   g2 -->|получает| n1
@@ -101,18 +102,19 @@ flowchart TB
   subgraph g7["База данных"]
     direction LR
     n8[("Возвраты")]:::db
+    n11[("refund-locks")]:::db
   end
   subgraph g8["Топики и очереди"]
     direction LR
     n9[/"refunds.approved"/]:::queue
     n10[/"payments.completed"/]:::queue
-    n14[/"refunds.created"/]:::queue
+    n15[/"refunds.created"/]:::queue
   end
   subgraph g9["Внешние сервисы"]
     direction LR
-    n11{{"ledger.example.com"}}:::external
-    n12{{"payments"}}:::external
-    n13{{"notify.example.com"}}:::external
+    n12{{"ledger.example.com"}}:::external
+    n13{{"payments"}}:::external
+    n14{{"notify.example.com"}}:::external
   end
   %% claim c-031aaff17e5ee300
   n1 -->|пишет| n8
@@ -122,22 +124,24 @@ flowchart TB
   n2 -->|читает| n8
   %% claim c-00901ecfd7a40a0f
   n10 -->|получает| n3
+  %% claim c-138eabb1f2c3400c
+  n3 -->|пишет| n11
   %% claim c-1b0ee75a39f6491f
   n3 -->|читает| n8
   %% claim c-12803d863b50a50e
   n3 -->|пишет| n8
   %% claim c-195f2b1fafba1607
-  n5 -->|вызывает API| n11
+  n5 -->|вызывает API| n12
   %% claim c-0e96e0157abb2303
   n5 -->|читает| n8
   %% claim c-02fc26133e7b940e
   n6 -->|пишет| n8
   %% claim c-0087eb84ac7c8d02
-  n6 -->|вызывает API| n12
-  %% claim c-1d9d21cc9488c713
   n6 -->|вызывает API| n13
+  %% claim c-1d9d21cc9488c713
+  n6 -->|вызывает API| n14
   %% claim c-024d3c170906f605
-  n6 -->|публикует| n14
+  n6 -->|публикует| n15
   %% claim c-0f71f9f289845d0d
   n7 -->|читает| n8
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
@@ -172,53 +176,68 @@ flowchart LR
   subgraph g3["Доступ к данным и API"]
     direction TB
     n10["RefundRepository"]:::component
-    n11["PaymentsClient"]:::component
+    n11["RefundLockRepository"]:::component
+    n12["PaymentsClient"]:::component
   end
   subgraph g4["Хранилища и внешние системы"]
-    direction TB
-    n12[("Возвраты<br/>таблица")]:::db
-    n13[/"refunds.approved<br/>топик"/]:::queue
-    n14{{"ledger.example.com<br/>внешний API"}}:::external
-    n15{{"payments<br/>внешний API"}}:::external
-    n16{{"notify.example.com<br/>внешний API"}}:::external
-    n17[/"refunds.created<br/>топик"/]:::queue
+    direction LR
+    subgraph g4c1[" "]
+      direction TB
+      n13[("Возвраты<br/>таблица")]:::db
+      n14[/"refunds.approved<br/>топик"/]:::queue
+      n15[("refund-locks<br/>таблица")]:::db
+    end
+    subgraph g4c2[" "]
+      direction TB
+      n16{{"ledger.example.com<br/>внешний API"}}:::external
+      n17{{"payments<br/>внешний API"}}:::external
+      n18{{"notify.example.com<br/>внешний API"}}:::external
+    end
+    subgraph g4c3[" "]
+      direction TB
+      n19[/"refunds.created<br/>топик"/]:::queue
+    end
   end
   %% claim c-15aec0f5d1509c01
   n1 -.->|вызывает| n4
   %% claim c-031aaff17e5ee300
-  n4 -->|пишет| n12
+  n4 -->|пишет| n13
   %% claim c-01664b64827d1904
   n1 -.->|вызывает| n5
   %% claim c-04f3d7945589a700
-  n5 -->|публикует| n13
+  n5 -->|публикует| n14
   %% claim c-1130632493a7bb17
   n6 -->|вызывает| n10
   %% claim c-04fb6787f3b58300
-  n10 -->|читает| n12
+  n10 -->|читает| n13
   %% claim c-0a2454f33f40af01
   n2 -->|вызывает| n7
+  %% claim c-11fe0864ed20e71a
+  n7 -->|вызывает| n11
+  %% claim c-138eabb1f2c3400c
+  n11 -->|пишет| n15
   %% claim c-19f33311ed75690e
   n7 -->|вызывает| n10
   %% claim c-12803d863b50a50e
-  n10 -->|пишет| n12
+  n10 -->|пишет| n13
   %% claim c-195f2b1fafba1607
-  n8 -->|вызывает API| n14
+  n8 -->|вызывает API| n16
   %% claim c-06cd6200b4ffd40b
   n8 -->|вызывает| n10
   %% claim c-1e367b4dee7b1210
   n1 -->|вызывает| n7
   %% claim c-09edb9a27f064a05
-  n7 -->|вызывает| n11
+  n7 -->|вызывает| n12
   %% claim c-0087eb84ac7c8d02
-  n11 -->|вызывает API| n15
+  n12 -->|вызывает API| n17
   %% claim c-105727ac2c2ba206
   n7 -->|вызывает| n9
   %% claim c-1d9d21cc9488c713
-  n9 -->|вызывает API| n16
+  n9 -->|вызывает API| n18
   %% claim c-1d4598f3099e1007
   n7 -.->|вызывает| n3
   %% claim c-024d3c170906f605
-  n3 -->|публикует| n17
+  n3 -->|публикует| n19
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -227,6 +246,9 @@ flowchart LR
   classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
   classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
   classDef more fill:#ffffff,stroke:#8b95a5,color:#1c2330,stroke-dasharray:4 3
+  style g4c1 fill:transparent,stroke:transparent
+  style g4c2 fill:transparent,stroke:transparent
+  style g4c3 fill:transparent,stroke:transparent
 ```
 
 === features/approvals/approve/README.md
@@ -319,7 +341,7 @@ sequenceDiagram
 <!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
 # kafka payments.completed
 
-- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 9.
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 11.
 - Группа: `payment-events` · `payment-events/on-payment-completed`
 - Владелец: @team-refunds
 
@@ -333,30 +355,36 @@ _Описание ещё не составлено._
 
 1. kafka payments.completed вызывает **PaymentEventsConsumer** (`onPaymentCompleted`) — `src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:14`
 2. PaymentEventsConsumer вызывает **Сервис возвратов** (`markPaid`) — `src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:16`
-3. Сервис возвратов читает **Возвраты** (`findById`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:33`
-4. Сервис возвратов пишет **Возвраты** (`save`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:35`
+3. Сервис возвратов пишет **refund-locks** (`save`) через RefundLockRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:36`
+4. Сервис возвратов читает **Возвраты** (`findById`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:37`
+5. Сервис возвратов пишет **Возвраты** (`save`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:39`
 
 ```mermaid
 sequenceDiagram
   participant p1 as топик payments.completed
   participant p2 as PaymentEventsConsumer
   participant p3 as Сервис возвратов
-  participant p4 as таблица Возвраты
+  participant p4 as таблица refund-locks
+  participant p5 as таблица Возвраты
   %% claim c-17b5c3ce03122e03
   p1->>p2: onPaymentCompleted
   %% claim c-0a2454f33f40af01
   p2->>p3: markPaid
+  %% claim c-11fe0864ed20e71a
+  %% claim c-138eabb1f2c3400c
+  p3->>p4: пишет: save (RefundLockRepository)
   %% claim c-19f33311ed75690e
   %% claim c-1b0ee75a39f6491f
-  p3->>p4: читает: findById (RefundRepository)
+  p3->>p5: читает: findById (RefundRepository)
   %% claim c-1f8b4962e56bba00
   %% claim c-12803d863b50a50e
-  p3->>p4: пишет: save (RefundRepository)
+  p3->>p5: пишет: save (RefundRepository)
 ```
 
 ## Куда пишет и откуда читает
 
 - топик **payments.completed**
+- таблица **refund-locks**
 - таблица **Возвраты**
 
 ## Где анализ не уверен
@@ -450,11 +478,11 @@ sequenceDiagram
 
 1. POST /api/v1/refunds вызывает **RefundController** (`create`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:16`
 2. RefundController вызывает **Сервис возвратов** (`create`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:17`
-3. Сервис возвратов пишет **Возвраты** (`save`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:23`
-4. Сервис возвратов вызывает API **payments** (`reserve`) через PaymentsClient — `src/main/kotlin/com/example/refunds/service/RefundService.kt:24`
-5. Сервис возвратов вызывает **NotificationService** (`notifyCustomer`) (асинхронно) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:26`
+3. Сервис возвратов пишет **Возвраты** (`save`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:26`
+4. Сервис возвратов вызывает API **payments** (`reserve`) через PaymentsClient — `src/main/kotlin/com/example/refunds/service/RefundService.kt:27`
+5. Сервис возвратов вызывает **NotificationService** (`notifyCustomer`) (асинхронно) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:29`
 6. NotificationService вызывает API **notify.example.com** (`notifyCustomer`) — `src/main/kotlin/com/example/refunds/notify/NotificationService.kt:12`
-7. Сервис возвратов вызывает **RefundEventsListener** (`event:RefundCreated -> onCreated`) (выведено, требует проверки) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:25`
+7. Сервис возвратов вызывает **RefundEventsListener** (`event:RefundCreated -> onCreated`) (выведено, требует проверки) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:28`
 8. RefundEventsListener публикует **refunds.created** (`send`) — `src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt:16`
 
 ```mermaid
@@ -513,7 +541,7 @@ _Описание ещё не составлено._
 
 1. GET /api/v1/refunds/{id} вызывает **RefundController** (`get`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:19`
 2. RefundController вызывает **Сервис возвратов** (`get`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:21`
-3. Сервис возвратов читает **Возвраты** (`findById`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:30`
+3. Сервис возвратов читает **Возвраты** (`findById`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:33`
 
 ```mermaid
 sequenceDiagram
@@ -556,17 +584,18 @@ flowchart LR
   subgraph g4["База данных"]
     direction TB
     n8[("Возвраты")]:::db
+    n9[("refund-locks")]:::db
   end
   subgraph g5["Публикует в топики"]
     direction TB
-    n9[/"refunds.approved"/]:::queue
-    n10[/"refunds.created"/]:::queue
+    n10[/"refunds.approved"/]:::queue
+    n11[/"refunds.created"/]:::queue
   end
   subgraph g6["Внешние сервисы"]
     direction TB
-    n11{{"ledger.example.com"}}:::external
-    n12{{"notify.example.com"}}:::external
-    n13{{"payments"}}:::external
+    n12{{"ledger.example.com"}}:::external
+    n13{{"notify.example.com"}}:::external
+    n14{{"payments"}}:::external
   end
   g1 -->|4 HTTP| n1
   g2 -->|получает| n1
@@ -614,18 +643,19 @@ flowchart TB
   subgraph g7["База данных"]
     direction LR
     n8[("Возвраты")]:::db
+    n11[("refund-locks")]:::db
   end
   subgraph g8["Топики и очереди"]
     direction LR
     n9[/"refunds.approved"/]:::queue
     n10[/"payments.completed"/]:::queue
-    n14[/"refunds.created"/]:::queue
+    n15[/"refunds.created"/]:::queue
   end
   subgraph g9["Внешние сервисы"]
     direction LR
-    n11{{"ledger.example.com"}}:::external
-    n12{{"payments"}}:::external
-    n13{{"notify.example.com"}}:::external
+    n12{{"ledger.example.com"}}:::external
+    n13{{"payments"}}:::external
+    n14{{"notify.example.com"}}:::external
   end
   %% claim c-031aaff17e5ee300
   n1 -->|пишет| n8
@@ -635,22 +665,24 @@ flowchart TB
   n2 -->|читает| n8
   %% claim c-00901ecfd7a40a0f
   n10 -->|получает| n3
+  %% claim c-138eabb1f2c3400c
+  n3 -->|пишет| n11
   %% claim c-1b0ee75a39f6491f
   n3 -->|читает| n8
   %% claim c-12803d863b50a50e
   n3 -->|пишет| n8
   %% claim c-195f2b1fafba1607
-  n5 -->|вызывает API| n11
+  n5 -->|вызывает API| n12
   %% claim c-0e96e0157abb2303
   n5 -->|читает| n8
   %% claim c-02fc26133e7b940e
   n6 -->|пишет| n8
   %% claim c-0087eb84ac7c8d02
-  n6 -->|вызывает API| n12
-  %% claim c-1d9d21cc9488c713
   n6 -->|вызывает API| n13
+  %% claim c-1d9d21cc9488c713
+  n6 -->|вызывает API| n14
   %% claim c-024d3c170906f605
-  n6 -->|публикует| n14
+  n6 -->|публикует| n15
   %% claim c-0f71f9f289845d0d
   n7 -->|читает| n8
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
@@ -683,53 +715,68 @@ flowchart LR
   subgraph g3["Доступ к данным и API"]
     direction TB
     n10["RefundRepository"]:::component
-    n11["PaymentsClient"]:::component
+    n11["RefundLockRepository"]:::component
+    n12["PaymentsClient"]:::component
   end
   subgraph g4["Хранилища и внешние системы"]
-    direction TB
-    n12[("Возвраты<br/>таблица")]:::db
-    n13[/"refunds.approved<br/>топик"/]:::queue
-    n14{{"ledger.example.com<br/>внешний API"}}:::external
-    n15{{"payments<br/>внешний API"}}:::external
-    n16{{"notify.example.com<br/>внешний API"}}:::external
-    n17[/"refunds.created<br/>топик"/]:::queue
+    direction LR
+    subgraph g4c1[" "]
+      direction TB
+      n13[("Возвраты<br/>таблица")]:::db
+      n14[/"refunds.approved<br/>топик"/]:::queue
+      n15[("refund-locks<br/>таблица")]:::db
+    end
+    subgraph g4c2[" "]
+      direction TB
+      n16{{"ledger.example.com<br/>внешний API"}}:::external
+      n17{{"payments<br/>внешний API"}}:::external
+      n18{{"notify.example.com<br/>внешний API"}}:::external
+    end
+    subgraph g4c3[" "]
+      direction TB
+      n19[/"refunds.created<br/>топик"/]:::queue
+    end
   end
   %% claim c-15aec0f5d1509c01
   n1 -.->|вызывает| n4
   %% claim c-031aaff17e5ee300
-  n4 -->|пишет| n12
+  n4 -->|пишет| n13
   %% claim c-01664b64827d1904
   n1 -.->|вызывает| n5
   %% claim c-04f3d7945589a700
-  n5 -->|публикует| n13
+  n5 -->|публикует| n14
   %% claim c-1130632493a7bb17
   n6 -->|вызывает| n10
   %% claim c-04fb6787f3b58300
-  n10 -->|читает| n12
+  n10 -->|читает| n13
   %% claim c-0a2454f33f40af01
   n2 -->|вызывает| n7
+  %% claim c-11fe0864ed20e71a
+  n7 -->|вызывает| n11
+  %% claim c-138eabb1f2c3400c
+  n11 -->|пишет| n15
   %% claim c-19f33311ed75690e
   n7 -->|вызывает| n10
   %% claim c-12803d863b50a50e
-  n10 -->|пишет| n12
+  n10 -->|пишет| n13
   %% claim c-195f2b1fafba1607
-  n8 -->|вызывает API| n14
+  n8 -->|вызывает API| n16
   %% claim c-06cd6200b4ffd40b
   n8 -->|вызывает| n10
   %% claim c-1e367b4dee7b1210
   n1 -->|вызывает| n7
   %% claim c-09edb9a27f064a05
-  n7 -->|вызывает| n11
+  n7 -->|вызывает| n12
   %% claim c-0087eb84ac7c8d02
-  n11 -->|вызывает API| n15
+  n12 -->|вызывает API| n17
   %% claim c-105727ac2c2ba206
   n7 -->|вызывает| n9
   %% claim c-1d9d21cc9488c713
-  n9 -->|вызывает API| n16
+  n9 -->|вызывает API| n18
   %% claim c-1d4598f3099e1007
   n7 -.->|вызывает| n3
   %% claim c-024d3c170906f605
-  n3 -->|публикует| n17
+  n3 -->|публикует| n19
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -738,6 +785,9 @@ flowchart LR
   classDef queue fill:#fbf0dc,stroke:#c27c0e,color:#4a3006
   classDef external fill:#fde5e0,stroke:#e24329,color:#4f1307
   classDef more fill:#ffffff,stroke:#8b95a5,color:#1c2330,stroke-dasharray:4 3
+  style g4c1 fill:transparent,stroke:transparent
+  style g4c2 fill:transparent,stroke:transparent
+  style g4c3 fill:transparent,stroke:transparent
 
 === features/approvals/approve/flow.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
@@ -777,17 +827,21 @@ sequenceDiagram
   participant p1 as топик payments.completed
   participant p2 as PaymentEventsConsumer
   participant p3 as Сервис возвратов
-  participant p4 as таблица Возвраты
+  participant p4 as таблица refund-locks
+  participant p5 as таблица Возвраты
   %% claim c-17b5c3ce03122e03
   p1->>p2: onPaymentCompleted
   %% claim c-0a2454f33f40af01
   p2->>p3: markPaid
+  %% claim c-11fe0864ed20e71a
+  %% claim c-138eabb1f2c3400c
+  p3->>p4: пишет: save (RefundLockRepository)
   %% claim c-19f33311ed75690e
   %% claim c-1b0ee75a39f6491f
-  p3->>p4: читает: findById (RefundRepository)
+  p3->>p5: читает: findById (RefundRepository)
   %% claim c-1f8b4962e56bba00
   %% claim c-12803d863b50a50e
-  p3->>p4: пишет: save (RefundRepository)
+  p3->>p5: пишет: save (RefundRepository)
 
 === features/ping/list/flow.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
@@ -864,9 +918,11 @@ sequenceDiagram
 
 ## Источники данных
 
+- `mongodb` `mongo:27017` / `refunds` — `spring.data.mongodb.uri`
+- `redis` `redis:6379` — `spring.data.redis.host`
 - `postgresql` `db:5432` / `refunds` — `spring.datasource.url`
 
-## Таблицы
+## Таблицы (SQL)
 
 ### audit\_log
 
@@ -876,6 +932,17 @@ sequenceDiagram
 |---|---|---|---|
 | `text` | varchar(255) |  |  |
 | `refund_id` | uuid | FK → refunds.id |  |
+
+### payouts
+
+- Откуда известна структура: JPA-сущность — `src/main/kotlin/com/example/refunds/persistence/PayoutRecord.kt`
+- Сущность: `com.example.refunds.persistence.PayoutRecord`
+
+| Колонка | Тип | Ключи и ограничения | Поле сущности |
+|---|---|---|---|
+| `id` | Long | PK | `id` |
+| `refund_id` | UUID | NOT NULL | `refundId` |
+| `amount_cents` | Long | NOT NULL | `amountCents` |
 
 ### refund\_items
 
@@ -888,6 +955,16 @@ sequenceDiagram
 | `refund_id` | uuid | FK → refunds.id, NOT NULL | `refund` |
 | `sku` | varchar(64) | NOT NULL | `stockKeepingUnit` |
 | `quantity` | int | NOT NULL | `quantity` |
+
+### refund\_note
+
+- Откуда известна структура: JPA-сущность — `src/main/kotlin/com/example/refunds/persistence/RefundSnapshot.kt`
+- Сущность: `com.example.refunds.persistence.RefundNote`
+
+| Колонка | Тип | Ключи и ограничения | Поле сущности |
+|---|---|---|---|
+| `id` | Long | NOT NULL | `id` |
+| `text` | String | NOT NULL | `text` |
 
 ### refunds
 
@@ -903,6 +980,32 @@ sequenceDiagram
 | `refund_reason` | text |  |  |
 | `created_at` | timestamp | NOT NULL |  |
 
+## Коллекции MongoDB
+
+### refund\_snapshots
+
+- Откуда известна структура: JPA-сущность — `src/main/kotlin/com/example/refunds/persistence/RefundSnapshot.kt`
+- Сущность: `com.example.refunds.persistence.RefundSnapshot`
+
+| Колонка | Тип | Ключи и ограничения | Поле сущности |
+|---|---|---|---|
+| `_id` | String | PK | `id` |
+| `payload` | String | NOT NULL | `body` |
+
+## Redis (@RedisHash)
+
+### refund-locks
+
+- Откуда известна структура: JPA-сущность — `src/main/kotlin/com/example/refunds/persistence/RefundLock.kt`
+- Сущность: `com.example.refunds.persistence.RefundLock`
+- Используется в фичах: kafka payments.completed (пишет)
+
+| Колонка | Тип | Ключи и ограничения | Поле сущности |
+|---|---|---|---|
+| `refundId` | String | PK | `refundId` |
+| `owner` | String | NOT NULL | `owner` |
+| `ttlSeconds` | Long | NOT NULL | `ttlSeconds` |
+
 ## ER-диаграмма
 
 ```mermaid
@@ -911,11 +1014,20 @@ erDiagram
     varchar(255) text
     uuid refund_id FK
   }
+  payouts {
+    Long id PK
+    UUID refund_id "not null"
+    Long amount_cents "not null"
+  }
   refund_items {
     bigserial id PK
     uuid refund_id FK "not null"
     varchar(64) sku "not null"
     int quantity "not null"
+  }
+  refund_note {
+    Long id "not null"
+    String text "not null"
   }
   refunds {
     uuid id PK
@@ -943,6 +1055,9 @@ erDiagram
 | `refunds.region` **не задано** |  |  | `ReconciliationJob.reconcile` |
 | `refunds.topics.created` | `refunds.created` |  | `RefundEventsListener` |
 | `spring.application.name` | `refunds` |  |  |
+| `spring.data.mongodb.uri` | `mongodb://mongo:27017/refunds` |  |  |
+| `spring.data.redis.host` | `redis` |  |  |
+| `spring.data.redis.port` | `6379` |  |  |
 | `spring.datasource.password` (секрет, скрыт) | `***` |  |  |
 | `spring.datasource.url` | `jdbc:postgresql://db:5432/refunds` |  |  |
 | `spring.datasource.username` | `refunds` |  |  |
@@ -954,11 +1069,20 @@ erDiagram
     varchar(255) text
     uuid refund_id FK
   }
+  payouts {
+    Long id PK
+    UUID refund_id "not null"
+    Long amount_cents "not null"
+  }
   refund_items {
     bigserial id PK
     uuid refund_id FK "not null"
     varchar(64) sku "not null"
     int quantity "not null"
+  }
+  refund_note {
+    Long id "not null"
+    String text "not null"
   }
   refunds {
     uuid id PK

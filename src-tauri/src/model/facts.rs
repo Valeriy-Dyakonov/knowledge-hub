@@ -110,6 +110,10 @@ pub struct EntityColumnFact {
 #[serde(rename_all = "camelCase")]
 pub struct EntityFact {
     pub id: String,
+    /// Where it is stored: sql | mongo | redis | elasticsearch | cassandra | neo4j | unknown.
+    #[serde(default = "sql_store")]
+    pub store: String,
+    /// Table, collection, Redis keyspace, index or label.
     pub table: String,
     pub columns: Vec<EntityColumnFact>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -236,4 +240,8 @@ impl ContextFacts {
         self.schema.extend(other.schema);
         self.ownership.extend(other.ownership);
     }
+}
+
+fn sql_store() -> String {
+    "sql".into()
 }

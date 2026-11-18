@@ -9,7 +9,13 @@ const model = analyse(scan);
 describe("database", () => {
   it("merges migrations with entities", () => {
     const db = model.database!;
-    expect(db.tables.map((t) => `${t.name}:${t.source}`)).toEqual(["audit_log:migration", "refund_items:both", "refunds:both"]);
+    expect(db.tables.map((t) => `${t.store}:${t.name}:${t.source}`)).toEqual([
+      "sql:audit_log:migration", "sql:payouts:entity", "sql:refund_items:both", "sql:refund_note:entity", "sql:refunds:both",
+      "mongo:refund_snapshots:entity", "redis:refund-locks:entity",
+    ]);
+    // Non-SQL stores keep field names; MongoDB's id is `_id`.
+    expect(db.tables.find((t) => t.name === "refund_snapshots")!.columns.map((c) => c.name)).toEqual(["_id", "payload"]);
+    expect(db.tables.find((t) => t.name === "refund-locks")!.columns.map((c) => c.name)).toEqual(["refundId", "owner", "ttlSeconds"]);
     const items = db.tables.find((t) => t.name === "refund_items")!;
     expect(items.entity).toBe("com.example.refunds.persistence.RefundItemEntity");
     const ref = items.columns.find((c) => c.name === "refund_id")!;
@@ -22,7 +28,9 @@ describe("database", () => {
   });
 
   it("describes the datasource without credentials", () => {
-    expect(model.database!.datasources[0]).toMatchObject({ kind: "postgresql", host: "db:5432", database: "refunds" });
+    const kinds = model.database!.datasources.map((d) => `${d.kind} ${d.host}`);
+    expect(kinds).toEqual(["mongodb mongo:27017", "redis redis:6379", "postgresql db:5432"]);
+    expect(model.database!.datasources.find((d) => d.kind === "postgresql")).toMatchObject({ host: "db:5432", database: "refunds" });
     expect(parseDatasource("x", "jdbc:postgresql://user:pw@h:5432/app?ssl=true").url).not.toContain("pw");
     expect(parseDatasource("x", "mongodb://u:p@m1:27017/docs")).toMatchObject({ kind: "mongodb", host: "m1:27017", database: "docs" });
   });

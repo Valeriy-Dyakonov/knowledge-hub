@@ -13,10 +13,11 @@ describe("flow steps", () => {
     expect(steps).toEqual([
       "onPaymentCompleted CALL PaymentEventsConsumer",
       "PaymentEventsConsumer CALL RefundService",
+      "RefundService WRITE db_table:refund-locks via RefundLockRepository.save",
       "RefundService READ db_table:refunds via RefundRepository.findById",
       "RefundService WRITE db_table:refunds via RefundRepository.save",
     ]);
-    expect(f.steps.length).toBe(6); // the model keeps both edges of each merged step
+    expect(f.steps.length).toBe(8); // the model keeps both edges of each merged step
   });
 
   it("mark a call into an @Async method and make an uncalled one a feature of its own", () => {

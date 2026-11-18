@@ -9,6 +9,12 @@ export const database: typeof ru = {
   datasources: "Datasources",
   profile: (p: string) => `profile ${p}`,
   tables: "Tables",
+  stores: {
+    sql: "Tables (SQL)", mongo: "MongoDB collections", redis: "Redis", elasticsearch: "Elasticsearch indices",
+    cassandra: "Cassandra tables", neo4j: "Neo4j nodes", unknown: "Store unknown",
+  } as Record<string, string>,
+  storesTip: "SQL tables come from migrations and entities (@Entity, Spring Data JDBC/R2DBC @Table). MongoDB collections from @Document, Redis from @RedisHash, indices from @Document(indexName), plus classes used as the type of a Spring Data repository. The ER diagram is for SQL only.",
+  fields: (n: number) => `${n} fields`,
   noHits: "Nothing found.",
   noTables: "No tables.",
   columnCount: (n: number) => `${n} columns`,

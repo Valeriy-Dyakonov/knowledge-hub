@@ -7,6 +7,12 @@ export const database = {
   datasources: "Источники данных",
   profile: (p: string) => `профиль ${p}`,
   tables: "Таблицы",
+  stores: {
+    sql: "Таблицы (SQL)", mongo: "Коллекции MongoDB", redis: "Redis", elasticsearch: "Индексы Elasticsearch",
+    cassandra: "Таблицы Cassandra", neo4j: "Узлы Neo4j", unknown: "Хранилище не определено",
+  } as Record<string, string>,
+  storesTip: "Таблицы SQL — из миграций и сущностей (@Entity, @Table Spring Data JDBC/R2DBC). Коллекции MongoDB — @Document, Redis — @RedisHash, индексы — @Document(indexName), а также классы, которые служат типом Spring Data репозитория. ER-диаграмма — только для SQL.",
+  fields: (n: number) => `полей: ${n}`,
   noHits: "Ничего не найдено.",
   noTables: "Таблиц нет.",
   columnCount: (n: number) => `колонок: ${n}`,

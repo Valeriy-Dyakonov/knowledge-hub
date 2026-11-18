@@ -14,9 +14,13 @@ const STEREOTYPES: [(&str, &str); 6] = [
     ("Configuration", "CONFIGURATION"),
     ("Component", "COMPONENT"),
 ];
-const REPOSITORY_BASES: [&str; 11] = [
+const REPOSITORY_BASES: [&str; 24] = [
     "JpaRepository", "CrudRepository", "PagingAndSortingRepository", "ListCrudRepository", "ListPagingAndSortingRepository",
-    "ReactiveCrudRepository", "CoroutineCrudRepository", "MongoRepository", "R2dbcRepository", "JpaSpecificationExecutor", "Repository",
+    "ReactiveCrudRepository", "CoroutineCrudRepository", "CoroutineSortingRepository", "ReactiveSortingRepository",
+    "MongoRepository", "ReactiveMongoRepository", "R2dbcRepository", "JpaSpecificationExecutor", "Repository",
+    "KeyValueRepository", "ElasticsearchRepository", "ReactiveElasticsearchRepository", "CassandraRepository",
+    "ReactiveCassandraRepository", "Neo4jRepository", "ReactiveNeo4jRepository", "CouchbaseRepository",
+    "QuerydslPredicateExecutor", "RevisionRepository",
 ];
 const MAPPINGS: [(&str, &str); 5] = [("GetMapping", "GET"), ("PostMapping", "POST"), ("PutMapping", "PUT"), ("DeleteMapping", "DELETE"), ("PatchMapping", "PATCH")];
 const LISTENERS: [&str; 5] = ["KafkaListener", "RabbitListener", "JmsListener", "SqsListener", "EventListener"];
@@ -167,6 +171,12 @@ fn join_path(prefix: &str, path: &str) -> String {
 }
 
 /// Spring Boot default naming: `RefundEntity` -> `refund_entity`.
+/// `RefundEvent` -> `refundEvent` (MongoDB's default collection name).
+fn lower_first(name: &str) -> String {
+    let mut c = name.chars();
+    c.next().map(|f| f.to_lowercase().chain(c).collect()).unwrap_or_default()
+}
+
 pub fn snake_case(name: &str) -> String {
     let mut out = String::new();
     for (i, c) in name.chars().enumerate() {
@@ -623,12 +633,8 @@ impl<'a> Analysis<'a> {
     fn repository_table(&self, b: &Bean) -> Option<String> {
         let base = b.class.supertypes.iter().find(|s| REPOSITORY_BASES.contains(&simple(&s.name)))?;
         let entity = self.index.resolve(base.args.first()?, b.file);
-        let (_, class) = self.index.classes.get(&entity)?;
-        let explicit = class
-            .annotation(&["Table"])
-            .and_then(|a| a.values(&["name", "value"]).into_iter().next())
-            .or_else(|| class.annotation(&["Document"]).and_then(|a| a.values(&["collection", "value"]).into_iter().next()));
-        Some(explicit.unwrap_or_else(|| snake_case(&class.name)))
+        let &(i, class) = self.index.classes.get(&entity)?;
+        self.storage(class, &self.index.files[i], Some(simple(&base.name))).map(|(_, name)| name)
     }
 
     /// Spring Data repository: every declared or called method becomes a READ/WRITE of the entity table.
@@ -669,41 +675,124 @@ impl<'a> Analysis<'a> {
     }
 
     /// JPA entities: table, columns (named by `@Column`/`@JoinColumn` or Spring's snake_case), keys, relations.
+    /// Stored classes: JPA `@Entity`, Spring Data `@Table` (JDBC, R2DBC, Cassandra), `@Document` (MongoDB,
+    /// Elasticsearch), `@RedisHash`, Neo4j `@Node`, and classes used as the type of a Spring Data repository.
     fn entities(&mut self) {
-        for f in self.index.files {
-            for c in f.classes.iter().filter(|c| c.annotation(&["Entity", "Document"]).is_some()) {
-                let table = c
-                    .annotation(&["Table"])
-                    .and_then(|a| a.values(&["name", "value"]).into_iter().next())
-                    .or_else(|| c.annotation(&["Document"]).and_then(|a| a.values(&["collection", "value"]).into_iter().next()))
-                    .unwrap_or_else(|| snake_case(&c.name));
-                let fields = c
-                    .constructor_params
-                    .iter()
-                    .map(|p| (p.name.clone(), p.type_name.clone(), p.nullable, p.annotations.clone()))
-                    .chain(c.properties.iter().filter(|p| !p.modifiers.iter().any(|m| m == "const")).map(|p| (p.name.clone(), p.type_name.clone().unwrap_or_default(), p.nullable, p.annotations.clone())));
-                let mut columns = Vec::new();
-                for (name, ty, nullable, anns) in fields {
-                    let has = |n: &[&str]| anns.iter().any(|a| n.contains(&a.name.as_str()));
-                    if has(&["Transient", "OneToMany", "ManyToMany", "Embedded"]) {
-                        continue;
-                    }
-                    let relation = has(&["ManyToOne", "OneToOne"]);
-                    let named = |ann: &str| anns.iter().find(|a| a.name == ann).and_then(|a| a.values(&["name", "value"]).into_iter().next());
-                    let column = if relation { named("JoinColumn").unwrap_or_else(|| format!("{}_id", snake_case(&name))) } else { named("Column").unwrap_or_else(|| snake_case(&name)) };
-                    columns.push(EntityColumnFact {
-                        field: name,
-                        column,
-                        kotlin_type: ty.clone(),
-                        nullable,
-                        primary_key: has(&["Id", "EmbeddedId"]),
-                        references_entity: relation.then(|| self.index.resolve(&ty, f)),
-                    });
+        let mut seen: BTreeSet<String> = BTreeSet::new();
+        let mut found: Vec<(usize, &KtClass, &'static str, String)> = Vec::new();
+        for (i, f) in self.index.files.iter().enumerate() {
+            for c in &f.classes {
+                if let Some((store, name)) = self.storage(c, f, None) {
+                    seen.insert(c.fqn.clone());
+                    found.push((i, c, store, name));
                 }
-                let evidence = self.ev(f, c.start_line, c.header_end_line);
-                self.facts.entities.push(EntityFact { id: c.fqn.clone(), table, columns, evidence });
             }
         }
+        // Entity types of repositories, even without a mapping annotation (defaults of the repository's store).
+        for f in self.index.files {
+            for r in f.classes.iter().filter(|c| is_repository_interface(c)) {
+                let Some(base) = r.supertypes.iter().find(|s| REPOSITORY_BASES.contains(&simple(&s.name))) else { continue };
+                let Some(arg) = base.args.first() else { continue };
+                let fqn = self.index.resolve(arg, f);
+                if seen.contains(&fqn) {
+                    continue;
+                }
+                let Some(&(i, c)) = self.index.classes.get(&fqn) else { continue };
+                if let Some((store, name)) = self.storage(c, &self.index.files[i], Some(simple(&base.name))) {
+                    seen.insert(fqn);
+                    found.push((i, c, store, name));
+                }
+            }
+        }
+        for (i, c, store, table) in found {
+            let f = &self.index.files[i];
+            let fields = c
+                .constructor_params
+                .iter()
+                .map(|p| (p.name.clone(), p.type_name.clone(), p.nullable, p.annotations.clone()))
+                .chain(c.properties.iter().filter(|p| !p.modifiers.iter().any(|m| m == "const")).map(|p| (p.name.clone(), p.type_name.clone().unwrap_or_default(), p.nullable, p.annotations.clone())));
+            let mut columns = Vec::new();
+            for (name, ty, nullable, anns) in fields {
+                let has = |n: &[&str]| anns.iter().any(|a| n.contains(&a.name.as_str()));
+                if has(&["Transient", "OneToMany", "ManyToMany", "Embedded", "ElementCollection"]) {
+                    continue;
+                }
+                let named = |ann: &str| anns.iter().find(|a| a.name == ann).and_then(|a| self.ann_value(a, &["name", "value"]));
+                let relation = store == "sql" && has(&["ManyToOne", "OneToOne"]);
+                let column = match store {
+                    "sql" if relation => named("JoinColumn").unwrap_or_else(|| format!("{}_id", snake_case(&name))),
+                    "sql" => named("Column").unwrap_or_else(|| snake_case(&name)),
+                    "mongo" if has(&["Id", "MongoId"]) => "_id".to_string(),
+                    "mongo" | "elasticsearch" => named("Field").unwrap_or_else(|| name.clone()),
+                    "cassandra" => named("Column").or_else(|| named("PrimaryKeyColumn")).or_else(|| named("PrimaryKey")).unwrap_or_else(|| name.to_lowercase()),
+                    "neo4j" => named("Property").unwrap_or_else(|| name.clone()),
+                    _ => name.clone(),
+                };
+                columns.push(EntityColumnFact {
+                    field: name,
+                    column,
+                    kotlin_type: ty.clone(),
+                    nullable,
+                    primary_key: has(&["Id", "EmbeddedId", "MongoId", "PrimaryKey", "PrimaryKeyColumn"]),
+                    references_entity: relation.then(|| self.index.resolve(&ty, f)),
+                });
+            }
+            let evidence = self.ev(f, c.start_line, c.header_end_line);
+            self.facts.entities.push(EntityFact { id: c.fqn.clone(), store: store.into(), table, columns, evidence });
+        }
+    }
+
+    /// First string value of an annotation argument; a constant reference is resolved.
+    fn ann_value(&self, a: &Annotation, names: &[&str]) -> Option<String> {
+        let v = a.values(names).into_iter().next()?;
+        let is_ref = a.chosen(names).iter().all(|x| x.strings.is_empty());
+        Some(if is_ref { self.index.constant(&v).unwrap_or(v) } else { v }).filter(|s| !s.is_empty())
+    }
+
+    /// Where a class is stored and under which name: by its mapping annotation, or — for the entity type of a
+    /// repository (`via`) — by the repository's store. Imports tell apart the same annotation name in different
+    /// Spring Data modules (`@Table`, `@Document`).
+    fn storage(&self, c: &KtClass, f: &KtFile, via: Option<&str>) -> Option<(&'static str, String)> {
+        let uses = |pkg: &str| f.imports.iter().any(|i| i.fqn.starts_with(pkg));
+        if let Some(a) = c.annotation(&["RedisHash"]) {
+            return Some(("redis", self.ann_value(a, &["value"]).unwrap_or_else(|| c.fqn.clone())));
+        }
+        if let Some(a) = c.annotation(&["Document"]) {
+            if a.chosen(&["indexName"]).len() > 0 || uses("org.springframework.data.elasticsearch") {
+                return Some(("elasticsearch", self.ann_value(a, &["indexName"]).unwrap_or_else(|| c.name.to_lowercase())));
+            }
+            return Some(("mongo", self.ann_value(a, &["collection", "value"]).unwrap_or_else(|| lower_first(&c.name))));
+        }
+        if let Some(a) = c.annotation(&["Node"]) {
+            return Some(("neo4j", self.ann_value(a, &["labels", "primaryLabel", "value"]).unwrap_or_else(|| c.name.clone())));
+        }
+        let table = c.annotation(&["Table"]).and_then(|a| self.ann_value(a, &["name", "value"]));
+        if c.annotation(&["Entity"]).is_some() {
+            return Some(("sql", table.unwrap_or_else(|| snake_case(&c.name))));
+        }
+        if c.annotation(&["Table"]).is_some() {
+            if uses("org.springframework.data.cassandra") {
+                return Some(("cassandra", table.unwrap_or_else(|| c.name.to_lowercase())));
+            }
+            return Some(("sql", table.unwrap_or_else(|| snake_case(&c.name))));
+        }
+        let store = match via? {
+            "MongoRepository" | "ReactiveMongoRepository" => "mongo",
+            "ElasticsearchRepository" | "ReactiveElasticsearchRepository" => "elasticsearch",
+            "CassandraRepository" | "ReactiveCassandraRepository" => "cassandra",
+            "Neo4jRepository" | "ReactiveNeo4jRepository" => "neo4j",
+            "KeyValueRepository" => "redis",
+            "JpaRepository" | "JpaSpecificationExecutor" | "R2dbcRepository" | "RevisionRepository" => "sql",
+            _ => "unknown",
+        };
+        let name = match store {
+            "mongo" => lower_first(&c.name),
+            "redis" => c.fqn.clone(),
+            "elasticsearch" | "cassandra" => c.name.to_lowercase(),
+            "neo4j" => c.name.clone(),
+            _ => snake_case(&c.name),
+        };
+        Some((store, name))
     }
 
     /// Where code reads configuration: `@Value`, placeholders in annotations, `@ConfigurationProperties` (and the

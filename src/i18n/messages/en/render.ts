@@ -47,6 +47,10 @@ export const render: typeof ru = {
   datasources: "Datasources",
   profile: (p: string) => `profile ${p}`,
   tables: "Tables",
+  stores: {
+    sql: "Tables (SQL)", mongo: "MongoDB collections", redis: "Redis (@RedisHash)", elasticsearch: "Elasticsearch indices",
+    cassandra: "Cassandra tables", neo4j: "Neo4j nodes", unknown: "Store unknown (repository type without a mapping annotation)",
+  } as Record<string, string>,
   noTables: "No tables found.",
   tableSource: "Structure known from",
   tableSources: { migration: "migrations", entity: "JPA entity", both: "migrations and JPA entity", code: "only a reference in code" } as Record<string, string>,

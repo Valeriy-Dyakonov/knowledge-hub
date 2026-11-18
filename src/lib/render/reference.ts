@@ -10,18 +10,22 @@ export const erIdent = (s: string) => s.replace(/[^A-Za-z0-9_]/g, "_").replace(/
 const erType = (s: string) => s.trim().replace(/\s+/g, "_").replace(/[^A-Za-z0-9_()[\],-]/g, "_").replace(/^([^A-Za-z_])/, "_$1") || "unknown";
 const md = (s: string) => s.replace(/([\\`*_[\]<>|])/g, "\\$1");
 
+/** SQL tables only: collections, Redis keyspaces and indices have no relational schema to draw. */
+const sqlTables = (db: DatabaseInfo) => db.tables.filter((t) => t.store === "sql");
+
 /** Tables to draw: all of them, or one table with the tables it references and those referencing it. */
 export function erNeighbourhood(db: DatabaseInfo, focus?: string): TableInfo[] {
-  if (!focus) return db.tables;
+  const all = sqlTables(db);
+  if (!focus) return all;
   const names = new Set([focus]);
-  for (const t of db.tables) {
+  for (const t of all) {
     for (const c of t.columns) {
       if (!c.references) continue;
       if (t.name === focus) names.add(c.references.table);
       if (c.references.table === focus) names.add(t.name);
     }
   }
-  return db.tables.filter((t) => names.has(t.name));
+  return all.filter((t) => names.has(t.name));
 }
 
 /** Mermaid erDiagram; `nodes` maps entity ids to table names for clicks. */
@@ -63,9 +67,13 @@ export function databaseMarkdown(model: KnowledgeModel, lang: string): string {
     }
     out.push("");
   }
-  out.push(`## ${m.tables}`, "");
-  if (!db.tables.length) out.push(`_${m.noTables}_`, "");
+  if (!db.tables.length) out.push(`## ${m.tables}`, "", `_${m.noTables}_`, "");
+  let store = "";
   for (const t of db.tables) {
+    if (t.store !== store) {
+      store = t.store;
+      out.push(`## ${m.stores[store] ?? store}`, "");
+    }
     out.push(`### ${md(t.name)}`, "", `- ${m.tableSource}: ${m.tableSources[t.source]}${t.evidence ? ` — \`${t.evidence.path}\`` : ""}`);
     if (t.entity) out.push(`- ${m.entity}: \`${t.entity}\``);
     const uses = tableUsage(model, t.name);
@@ -82,7 +90,7 @@ export function databaseMarkdown(model: KnowledgeModel, lang: string): string {
     }
     out.push("");
   }
-  if (db.tables.length) {
+  if (sqlTables(db).length) {
     const er = erDiagram(db, lang).text.split("\n").filter((l) => l && !l.startsWith("%% "));
     out.push(`## ${m.erDiagram}`, "", "```mermaid", ...er, "```", "");
   }
@@ -115,7 +123,7 @@ export const referenceRenderer: Renderer = {
       { relativePath: "database.md", content: databaseMarkdown(model, view.language) },
       { relativePath: "config.md", content: configMarkdown(model, view.language) },
     ];
-    if (model.database?.tables.length) files.push({ relativePath: "diagrams/er.mmd", content: erDiagram(model.database, view.language).text });
+    if (model.database && sqlTables(model.database).length) files.push({ relativePath: "diagrams/er.mmd", content: erDiagram(model.database, view.language).text });
     return files;
   },
 };
