@@ -1,0 +1,28 @@
+export type ErrorParams = Record<string, string | number | boolean | undefined>;
+type Word = (p: ErrorParams) => string;
+
+export const errors = {
+  unknown: (code: string, details: string) => `Ошибка ${code}${details ? `: ${details}` : ""}`,
+  codes: {
+    raw: (p) => String(p.detail ?? ""),
+    service: (p) => `${p.service}: ${p.detail}`,
+    http: (p) => `${p.service}: HTTP ${p.status}${p.body ? ` — ${p.body}` : ""}`,
+    repoNotFound: (p) => `Папка репозитория не найдена: ${p.path}`,
+    pathOutsideRepo: (p) => `Путь вне репозитория: ${p.path}`,
+    noExtractor: () => "Нет экстрактора для этого репозитория (поддерживается Kotlin + Spring Boot)",
+    stageFailed: (p) => `Стадия ${p.id} завершилась ошибкой${p.detail ? `: ${p.detail}` : ""}`,
+    runNotFound: (p) => `Запуск не найден: ${p.runId}`,
+    runAlreadyCompleted: () => "Запуск уже завершён",
+    storeFailed: (p) => `Не удалось прочитать или записать базу знаний: ${p.detail ?? p.file ?? ""}`,
+    schemaUnsupported: (p) => `Файл знаний новее приложения (версия схемы ${p.version}). Обновите приложение.`,
+    invalidArgument: (p) => `Недопустимое значение: ${p.value ?? p.path ?? ""}`,
+    stateFailed: (p) => `Ошибка рабочей базы (.state): ${p.detail ?? ""}`,
+    unknownSecret: (p) => `Неизвестный секрет: ${p.secret}`,
+    keychainNotSaved: () => "Хранилище учётных данных не сохранило значение",
+    llmNotConfigured: () => "LLM не настроена: укажите адрес и модель в настройках",
+    llmUnavailable: () => "LLM недоступна",
+    llmNoContent: () => "LLM вернула пустой ответ",
+    llmNoAnswer: () => "LLM не ответила",
+    llmBadResponse: (p) => `LLM вернула ответ не в том формате (${p.reason ?? ""})`,
+  } as Record<string, Word>,
+};

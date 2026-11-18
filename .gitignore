@@ -1,9 +1,8 @@
-.gradle/
-build/
-out/
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
 .idea/
 *.iml
-.kotlin/
-.state/
 *.log
 .env

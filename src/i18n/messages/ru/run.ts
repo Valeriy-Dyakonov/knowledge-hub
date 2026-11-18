@@ -1,0 +1,30 @@
+type P = Record<string, string>;
+
+export const run = {
+  title: "Анализ",
+  start: "Запустить анализ",
+  running: "Анализ идёт…",
+  resume: "Продолжить",
+  resumeTip: "Продолжить упавший запуск с первой незавершённой стадии; готовые стадии не повторяются.",
+  describe: "Бизнес-названия через LLM",
+  describeTip: "Стадия Describe: LLM предлагает бизнес-названия и описания. Они попадают на ревью. Без LLM остаются технические названия.",
+  history: "Запуски",
+  noRuns: "Запусков ещё не было.",
+  log: "Лог",
+  status: { RUNNING: "идёт", COMPLETED: "готово", FAILED: "ошибка" } as P,
+  stages: { scan: "Сканирование", discover: "Поиск фич", trace: "Трассировка", describe: "Описание", assemble: "Сборка модели", render: "Генерация документов", index: "Индекс" } as P,
+  codes: {
+    runStarted: (p: P) => `Запуск ${p.runId} на коммите ${(p.commit ?? "").slice(0, 7)}${p.resumedAfter ? ` (продолжение после: ${p.resumedAfter})` : ""}`,
+    runCompleted: (p: P) => `Готово. Фич: ${p.features}`,
+    stepSkipped: (p: P) => `Пропущено: ${p.id} (${p.reason})`,
+    stepDone: (p: P) => `Готово: ${p.id}`,
+    scanSummary: (p: P) => `Компонентов: ${p.components}, точек входа: ${p.triggers}, вызовов: ${p.calls}, обращений к стокам: ${p.sinkAccesses}, свойств конфигурации: ${p.properties}`,
+    discoverSummary: (p: P) => `Кандидатов в фичи: ${p.candidates}`,
+    traceSummary: (p: P) => `Прослежено фич: ${p.features}, обрывов: ${p.breaks}`,
+    describeSummary: (p: P) => `Описано фич: ${p.described}, взято из ревью: ${p.reused}, неудачных запросов: ${p.failedRequests}`,
+    assembleSummary: (p: P) => `Фич: ${p.features}, утверждений: ${p.claims}, непроверенных: ${p.unverified}, конфликтов: ${p.conflicts}`,
+    renderSummary: (p: P) => `Сгенерировано файлов: ${p.files}`,
+    businessNamesMissing: (p: P) => `Без бизнес-названий: ${p.count}`,
+  } as Record<string, (p: P) => string>,
+  reasons: { disabledByOption: "выключено", notImplemented: "ещё не реализовано", noRenderers: "нет рендереров", llmNotConfigured: "LLM не настроена" } as P,
+};

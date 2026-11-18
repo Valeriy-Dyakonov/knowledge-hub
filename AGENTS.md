@@ -15,7 +15,6 @@ Design docs live in `docs/` (Russian); read `docs/00-vision.md` and `docs/01-arc
 | Frontend tests | `npm test` (vitest, `src/**/*.test.ts`) |
 | Frontend build | `npx vite build` |
 | Rust tests | `cargo test` in `src-tauri/` |
-| MCP server (after a build) | `src-tauri/target/debug/knowledge-hub mcp` |
 
 On this Windows machine cargo may be missing from PATH in Git Bash: prefix with `PATH="$HOME/.cargo/bin:$PATH"`.
 Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests if `src-tauri` changed.

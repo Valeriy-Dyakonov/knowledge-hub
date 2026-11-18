@@ -1,0 +1,30 @@
+import type { run as ru } from "../ru/run";
+
+export const run: typeof ru = {
+  title: "Analysis",
+  start: "Run analysis",
+  running: "Analysing…",
+  resume: "Resume",
+  resumeTip: "Continue a failed run from its first unfinished stage; finished stages are not repeated.",
+  describe: "Business names via LLM",
+  describeTip: "Describe stage: the LLM proposes business names and descriptions. They go to review. Without the LLM technical names stay.",
+  history: "Runs",
+  noRuns: "No runs yet.",
+  log: "Log",
+  status: { RUNNING: "running", COMPLETED: "done", FAILED: "failed" },
+  stages: { scan: "Scan", discover: "Discover", trace: "Trace", describe: "Describe", assemble: "Assemble", render: "Render", index: "Index" },
+  codes: {
+    runStarted: (p) => `Run ${p.runId} at commit ${(p.commit ?? "").slice(0, 7)}${p.resumedAfter ? ` (resumed after: ${p.resumedAfter})` : ""}`,
+    runCompleted: (p) => `Done. Features: ${p.features}`,
+    stepSkipped: (p) => `Skipped: ${p.id} (${p.reason})`,
+    stepDone: (p) => `Done: ${p.id}`,
+    scanSummary: (p) => `Components: ${p.components}, entry points: ${p.triggers}, calls: ${p.calls}, sink accesses: ${p.sinkAccesses}, config properties: ${p.properties}`,
+    discoverSummary: (p) => `Candidate features: ${p.candidates}`,
+    traceSummary: (p) => `Traced features: ${p.features}, breaks: ${p.breaks}`,
+    describeSummary: (p) => `Described: ${p.described}, reused from review: ${p.reused}, failed requests: ${p.failedRequests}`,
+    assembleSummary: (p) => `Features: ${p.features}, claims: ${p.claims}, unverified: ${p.unverified}, conflicts: ${p.conflicts}`,
+    renderSummary: (p) => `Generated files: ${p.files}`,
+    businessNamesMissing: (p) => `Without business names: ${p.count}`,
+  },
+  reasons: { disabledByOption: "turned off", notImplemented: "not implemented yet", noRenderers: "no renderers", llmNotConfigured: "LLM not configured" },
+};
