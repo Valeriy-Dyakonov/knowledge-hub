@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, backend } from "../../api";
 import { getLocale, useT } from "../../i18n";
-import { constructs, parseReport } from "../../lib/parseReport";
+import { constructs, diagnosisLines, parseReport } from "../../lib/parseReport";
 import { describeRun, resumeRun, runAnalysis } from "../../lib/pipeline";
 import { STAGES, type RunState } from "../../lib/stages";
 import { runMode, type LogEntry, type RepoEntry, type RunRecord, type Settings } from "../../types";
@@ -292,7 +292,7 @@ function ParseProblems(props: { log: LogEntry[]; run: RunRecord | null }) {
     .filter((e) => e.code === "parseError" && e.params?.file)
     .map((e) => ({
       file: e.params!.file, detail: e.params!.detail ?? "", context: e.params!.context, pattern: e.params!.pattern, unparsed: e.params!.unparsed,
-      first: e.params!.first === "true", innerContext: e.params!.innerContext, innerPattern: e.params!.innerPattern,
+      first: e.params!.first === "true", innerContext: e.params!.innerContext, innerPattern: e.params!.innerPattern, diagnosis: e.params!.diagnosis,
     }));
   if (!problems.length) return null;
   const list = constructs(problems);
@@ -314,6 +314,7 @@ function ParseProblems(props: { log: LogEntry[]; run: RunRecord | null }) {
           <b>{t.constructTitle(i + 1, c.files.length, c.count)}</b> <span className={c.first ? "badge warn" : "badge"}>{c.first ? t.parseReport.firstShort : t.parseReport.consequenceShort}</span>
           <div className="hint">{t.context}: <code>{c.context || "?"}</code></div>
           <pre className="mmd-src">{c.pattern || "?"}</pre>
+          {c.diagnosis && <pre className="diag">{diagnosisLines(c.diagnosis).join("\n")}</pre>}
           {c.innerPattern && (
             <>
               <div className="hint">{t.parseReport.inner} <code>{c.innerContext}</code></div>

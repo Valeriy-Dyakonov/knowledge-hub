@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { constructs, parseReport } from "./parseReport";
+import { constructs, diagnosisLines, parseReport } from "./parseReport";
 
 const problem = (file: string, pattern: string) => ({ file, detail: "line 3: `x`", context: "class_declaration › class_body › ERROR", pattern });
 
@@ -17,5 +17,16 @@ describe("parse error report", () => {
     expect(text).not.toContain("acme");
     expect(text).not.toContain("Billing");
     expect(text).not.toContain("line 3");
+  });
+
+  it("words the diagnosis of a file and carries it into the report", () => {
+    const diagnosis = JSON.stringify({ fixedBy: "strings", kind: "raw", linesBefore: "-3", length: "18", classes: "latin,spaces", punct: "\":", unicode: "U+00A0" });
+    const lines = diagnosisLines(diagnosis);
+    expect(lines.join(" ")).toContain("U+00A0");
+    expect(lines.join(" ")).toContain("18");
+    const report = parseReport([{ file: "src/Secret.kt", detail: "", context: "source_file › ERROR", pattern: "class A1 {", first: true, diagnosis }], { extractor: "kotlin-spring" });
+    expect(report).toContain(lines[1]);
+    expect(report).not.toContain("Secret");
+    expect(diagnosisLines("not json")).toEqual([]);
   });
 });

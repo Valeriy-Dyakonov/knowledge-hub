@@ -33,6 +33,9 @@ pub struct ParseError {
     /// When the grammar gave up on a whole `{ … }` body, the body is parsed alone: where it fails there
     /// (tree context and anonymised pattern) is usually the real cause.
     pub inner: Option<(String, String)>,
+    /// First error of a file only: which kind of text, neutralised, makes the error go away, and the shape of the
+    /// literal responsible (see `diagnose.rs`).
+    pub diagnosis: Option<super::diagnose::Diagnosis>,
 }
 
 #[derive(Debug, Clone)]
@@ -165,7 +168,7 @@ impl KtClass {
 /// Rewrites what the grammar does not know into what it does, keeping every byte position (so lines and columns
 /// stay): the extra `$` of multi-dollar strings (`$$"…"`, Kotlin 2.1+) become spaces, and so does a trailing comma
 /// before `]` (`map[\n key,\n]`, allowed by Kotlin, unknown to the grammar). Strings and comments are left alone.
-fn sanitize(source: &str) -> String {
+pub(super) fn sanitize(source: &str) -> String {
     let b = source.as_bytes();
     let mut out = b.to_vec();
     // Open strings: (raw, dollars) — nested through `${…}` templates, whose code is scanned as code.
@@ -307,6 +310,7 @@ pub fn parse(path: &str, original: &str) -> KtFile {
         collect_errors(root, original, &mut Vec::new(), &mut file.parse_errors, 0);
         if let Some(e) = file.parse_errors.first_mut() {
             e.first = true;
+            e.diagnosis = super::diagnose::diagnose(original);
         }
     }
     let prefix = if file.package.is_empty() { String::new() } else { format!("{}.", file.package) };
@@ -330,6 +334,7 @@ fn collect_errors<'a>(n: Node<'a>, source: &str, path: &mut Vec<&'static str>, o
             unparsed: if n.is_missing() { String::new() } else { super::anon::anonymise(&dedent(&unparsed)) },
             first: false,
             inner: if n.is_missing() || nesting > 1 { None } else { inner_cause(source, n.start_byte(), nesting) },
+            diagnosis: None,
         });
         return;
     }

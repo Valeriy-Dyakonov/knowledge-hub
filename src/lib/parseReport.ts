@@ -6,10 +6,12 @@ export interface ParseProblem {
   file: string; detail: string; context?: string; pattern?: string; unparsed?: string; first?: boolean;
   /** The grammar dropped a whole `{ … }` body; parsed alone, the body fails here. */
   innerContext?: string; innerPattern?: string;
+  /** JSON from the Rust diagnosis of the file's first error (see diagnose.rs). */
+  diagnosis?: string;
 }
 
 /** A construct the grammar could not parse, with how often and where it occurs. */
-export interface ParseConstruct { context: string; pattern: string; unparsed: string; files: string[]; count: number; first: boolean; innerContext?: string; innerPattern?: string }
+export interface ParseConstruct { context: string; pattern: string; unparsed: string; files: string[]; count: number; first: boolean; innerContext?: string; innerPattern?: string; diagnosis?: string }
 
 /** Groups errors by construct (same place in the tree and same anonymised code), most frequent first. */
 export function constructs(problems: ParseProblem[]): ParseConstruct[] {
@@ -18,7 +20,7 @@ export function constructs(problems: ParseProblem[]): ParseConstruct[] {
     const context = p.context ?? "";
     const pattern = p.pattern ?? "";
     const key = `${context}\u0000${pattern}`;
-    const c = by.get(key) ?? { context, pattern, unparsed: p.unparsed ?? "", files: [], count: 0, first: false, innerContext: p.innerContext || undefined, innerPattern: p.innerPattern || undefined };
+    const c = by.get(key) ?? { context, pattern, unparsed: p.unparsed ?? "", files: [], count: 0, first: false, innerContext: p.innerContext || undefined, innerPattern: p.innerPattern || undefined, diagnosis: p.diagnosis || undefined };
     c.count++;
     c.first ||= !!p.first;
     if (!c.files.includes(p.file)) c.files.push(p.file);
@@ -26,6 +28,23 @@ export function constructs(problems: ParseProblem[]): ParseConstruct[] {
   }
   // First errors of a file come first: the following ones are often only their consequences.
   return [...by.values()].sort((a, b) => Number(b.first) - Number(a.first) || b.files.length - a.files.length || b.count - a.count);
+}
+
+/**
+ * The diagnosis of a file's first error in words: which kind of text, neutralised, makes the error disappear, and
+ * the shape of the literal responsible (length, character classes, punctuation, Unicode code points; no words).
+ */
+export function diagnosisLines(json?: string): string[] {
+  if (!json) return [];
+  let d: Record<string, string>;
+  try { d = JSON.parse(json); } catch { return []; }
+  const m = t().run.parseReport.diagnosis;
+  const out = [m.title, `- ${m.fixedBy[d.fixedBy] ?? d.fixedBy}`];
+  if (d.length) {
+    const lines = Number(d.linesBefore ?? 0);
+    out.push(`- ${m.culprit(d.kind ? m.kinds[d.kind] ?? d.kind : m.kinds.line, m.where(lines))}`, `- ${m.shape(d)}`);
+  }
+  return out;
 }
 
 /**
@@ -43,6 +62,8 @@ export function parseReport(problems: ParseProblem[], meta: { extractor: string;
     // The pattern is anonymised in Rust already; redaction is a second line of defence.
     out.push("```kotlin", redact(c.pattern || "?"), "```", "");
     if (c.unparsed) out.push(m.unparsed, "```kotlin", redact(c.unparsed), "```", "");
+    const d = diagnosisLines(c.diagnosis);
+    if (d.length) out.push(...d, "");
     if (c.innerPattern) out.push(m.inner, m.context(c.innerContext || "?"), "", "```kotlin", redact(c.innerPattern), "```", "");
   });
   if (list.length > 15) out.push(m.more(list.length - 15));

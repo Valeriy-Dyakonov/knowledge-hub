@@ -256,6 +256,10 @@ impl<'a> Analysis<'a> {
                             a.insert("innerContext".into(), context.clone());
                             a.insert("innerPattern".into(), pattern.clone());
                         }
+                        if let Some(d) = &e.diagnosis {
+                            let map: serde_json::Map<String, serde_json::Value> = d.iter().map(|(k, v)| (k.clone(), v.clone().into())).collect();
+                            a.insert("diagnosis".into(), serde_json::Value::Object(map).to_string());
+                        }
                         a
                     },
                     evidence: ev,
