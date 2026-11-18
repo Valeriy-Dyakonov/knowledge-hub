@@ -20,7 +20,7 @@ const GROUP_KEY = "hub.features.groupBy";
 const readGroupBy = (): GroupBy => {
   try { const v = localStorage.getItem(GROUP_KEY); return v === "area" || v === "class" ? v : "entry"; } catch { return "entry"; }
 };
-const ENTRY_ORDER = ["HTTP", "MESSAGE:kafka", "MESSAGE:rabbit", "MESSAGE:jms", "MESSAGE:sqs", "MESSAGE", "SCHEDULE", "EVENT", "STARTUP", "CLI"];
+const ENTRY_ORDER = ["HTTP", "MESSAGE:kafka", "MESSAGE:rabbit", "MESSAGE:jms", "MESSAGE:sqs", "MESSAGE", "SCHEDULE", "ASYNC", "EVENT", "STARTUP", "CLI"];
 
 /** How a feature is entered: HTTP controller, Kafka listener, scheduled job... (message triggers split by broker). */
 function entryKey(f: Feature): string {
@@ -97,7 +97,7 @@ export default function Features(props: { repo: RepoEntry }) {
               const s = statusOf(f.claims);
               return (
                 <button key={f.id} className={`fl-item ${f.id === selected ? "on" : ""}`} onClick={() => setSelected(f.id)}>
-                  <span className="fl-name">{featureName(f)}</span>
+                  <span className="fl-name">{featureName(f)}{f.edges.some((e) => e.async) && <span className="async-mark" title={t.hasAsync}> ⇢</span>}</span>
                   <span className={`dot ${tone[s]}`} title={s} />
                   <span className="hint">{hits?.get(f.id) || (groupBy === "entry" ? `${f.group} · ${f.technicalName}` : f.technicalName)}</span>
                 </button>
@@ -161,6 +161,7 @@ function FeatureView({ feature: f, model }: { feature: Feature; model: Knowledge
               <b>{nodeName(s.from.id, s.from.type)}</b> <span className="muted">{t.edgeKinds[s.kind] ?? s.kind}</span> <b>{nodeName(s.to.id, s.to.type)}</b>
               <span className="muted"> · {s.label}</span>
               {s.via && <span className="muted"> · {t.via(nodeName(s.via.componentId, "COMPONENT"))}</span>}
+              {s.async && <Badge>{t.async}</Badge>}
               {s.origin === "INFERRED" && <Badge tone="warn">{t.inferred}</Badge>}
               <span className="hint flow-loc">{loc(s.evidence)}</span>
             </li>

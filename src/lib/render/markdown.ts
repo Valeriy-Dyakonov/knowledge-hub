@@ -36,7 +36,7 @@ export function featureMarkdown(model: KnowledgeModel, f: Feature, lang: string)
       const from = s.from.type === "TRIGGER" ? f.triggers.find((t) => t.id === s.from.id)?.technicalName ?? s.from.id : s.from.type === "SINK" ? n.sink(s.from.id) : n.component(s.from.id);
       const to = s.to.type === "SINK" ? n.sink(s.to.id) : n.component(s.to.id);
       const via = s.via ? ` ${m.via(n.component(s.via.componentId))}` : "";
-      return `${i + 1}. ${md(from)} ${m.edges[s.kind] ?? s.kind} **${md(to)}** (\`${s.label}\`)${via}${s.origin === "INFERRED" ? ` ${m.inferredMark}` : ""}${loc(s.evidence)}`;
+      return `${i + 1}. ${md(from)} ${m.edges[s.kind] ?? s.kind} **${md(to)}** (\`${s.label}\`)${via}${s.async ? ` ${m.asyncMark}` : ""}${s.origin === "INFERRED" ? ` ${m.inferredMark}` : ""}${loc(s.evidence)}`;
     }),
     "",
     fence(flowDiagram(model, f, lang)),

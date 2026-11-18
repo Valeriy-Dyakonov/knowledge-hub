@@ -25,6 +25,10 @@ const CLASS_SUFFIXES = ["Controller", "Listener", "Consumer", "Handler", "Schedu
 export function discover(facts: SourceFacts, context: ContextFacts, previous: KnowledgeModel | null): FeatureCandidate[] {
   // Internal events are followed inside the publishing flow; only framework/external events are entry points.
   const published = new Set(facts.events.map((e) => e.eventType).filter(Boolean));
+  // Same for @Async methods: called from project code -> an async step of that flow; never called -> an entry point.
+  const supertypes = new Map(facts.components.map((c) => [c.id, c.supertypes]));
+  const called = (component: string, method: string) =>
+    facts.calls.some((c) => c.targetMethod === method && c.fromComponent !== component && (c.targetType === component || (supertypes.get(component) ?? []).includes(c.targetType)));
   const previousIdByTrigger = new Map<string, string>();
   for (const f of previous?.features ?? []) for (const t of f.triggers) previousIdByTrigger.set(t.id, f.id);
   const names = new Map(facts.components.map((c) => [c.id, c.simpleName]));
@@ -32,6 +36,7 @@ export function discover(facts: SourceFacts, context: ContextFacts, previous: Kn
   const seen = new Set<string>();
   const triggers = facts.triggers
     .filter((t) => !(t.type === "EVENT" && published.has(t.attributes.eventType)))
+    .filter((t) => !(t.type === "ASYNC" && called(t.componentId, t.method)))
     .map((t) => toTrigger(t, context, names))
     .filter((t) => !seen.has(t.id) && seen.add(t.id))
     .sort((a, b) => a.id.localeCompare(b.id));
@@ -59,6 +64,7 @@ function toTrigger(f: TriggerFact, context: ContextFacts, names: Map<string, str
     SCHEDULE: () => `schedule ${a.cron ?? a.fixedRate ?? a.fixedDelay ?? ""} ${owner}.${f.method}`.replace(/\s+/g, " "),
     EVENT: () => `event ${simpleName(a.eventType ?? "")}`,
     STARTUP: () => `startup ${owner}.${f.method}`,
+    ASYNC: () => `async ${owner}.${f.method}`,
     CLI: () => `cli ${owner}.${f.method}`,
   }[f.type]();
   const id = f.type === "HTTP"

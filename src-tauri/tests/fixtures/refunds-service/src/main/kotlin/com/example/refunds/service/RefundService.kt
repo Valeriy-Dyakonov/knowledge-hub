@@ -5,6 +5,7 @@ import com.example.refunds.client.Reservation
 import com.example.refunds.domain.CreateRefund
 import com.example.refunds.domain.Refund
 import com.example.refunds.domain.RefundCreated
+import com.example.refunds.notify.NotificationService
 import com.example.refunds.persistence.RefundEntity
 import com.example.refunds.persistence.RefundRepository
 import org.springframework.context.ApplicationEventPublisher
@@ -16,11 +17,13 @@ class RefundService(
     private val repository: RefundRepository,
     private val paymentsClient: PaymentsClient,
     private val events: ApplicationEventPublisher,
+    private val notifications: NotificationService,
 ) {
     fun create(request: CreateRefund): Refund {
         val entity = repository.save(RefundEntity(UUID.randomUUID(), request.amount, "NEW"))
         paymentsClient.reserve(Reservation(entity.id, request.amount))
         events.publishEvent(RefundCreated(entity.id))
+        notifications.notifyCustomer(entity.id)
         return toRefund(entity)
     }
 

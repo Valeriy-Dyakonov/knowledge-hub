@@ -204,10 +204,26 @@
       {
         "evidence": {
           "commit": "unknown",
+          "fingerprint": "6f0e422610773a5b",
+          "lines": {
+            "end": 11,
+            "start": 11
+          },
+          "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.notify.CacheWarmer",
+        "fromMethod": "warmUp",
+        "targetMethod": "findAllByStatus",
+        "targetType": "com.example.refunds.persistence.RefundRepository"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
           "fingerprint": "99ba9073c65b7bdd",
           "lines": {
-            "end": 21,
-            "start": 21
+            "end": 23,
+            "start": 23
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -222,8 +238,8 @@
           "commit": "unknown",
           "fingerprint": "3e817def1d58d2e2",
           "lines": {
-            "end": 22,
-            "start": 22
+            "end": 24,
+            "start": 24
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -236,10 +252,26 @@
       {
         "evidence": {
           "commit": "unknown",
+          "fingerprint": "8afc7e23505f3f13",
+          "lines": {
+            "end": 26,
+            "start": 26
+          },
+          "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.service.RefundService",
+        "fromMethod": "create",
+        "targetMethod": "notifyCustomer",
+        "targetType": "com.example.refunds.notify.NotificationService"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
           "fingerprint": "f7ee265797b35ea8",
           "lines": {
-            "end": 24,
-            "start": 24
+            "end": 27,
+            "start": 27
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -254,8 +286,8 @@
           "commit": "unknown",
           "fingerprint": "0f8775034bcf03bc",
           "lines": {
-            "end": 27,
-            "start": 27
+            "end": 30,
+            "start": 30
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -270,8 +302,8 @@
           "commit": "unknown",
           "fingerprint": "0f8775034bcf03bc",
           "lines": {
-            "end": 27,
-            "start": 27
+            "end": 30,
+            "start": 30
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -286,8 +318,8 @@
           "commit": "unknown",
           "fingerprint": "69a98913fdec70eb",
           "lines": {
-            "end": 30,
-            "start": 30
+            "end": 33,
+            "start": 33
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -302,8 +334,8 @@
           "commit": "unknown",
           "fingerprint": "6a99814813c88b38",
           "lines": {
-            "end": 32,
-            "start": 32
+            "end": 35,
+            "start": 35
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -611,6 +643,86 @@
       },
       {
         "attributes": {
+          "async": "warmUp"
+        },
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "f1c20165cb2b0339",
+          "lines": {
+            "end": 8,
+            "start": 7
+          },
+          "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.notify.CacheWarmer",
+        "injected": {
+          "repository": "com.example.refunds.persistence.RefundRepository"
+        },
+        "isInterface": false,
+        "kind": "COMPONENT",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "d106d3987dc9797b",
+              "lines": {
+                "end": 12,
+                "start": 9
+              },
+              "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+              "repo": "refunds-service"
+            },
+            "name": "warmUp",
+            "parameterTypes": []
+          }
+        ],
+        "simpleName": "CacheWarmer",
+        "supertypes": []
+      },
+      {
+        "attributes": {
+          "async": "notifyCustomer"
+        },
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "2e53fdb518a94f15",
+          "lines": {
+            "end": 9,
+            "start": 8
+          },
+          "path": "src/main/kotlin/com/example/refunds/notify/NotificationService.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.notify.NotificationService",
+        "injected": {
+          "restTemplate": "org.springframework.web.client.RestTemplate"
+        },
+        "isInterface": false,
+        "kind": "SERVICE",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "582b59b34cf63b3c",
+              "lines": {
+                "end": 13,
+                "start": 10
+              },
+              "path": "src/main/kotlin/com/example/refunds/notify/NotificationService.kt",
+              "repo": "refunds-service"
+            },
+            "name": "notifyCustomer",
+            "parameterTypes": [
+              "java.util.UUID"
+            ]
+          }
+        ],
+        "simpleName": "NotificationService",
+        "supertypes": []
+      },
+      {
+        "attributes": {
           "table": "refunds"
         },
         "evidence": {
@@ -736,10 +848,10 @@
         "attributes": {},
         "evidence": {
           "commit": "unknown",
-          "fingerprint": "873ba46d2877b0bb",
+          "fingerprint": "6acffbba207e6416",
           "lines": {
-            "end": 19,
-            "start": 14
+            "end": 21,
+            "start": 15
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -747,6 +859,7 @@
         "id": "com.example.refunds.service.RefundService",
         "injected": {
           "events": "org.springframework.context.ApplicationEventPublisher",
+          "notifications": "com.example.refunds.notify.NotificationService",
           "paymentsClient": "com.example.refunds.client.PaymentsClient",
           "repository": "com.example.refunds.persistence.RefundRepository"
         },
@@ -756,10 +869,10 @@
           {
             "evidence": {
               "commit": "unknown",
-              "fingerprint": "17adaf223a7ab02c",
+              "fingerprint": "87074399944e7a41",
               "lines": {
-                "end": 25,
-                "start": 20
+                "end": 28,
+                "start": 22
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -774,8 +887,8 @@
               "commit": "unknown",
               "fingerprint": "0f8775034bcf03bc",
               "lines": {
-                "end": 27,
-                "start": 27
+                "end": 30,
+                "start": 30
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -790,8 +903,8 @@
               "commit": "unknown",
               "fingerprint": "71f4523dfe80f9dd",
               "lines": {
-                "end": 33,
-                "start": 29
+                "end": 36,
+                "start": 32
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -806,8 +919,8 @@
               "commit": "unknown",
               "fingerprint": "4a37d959b894e1f3",
               "lines": {
-                "end": 35,
-                "start": 35
+                "end": 38,
+                "start": 38
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -830,8 +943,8 @@
           "commit": "unknown",
           "fingerprint": "29de02b910d40882",
           "lines": {
-            "end": 23,
-            "start": 23
+            "end": 25,
+            "start": 25
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -909,6 +1022,30 @@
         "origin": "STATIC",
         "sinkKind": "EXTERNAL_HTTP",
         "sinkName": "ledger.example.com"
+      },
+      {
+        "attributes": {
+          "httpMethod": "POST",
+          "operation": "notifyCustomer",
+          "path": "/api/messages"
+        },
+        "componentId": "com.example.refunds.notify.NotificationService",
+        "confidence": "HIGH",
+        "edgeKind": "HTTP_CALL",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "475aef4e249b9b8b",
+          "lines": {
+            "end": 12,
+            "start": 12
+          },
+          "path": "src/main/kotlin/com/example/refunds/notify/NotificationService.kt",
+          "repo": "refunds-service"
+        },
+        "method": "notifyCustomer",
+        "origin": "STATIC",
+        "sinkKind": "EXTERNAL_HTTP",
+        "sinkName": "notify.example.com"
       },
       {
         "attributes": {
@@ -1152,6 +1289,38 @@
         },
         "method": "onPaymentCompleted",
         "type": "MESSAGE"
+      },
+      {
+        "attributes": {},
+        "componentId": "com.example.refunds.notify.CacheWarmer",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "e9af2c21abd12a5e",
+          "lines": {
+            "end": 10,
+            "start": 9
+          },
+          "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+          "repo": "refunds-service"
+        },
+        "method": "warmUp",
+        "type": "ASYNC"
+      },
+      {
+        "attributes": {},
+        "componentId": "com.example.refunds.notify.NotificationService",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "0fde593b8af53119",
+          "lines": {
+            "end": 11,
+            "start": 10
+          },
+          "path": "src/main/kotlin/com/example/refunds/notify/NotificationService.kt",
+          "repo": "refunds-service"
+        },
+        "method": "notifyCustomer",
+        "type": "ASYNC"
       }
     ],
     "unresolved": [
@@ -1179,12 +1348,12 @@
       "kind": "extractor",
       "millis": 0,
       "stats": {
-        "calls": 14,
-        "components": 10,
+        "calls": 16,
+        "components": 12,
         "events": 1,
-        "files": 12,
-        "sinkAccesses": 8,
-        "triggers": 7,
+        "files": 14,
+        "sinkAccesses": 9,
+        "triggers": 9,
         "unresolved": 1
       },
       "status": "done",

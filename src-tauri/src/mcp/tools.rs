@@ -307,7 +307,7 @@ mod tests {
     fn lists_features_with_trust_metadata() {
         let (_d, t) = tools();
         let r = t.call("list_features", &json!({})).unwrap();
-        assert_eq!(r["data"].as_array().unwrap().len(), 6);
+        assert_eq!(r["data"].as_array().unwrap().len(), 7);
         assert_eq!(r["meta"]["reviewStatus"], "DRAFT");
         assert!(r["meta"]["unverifiedClaims"].as_u64().unwrap() > 0);
     }

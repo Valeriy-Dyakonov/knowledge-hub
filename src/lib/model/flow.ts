@@ -11,6 +11,8 @@ export interface FlowStep {
   evidence?: Evidence;
   /** The repository or client the step goes through, when two model edges are shown as one step. */
   via?: { componentId: string; method: string };
+  /** The step starts an `@Async` method: the caller does not wait. */
+  async?: boolean;
   claimIds: string[];
 }
 
@@ -49,7 +51,7 @@ export function flowSteps(model: KnowledgeModel, f: Feature): FlowStep[] {
         continue;
       }
     }
-    out.push({ from: e.from, to: e.to, kind: e.kind, label: e.label, origin: e.origin, confidence: e.confidence, evidence: e.evidence, claimIds: e.claimId ? [e.claimId] : [] });
+    out.push({ from: e.from, to: e.to, kind: e.kind, label: e.label, origin: e.origin, confidence: e.confidence, evidence: e.evidence, async: e.async, claimIds: e.claimId ? [e.claimId] : [] });
   }
   return out;
 }

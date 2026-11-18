@@ -63,7 +63,8 @@ export interface Service {
   lastAnalyzedCommit?: string;
 }
 
-export type TriggerType = "HTTP" | "MESSAGE" | "SCHEDULE" | "EVENT" | "STARTUP" | "CLI";
+/** ASYNC: an `@Async` method nobody in the project calls — it runs in its own thread, started from outside. */
+export type TriggerType = "HTTP" | "MESSAGE" | "SCHEDULE" | "EVENT" | "STARTUP" | "ASYNC" | "CLI";
 
 export interface Trigger {
   id: string;
@@ -109,6 +110,8 @@ export interface Edge {
   confidence: Confidence;
   evidence?: Evidence;
   claimId?: ClaimId;
+  /** The call goes to an `@Async` method: the caller does not wait for it. */
+  async?: boolean;
 }
 
 /** Ordered step of a flow: a component performing an action, reached through `edgeId`. */

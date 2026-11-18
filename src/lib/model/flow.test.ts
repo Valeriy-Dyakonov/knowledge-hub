@@ -19,6 +19,18 @@ describe("flow steps", () => {
     expect(f.steps.length).toBe(6); // the model keeps both edges of each merged step
   });
 
+  it("mark a call into an @Async method and make an uncalled one a feature of its own", () => {
+    const model = mergeModels(null, analyse(scan));
+    const create = model.features.find((x) => x.id === "refunds/create-refund")!;
+    const asyncSteps = flowSteps(model, create).filter((s) => s.async);
+    expect(asyncSteps.map((s) => `${s.to.id.split(".").pop()}.${s.label}`)).toEqual(["NotificationService.notifyCustomer"]);
+    // Called from a flow: a step there, not a feature.
+    expect(model.features.some((f) => f.triggers.some((t) => t.type === "ASYNC" && t.method === "notifyCustomer"))).toBe(false);
+    // Called by nobody: its own feature.
+    const warm = model.features.find((f) => f.triggers.some((t) => t.type === "ASYNC"))!;
+    expect(warm.id).toBe("cache-warmer/warm-up");
+  });
+
   it("do not repeat a call made twice", () => {
     const comp = (id: string) => ({ id, simpleName: id, kind: "SERVICE" as const, isInterface: false, supertypes: [], injected: {}, methods: [], attributes: {} });
     const call = (line: number) => ({ fromComponent: "A", fromMethod: "run", targetType: "B", targetMethod: "save", evidence: { repo: "r", path: "A.kt", lines: { start: line, end: line }, commit: "c", fingerprint: String(line) } });

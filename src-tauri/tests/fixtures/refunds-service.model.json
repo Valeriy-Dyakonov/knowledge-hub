@@ -108,6 +108,38 @@
         }
       },
       {
+        "id": "com.example.refunds.notify.CacheWarmer",
+        "kind": "COMPONENT",
+        "technicalName": "CacheWarmer",
+        "businessName": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "f1c20165cb2b0339",
+          "lines": {
+            "end": 8,
+            "start": 7
+          },
+          "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+          "repo": "refunds-service"
+        }
+      },
+      {
+        "id": "com.example.refunds.notify.NotificationService",
+        "kind": "SERVICE",
+        "technicalName": "NotificationService",
+        "businessName": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "2e53fdb518a94f15",
+          "lines": {
+            "end": 9,
+            "start": 8
+          },
+          "path": "src/main/kotlin/com/example/refunds/notify/NotificationService.kt",
+          "repo": "refunds-service"
+        }
+      },
+      {
         "id": "com.example.refunds.persistence.RefundRepository",
         "kind": "REPOSITORY",
         "technicalName": "RefundRepository",
@@ -162,10 +194,10 @@
         "businessName": {},
         "evidence": {
           "commit": "unknown",
-          "fingerprint": "873ba46d2877b0bb",
+          "fingerprint": "6acffbba207e6416",
           "lines": {
-            "end": 19,
-            "start": 14
+            "end": 21,
+            "start": 15
           },
           "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
           "repo": "refunds-service"
@@ -183,6 +215,12 @@
         "id": "external_http:payments",
         "kind": "EXTERNAL_HTTP",
         "technicalName": "payments",
+        "businessName": {}
+      },
+      {
+        "id": "external_http:notify.example.com",
+        "kind": "EXTERNAL_HTTP",
+        "technicalName": "notify.example.com",
         "businessName": {}
       },
       {
@@ -695,6 +733,325 @@
       "owner": "@team-refunds"
     },
     {
+      "id": "cache-warmer/warm-up",
+      "group": "cache-warmer",
+      "technicalName": "async CacheWarmer.warmUp",
+      "businessName": {},
+      "description": {},
+      "aliases": [],
+      "triggers": [
+        {
+          "id": "async:com.example.refunds.notify.CacheWarmer.warmUp",
+          "type": "ASYNC",
+          "technicalName": "async CacheWarmer.warmUp",
+          "componentId": "com.example.refunds.notify.CacheWarmer",
+          "method": "warmUp",
+          "attributes": {},
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "e9af2c21abd12a5e",
+            "lines": {
+              "end": 10,
+              "start": 9
+            },
+            "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+            "repo": "refunds-service"
+          }
+        }
+      ],
+      "componentIds": [
+        "com.example.refunds.notify.CacheWarmer",
+        "com.example.refunds.persistence.RefundRepository"
+      ],
+      "sinkIds": [
+        "db_table:refunds"
+      ],
+      "edges": [
+        {
+          "id": "e-0cfea18f3853",
+          "from": {
+            "type": "TRIGGER",
+            "id": "async:com.example.refunds.notify.CacheWarmer.warmUp"
+          },
+          "to": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.notify.CacheWarmer"
+          },
+          "kind": "CALL",
+          "label": "warmUp",
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "e9af2c21abd12a5e",
+            "lines": {
+              "end": 10,
+              "start": 9
+            },
+            "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+            "repo": "refunds-service"
+          },
+          "claimId": "c-018ee512758be41a"
+        },
+        {
+          "id": "e-1815592dc265",
+          "from": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.notify.CacheWarmer"
+          },
+          "to": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.persistence.RefundRepository"
+          },
+          "kind": "CALL",
+          "label": "findAllByStatus",
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "6f0e422610773a5b",
+            "lines": {
+              "end": 11,
+              "start": 11
+            },
+            "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+            "repo": "refunds-service"
+          },
+          "claimId": "c-1130632493a7bb17"
+        },
+        {
+          "id": "e-1781170a367e",
+          "from": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.persistence.RefundRepository"
+          },
+          "to": {
+            "type": "SINK",
+            "id": "db_table:refunds"
+          },
+          "kind": "READ",
+          "label": "findAllByStatus",
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "071b9b1e1771df6e",
+            "lines": {
+              "end": 7,
+              "start": 7
+            },
+            "path": "src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt",
+            "repo": "refunds-service"
+          },
+          "claimId": "c-04fb6787f3b58300"
+        }
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "componentId": "com.example.refunds.notify.CacheWarmer",
+          "action": "warmUp",
+          "edgeId": "e-0cfea18f3853"
+        },
+        {
+          "order": 2,
+          "componentId": "com.example.refunds.persistence.RefundRepository",
+          "action": "findAllByStatus",
+          "edgeId": "e-1815592dc265"
+        },
+        {
+          "order": 3,
+          "componentId": "com.example.refunds.persistence.RefundRepository",
+          "action": "findAllByStatus",
+          "edgeId": "e-1781170a367e"
+        }
+      ],
+      "breaks": [],
+      "claims": [
+        {
+          "id": "c-00c9ccee714f6a19",
+          "featureId": "cache-warmer/warm-up",
+          "subject": {
+            "type": "TRIGGER",
+            "id": "async:com.example.refunds.notify.CacheWarmer.warmUp"
+          },
+          "kind": "EXISTS",
+          "payload": {
+            "type": "ASYNC",
+            "technicalName": "async CacheWarmer.warmUp"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "e9af2c21abd12a5e",
+              "lines": {
+                "end": 10,
+                "start": 9
+              },
+              "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "type": "ASYNC",
+            "technicalName": "async CacheWarmer.warmUp"
+          }
+        },
+        {
+          "id": "c-04811c173066831f",
+          "featureId": "cache-warmer/warm-up",
+          "subject": {
+            "type": "TRIGGER",
+            "id": "async:com.example.refunds.notify.CacheWarmer.warmUp"
+          },
+          "kind": "BELONGS_TO_FEATURE",
+          "payload": {
+            "feature": "cache-warmer/warm-up",
+            "group": "cache-warmer",
+            "reason": "class"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "e9af2c21abd12a5e",
+              "lines": {
+                "end": 10,
+                "start": 9
+              },
+              "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "INFERRED",
+          "confidence": "MEDIUM",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "feature": "cache-warmer/warm-up",
+            "group": "cache-warmer",
+            "reason": "class"
+          }
+        },
+        {
+          "id": "c-018ee512758be41a",
+          "featureId": "cache-warmer/warm-up",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-0cfea18f3853"
+          },
+          "kind": "CALLS",
+          "payload": {
+            "from": "async:com.example.refunds.notify.CacheWarmer.warmUp",
+            "to": "com.example.refunds.notify.CacheWarmer",
+            "toType": "COMPONENT",
+            "label": "warmUp",
+            "edgeKind": "CALL"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "e9af2c21abd12a5e",
+              "lines": {
+                "end": 10,
+                "start": 9
+              },
+              "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "async:com.example.refunds.notify.CacheWarmer.warmUp",
+            "to": "com.example.refunds.notify.CacheWarmer",
+            "toType": "COMPONENT",
+            "label": "warmUp",
+            "edgeKind": "CALL"
+          }
+        },
+        {
+          "id": "c-1130632493a7bb17",
+          "featureId": "cache-warmer/warm-up",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-1815592dc265"
+          },
+          "kind": "CALLS",
+          "payload": {
+            "from": "com.example.refunds.notify.CacheWarmer",
+            "to": "com.example.refunds.persistence.RefundRepository",
+            "toType": "COMPONENT",
+            "label": "findAllByStatus",
+            "edgeKind": "CALL"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "6f0e422610773a5b",
+              "lines": {
+                "end": 11,
+                "start": 11
+              },
+              "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "com.example.refunds.notify.CacheWarmer",
+            "to": "com.example.refunds.persistence.RefundRepository",
+            "toType": "COMPONENT",
+            "label": "findAllByStatus",
+            "edgeKind": "CALL"
+          }
+        },
+        {
+          "id": "c-04fb6787f3b58300",
+          "featureId": "cache-warmer/warm-up",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-1781170a367e"
+          },
+          "kind": "READS",
+          "payload": {
+            "from": "com.example.refunds.persistence.RefundRepository",
+            "to": "db_table:refunds",
+            "toType": "SINK",
+            "label": "findAllByStatus",
+            "edgeKind": "READ"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "071b9b1e1771df6e",
+              "lines": {
+                "end": 7,
+                "start": 7
+              },
+              "path": "src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "com.example.refunds.persistence.RefundRepository",
+            "to": "db_table:refunds",
+            "toType": "SINK",
+            "label": "findAllByStatus",
+            "edgeKind": "READ"
+          }
+        }
+      ],
+      "owner": "@team-refunds"
+    },
+    {
       "id": "payment-events/on-payment-completed",
       "group": "payment-events",
       "technicalName": "kafka payments.completed",
@@ -830,8 +1187,8 @@
             "commit": "unknown",
             "fingerprint": "69a98913fdec70eb",
             "lines": {
-              "end": 30,
-              "start": 30
+              "end": 33,
+              "start": 33
             },
             "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
             "repo": "refunds-service"
@@ -882,8 +1239,8 @@
             "commit": "unknown",
             "fingerprint": "6a99814813c88b38",
             "lines": {
-              "end": 32,
-              "start": 32
+              "end": 35,
+              "start": 35
             },
             "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
             "repo": "refunds-service"
@@ -1174,8 +1531,8 @@
               "commit": "unknown",
               "fingerprint": "69a98913fdec70eb",
               "lines": {
-                "end": 30,
-                "start": 30
+                "end": 33,
+                "start": 33
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -1250,8 +1607,8 @@
               "commit": "unknown",
               "fingerprint": "6a99814813c88b38",
               "lines": {
-                "end": 32,
-                "start": 32
+                "end": 35,
+                "start": 35
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -1915,11 +2272,13 @@
         "com.example.refunds.service.RefundService",
         "com.example.refunds.persistence.RefundRepository",
         "com.example.refunds.client.PaymentsClient",
+        "com.example.refunds.notify.NotificationService",
         "com.example.refunds.events.RefundEventsListener"
       ],
       "sinkIds": [
         "db_table:refunds",
         "external_http:payments",
+        "external_http:notify.example.com",
         "topic:refunds.created"
       ],
       "edges": [
@@ -1993,8 +2352,8 @@
             "commit": "unknown",
             "fingerprint": "99ba9073c65b7bdd",
             "lines": {
-              "end": 21,
-              "start": 21
+              "end": 23,
+              "start": 23
             },
             "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
             "repo": "refunds-service"
@@ -2045,8 +2404,8 @@
             "commit": "unknown",
             "fingerprint": "3e817def1d58d2e2",
             "lines": {
-              "end": 22,
-              "start": 22
+              "end": 24,
+              "start": 24
             },
             "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
             "repo": "refunds-service"
@@ -2080,6 +2439,59 @@
           "claimId": "c-0087eb84ac7c8d02"
         },
         {
+          "id": "e-0012b43a3a3c",
+          "from": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.service.RefundService"
+          },
+          "to": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.notify.NotificationService"
+          },
+          "kind": "CALL",
+          "label": "notifyCustomer",
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "8afc7e23505f3f13",
+            "lines": {
+              "end": 26,
+              "start": 26
+            },
+            "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+            "repo": "refunds-service"
+          },
+          "async": true,
+          "claimId": "c-105727ac2c2ba206"
+        },
+        {
+          "id": "e-1c8af7eac721",
+          "from": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.notify.NotificationService"
+          },
+          "to": {
+            "type": "SINK",
+            "id": "external_http:notify.example.com"
+          },
+          "kind": "HTTP_CALL",
+          "label": "notifyCustomer",
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "475aef4e249b9b8b",
+            "lines": {
+              "end": 12,
+              "start": 12
+            },
+            "path": "src/main/kotlin/com/example/refunds/notify/NotificationService.kt",
+            "repo": "refunds-service"
+          },
+          "claimId": "c-1d9d21cc9488c713"
+        },
+        {
           "id": "e-1e59b43f08d4",
           "from": {
             "type": "COMPONENT",
@@ -2097,8 +2509,8 @@
             "commit": "unknown",
             "fingerprint": "29de02b910d40882",
             "lines": {
-              "end": 23,
-              "start": 23
+              "end": 25,
+              "start": 25
             },
             "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
             "repo": "refunds-service"
@@ -2171,12 +2583,24 @@
         },
         {
           "order": 7,
+          "componentId": "com.example.refunds.notify.NotificationService",
+          "action": "notifyCustomer",
+          "edgeId": "e-0012b43a3a3c"
+        },
+        {
+          "order": 8,
+          "componentId": "com.example.refunds.notify.NotificationService",
+          "action": "notifyCustomer",
+          "edgeId": "e-1c8af7eac721"
+        },
+        {
+          "order": 9,
           "componentId": "com.example.refunds.events.RefundEventsListener",
           "action": "onCreated",
           "edgeId": "e-1e59b43f08d4"
         },
         {
-          "order": 8,
+          "order": 10,
           "componentId": "com.example.refunds.events.RefundEventsListener",
           "action": "send",
           "edgeId": "e-10b53a1bfeb3"
@@ -2346,8 +2770,8 @@
               "commit": "unknown",
               "fingerprint": "99ba9073c65b7bdd",
               "lines": {
-                "end": 21,
-                "start": 21
+                "end": 23,
+                "start": 23
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -2422,8 +2846,8 @@
               "commit": "unknown",
               "fingerprint": "3e817def1d58d2e2",
               "lines": {
-                "end": 22,
-                "start": 22
+                "end": 24,
+                "start": 24
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -2479,6 +2903,82 @@
           }
         },
         {
+          "id": "c-105727ac2c2ba206",
+          "featureId": "refunds/create-refund",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-0012b43a3a3c"
+          },
+          "kind": "CALLS",
+          "payload": {
+            "from": "com.example.refunds.service.RefundService",
+            "to": "com.example.refunds.notify.NotificationService",
+            "toType": "COMPONENT",
+            "label": "notifyCustomer",
+            "edgeKind": "CALL"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "8afc7e23505f3f13",
+              "lines": {
+                "end": 26,
+                "start": 26
+              },
+              "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "com.example.refunds.service.RefundService",
+            "to": "com.example.refunds.notify.NotificationService",
+            "toType": "COMPONENT",
+            "label": "notifyCustomer",
+            "edgeKind": "CALL"
+          }
+        },
+        {
+          "id": "c-1d9d21cc9488c713",
+          "featureId": "refunds/create-refund",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-1c8af7eac721"
+          },
+          "kind": "HTTP_CALLS",
+          "payload": {
+            "from": "com.example.refunds.notify.NotificationService",
+            "to": "external_http:notify.example.com",
+            "toType": "SINK",
+            "label": "notifyCustomer",
+            "edgeKind": "HTTP_CALL"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "475aef4e249b9b8b",
+              "lines": {
+                "end": 12,
+                "start": 12
+              },
+              "path": "src/main/kotlin/com/example/refunds/notify/NotificationService.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "com.example.refunds.notify.NotificationService",
+            "to": "external_http:notify.example.com",
+            "toType": "SINK",
+            "label": "notifyCustomer",
+            "edgeKind": "HTTP_CALL"
+          }
+        },
+        {
           "id": "c-1d4598f3099e1007",
           "featureId": "refunds/create-refund",
           "subject": {
@@ -2498,8 +2998,8 @@
               "commit": "unknown",
               "fingerprint": "29de02b910d40882",
               "lines": {
-                "end": 23,
-                "start": 23
+                "end": 25,
+                "start": 25
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"
@@ -2666,8 +3166,8 @@
             "commit": "unknown",
             "fingerprint": "0f8775034bcf03bc",
             "lines": {
-              "end": 27,
-              "start": 27
+              "end": 30,
+              "start": 30
             },
             "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
             "repo": "refunds-service"
@@ -2891,8 +3391,8 @@
               "commit": "unknown",
               "fingerprint": "0f8775034bcf03bc",
               "lines": {
-                "end": 27,
-                "start": 27
+                "end": 30,
+                "start": 30
               },
               "path": "src/main/kotlin/com/example/refunds/service/RefundService.kt",
               "repo": "refunds-service"

@@ -50,7 +50,7 @@ describe("describe stage", () => {
     const { ctx, warnings, requests } = context(echo);
     await describeStage.run(ctx);
     const d = ctx.state.descriptions!;
-    expect(Object.keys(d.features)).toHaveLength(6);
+    expect(Object.keys(d.features)).toHaveLength(7);
     expect(d.features["refunds/create-refund"].name).toBe("Имя refunds/create-refund");
     expect(d.sinks["db_table:refunds"]).toBe("С db_table:refunds");
     expect(warnings).toEqual([]);
@@ -110,7 +110,7 @@ describe("describe stage", () => {
     expect(calls).toBe(2);
     expect(slept).toContain(15_000);
     expect(warnings).toEqual([]);
-    expect(Object.keys(ctx.state.descriptions!.features)).toHaveLength(6);
+    expect(Object.keys(ctx.state.descriptions!.features)).toHaveLength(7);
   });
 
   it("parses JSON wrapped in prose", () => {

@@ -84,3 +84,4 @@ table.grid td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical
 .k-CLIENTS, .k-SCHEDULE, .k-EVENT, .k-STARTUP { border-color: var(--node-trigger); color: var(--node-trigger); }
 .areas { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px 20px; }
 .area h4 { margin: 4px 0; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.async-mark { color: var(--accent); font-weight: 700; }

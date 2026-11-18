@@ -9,6 +9,7 @@
 | Фича | Группа | Статус |
 |---|---|---|
 | [POST /api/v1/refunds/{id}/approve](features/approvals/approve/README.md) | `approvals` | черновик: есть непроверенные утверждения |
+| [async CacheWarmer.warmUp](features/cache-warmer/warm-up/README.md) | `cache-warmer` | черновик: есть непроверенные утверждения |
 | [kafka payments.completed](features/payment-events/on-payment-completed/README.md) | `payment-events` | черновик: есть непроверенные утверждения |
 | [GET /internal/ping](features/ping/list/README.md) | `ping` | черновик: есть непроверенные утверждения |
 | [schedule 0 0 \* \* \* \* ReconciliationJob.reconcile](features/reconciliation/reconcile/README.md) | `reconciliation` | черновик: есть непроверенные утверждения |
@@ -21,27 +22,31 @@
 
 ```mermaid
 flowchart LR
-  n1[["Refunds<br/>фич: 6"]]:::service
+  n1[["Refunds<br/>фич: 7"]]:::service
   subgraph g1["Кто обращается"]
     n2(["Клиенты API<br/>approvals: 1<br/>ping: 1<br/>refunds: 2"]):::trigger
     n3[/"payments.completed"/]:::queue
     n4(["Расписание<br/>schedule 0 0 * * * * ReconciliationJob.reconcile"]):::trigger
+    n5(["Асинхронные задачи<br/>async CacheWarmer.warmUp"]):::trigger
   end
   subgraph g2["С чем работает"]
-    n5[("База данных (1 табл.)<br/>Возвраты")]:::db
-    n6[/"refunds.approved"/]:::queue
-    n7[/"refunds.created"/]:::queue
-    n8{{"ledger.example.com"}}:::external
-    n9{{"payments"}}:::external
+    n6[("База данных (1 табл.)<br/>Возвраты")]:::db
+    n7[/"refunds.approved"/]:::queue
+    n8[/"refunds.created"/]:::queue
+    n9{{"ledger.example.com"}}:::external
+    n10{{"payments"}}:::external
+    n11{{"notify.example.com"}}:::external
   end
   n2 -->|POST /api/v1/refunds/#123;id#125;/approve, GET /internal/ping, Создание возврата, ещё 1| n1
   n3 -->|получает: kafka payments.completed| n1
   n4 --> n1
-  n1 -->|пишет: POST /api/v1/refunds/#123;id#125;/approve, kafka payments.completed, ещё 1 · читает: kafka payments.completed, schedule 0 0 * * * * ReconciliationJob.reconcile, ещё 1| n5
-  n1 -->|публикует: POST /api/v1/refunds/#123;id#125;/approve| n6
-  n1 -->|публикует: Создание возврата| n7
-  n1 -->|вызывает API: schedule 0 0 * * * * ReconciliationJob.reconcile| n8
-  n1 -->|вызывает API: Создание возврата| n9
+  n5 --> n1
+  n1 -->|пишет: POST /api/v1/refunds/#123;id#125;/approve, kafka payments.completed, ещё 1 · читает: async CacheWarmer.warmUp, kafka payments.completed, ещё 2| n6
+  n1 -->|публикует: POST /api/v1/refunds/#123;id#125;/approve| n7
+  n1 -->|публикует: Создание возврата| n8
+  n1 -->|вызывает API: schedule 0 0 * * * * ReconciliationJob.reconcile| n9
+  n1 -->|вызывает API: Создание возврата| n10
+  n1 -->|вызывает API: Создание возврата| n11
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -55,50 +60,58 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  n7[("Возвраты<br/>таблица")]:::db
-  n8[/"refunds.approved<br/>топик"/]:::queue
-  n9[/"payments.completed<br/>топик"/]:::queue
-  n10{{"ledger.example.com<br/>внешний API"}}:::external
-  n11{{"payments<br/>внешний API"}}:::external
-  n12[/"refunds.created<br/>топик"/]:::queue
+  n8[("Возвраты<br/>таблица")]:::db
+  n9[/"refunds.approved<br/>топик"/]:::queue
+  n10[/"payments.completed<br/>топик"/]:::queue
+  n11{{"ledger.example.com<br/>внешний API"}}:::external
+  n12{{"payments<br/>внешний API"}}:::external
+  n13{{"notify.example.com<br/>внешний API"}}:::external
+  n14[/"refunds.created<br/>топик"/]:::queue
   subgraph g1["approvals"]
     n1("POST /api/v1/refunds/{id}/approve<br/>HTTP API"):::feature
   end
-  subgraph g2["payment-events"]
-    n2("kafka payments.completed<br/>сообщение"):::feature
+  subgraph g2["cache-warmer"]
+    n2("async CacheWarmer.warmUp<br/>асинхронно (@Async)"):::feature
   end
-  subgraph g3["ping"]
-    n3("GET /internal/ping<br/>HTTP API"):::feature
+  subgraph g3["payment-events"]
+    n3("kafka payments.completed<br/>сообщение"):::feature
   end
-  subgraph g4["reconciliation"]
-    n4("schedule 0 0 * * * * ReconciliationJob.reconcile<br/>по расписанию"):::feature
+  subgraph g4["ping"]
+    n4("GET /internal/ping<br/>HTTP API"):::feature
   end
-  subgraph g5["refunds"]
-    n5("Создание возврата<br/>HTTP API"):::feature
-    n6("GET /api/v1/refunds/{id}<br/>HTTP API"):::feature
+  subgraph g5["reconciliation"]
+    n5("schedule 0 0 * * * * ReconciliationJob.reconcile<br/>по расписанию"):::feature
+  end
+  subgraph g6["refunds"]
+    n6("Создание возврата<br/>HTTP API"):::feature
+    n7("GET /api/v1/refunds/{id}<br/>HTTP API"):::feature
   end
   %% claim c-031aaff17e5ee300
-  n1 -->|пишет| n7
+  n1 -->|пишет| n8
   %% claim c-04f3d7945589a700
-  n1 -->|публикует| n8
+  n1 -->|публикует| n9
+  %% claim c-04fb6787f3b58300
+  n2 -->|читает| n8
   %% claim c-00901ecfd7a40a0f
-  n9 -->|получает| n2
+  n10 -->|получает| n3
   %% claim c-1b0ee75a39f6491f
-  n2 -->|читает| n7
+  n3 -->|читает| n8
   %% claim c-12803d863b50a50e
-  n2 -->|пишет| n7
+  n3 -->|пишет| n8
   %% claim c-195f2b1fafba1607
-  n4 -->|вызывает API| n10
-  %% claim c-0e96e0157abb2303
-  n4 -->|читает| n7
-  %% claim c-02fc26133e7b940e
-  n5 -->|пишет| n7
-  %% claim c-0087eb84ac7c8d02
   n5 -->|вызывает API| n11
+  %% claim c-0e96e0157abb2303
+  n5 -->|читает| n8
+  %% claim c-02fc26133e7b940e
+  n6 -->|пишет| n8
+  %% claim c-0087eb84ac7c8d02
+  n6 -->|вызывает API| n12
+  %% claim c-1d9d21cc9488c713
+  n6 -->|вызывает API| n13
   %% claim c-024d3c170906f605
-  n5 -->|публикует| n12
+  n6 -->|публикует| n14
   %% claim c-0f71f9f289845d0d
-  n6 -->|читает| n7
+  n7 -->|читает| n8
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -113,40 +126,36 @@ flowchart LR
 ```mermaid
 flowchart LR
   subgraph g1["Точки входа"]
-    n1["RefundController"]:::component
-    n2["PaymentEventsConsumer"]:::component
-    n3["RefundEventsListener"]:::component
+    n1["Контроллеры (1)"]:::component
+    n2["Обработчики (2)"]:::component
   end
   subgraph g2["Логика"]
-    n4["ManualApprovalService"]:::component
-    n5["AutoApprovalService"]:::component
-    n6["Сервис возвратов"]:::component
-    n7["ReconciliationJob"]:::component
+    n3["Сервисы (4)"]:::component
+    n4["Компоненты (2)"]:::component
   end
   subgraph g3["Доступ к данным и API"]
-    n8["RefundRepository"]:::component
-    n9["PaymentsClient"]:::component
+    n5["Репозитории (1)"]:::component
+    n6["Клиенты (1)"]:::component
   end
   subgraph g4["Хранилища и внешние системы"]
-    n10[("База данных (1 табл.)")]:::db
-    n11[/"Очереди и топики (2)"/]:::queue
-    n12{{"Внешние сервисы (2)"}}:::external
+    n7[("База данных (1 табл.)")]:::db
+    n8[/"Очереди и топики (2)"/]:::queue
+    n9{{"Внешние сервисы (3)"}}:::external
   end
-  n1 -.->|вызывает| n4
-  n4 -->|пишет| n10
-  n1 -.->|вызывает| n5
-  n5 -->|публикует| n11
-  n2 -->|вызывает| n6
-  n6 -->|вызывает| n8
-  n8 -->|читает| n10
-  n8 -->|пишет| n10
-  n7 -->|вызывает API| n12
-  n7 -->|вызывает| n8
-  n1 -->|вызывает| n6
-  n6 -->|вызывает| n9
-  n9 -->|вызывает API| n12
-  n6 -.->|вызывает| n3
-  n3 -->|публикует| n11
+  n1 -.->|вызывает| n3
+  n3 -->|пишет| n7
+  n3 -->|публикует| n8
+  n4 -->|вызывает| n5
+  n5 -->|читает| n7
+  n2 -->|вызывает| n3
+  n3 -->|вызывает| n5
+  n5 -->|пишет| n7
+  n4 -->|вызывает API| n9
+  n3 -->|вызывает| n6
+  n6 -->|вызывает API| n9
+  n3 -->|вызывает API| n9
+  n3 -.->|вызывает| n2
+  n2 -->|публикует| n8
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -207,6 +216,41 @@ sequenceDiagram
 
 - несколько реализаций интерфейса: `RefundController.approve` com.example.refunds.service.ApprovalService — `src/main/kotlin/com/example/refunds/api/RefundController.kt:26`
 
+=== features/cache-warmer/warm-up/README.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# async CacheWarmer.warmUp
+
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 5.
+- Группа: `cache-warmer` · `cache-warmer/warm-up`
+- Владелец: @team-refunds
+
+_Описание ещё не составлено._
+
+## Что запускает
+
+- `async CacheWarmer.warmUp` — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:9`
+
+## Поток
+
+1. async CacheWarmer.warmUp вызывает **CacheWarmer** (`warmUp`) — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:9`
+2. CacheWarmer читает **Возвраты** (`findAllByStatus`) через RefundRepository — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:11`
+
+```mermaid
+sequenceDiagram
+  participant p1 as async CacheWarmer.warmUp
+  participant p2 as CacheWarmer
+  participant p3 as таблица Возвраты
+  %% claim c-018ee512758be41a
+  p1->>p2: warmUp
+  %% claim c-1130632493a7bb17
+  %% claim c-04fb6787f3b58300
+  p2->>p3: читает: findAllByStatus (RefundRepository)
+```
+
+## Куда пишет и откуда читает
+
+- таблица **Возвраты**
+
 === features/payment-events/on-payment-completed/README.md
 <!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
 # kafka payments.completed
@@ -225,8 +269,8 @@ _Описание ещё не составлено._
 
 1. kafka payments.completed вызывает **PaymentEventsConsumer** (`onPaymentCompleted`) — `src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:14`
 2. PaymentEventsConsumer вызывает **Сервис возвратов** (`markPaid`) — `src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:16`
-3. Сервис возвратов читает **Возвраты** (`findById`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:30`
-4. Сервис возвратов пишет **Возвраты** (`save`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:32`
+3. Сервис возвратов читает **Возвраты** (`findById`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:33`
+4. Сервис возвратов пишет **Возвраты** (`save`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:35`
 
 ```mermaid
 sequenceDiagram
@@ -328,7 +372,7 @@ sequenceDiagram
 <!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
 # Создание возврата
 
-- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 12.
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 14.
 - Группа: `refunds` · `refunds/create-refund`
 - Владелец: @team-refunds
 
@@ -342,40 +386,49 @@ sequenceDiagram
 
 1. POST /api/v1/refunds вызывает **RefundController** (`create`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:16`
 2. RefundController вызывает **Сервис возвратов** (`create`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:17`
-3. Сервис возвратов пишет **Возвраты** (`save`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:21`
-4. Сервис возвратов вызывает API **payments** (`reserve`) через PaymentsClient — `src/main/kotlin/com/example/refunds/service/RefundService.kt:22`
-5. Сервис возвратов вызывает **RefundEventsListener** (`event:RefundCreated -> onCreated`) (выведено, требует проверки) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:23`
-6. RefundEventsListener публикует **refunds.created** (`send`) — `src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt:16`
+3. Сервис возвратов пишет **Возвраты** (`save`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:23`
+4. Сервис возвратов вызывает API **payments** (`reserve`) через PaymentsClient — `src/main/kotlin/com/example/refunds/service/RefundService.kt:24`
+5. Сервис возвратов вызывает **NotificationService** (`notifyCustomer`) (асинхронно) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:26`
+6. NotificationService вызывает API **notify.example.com** (`notifyCustomer`) — `src/main/kotlin/com/example/refunds/notify/NotificationService.kt:12`
+7. Сервис возвратов вызывает **RefundEventsListener** (`event:RefundCreated -> onCreated`) (выведено, требует проверки) — `src/main/kotlin/com/example/refunds/service/RefundService.kt:25`
+8. RefundEventsListener публикует **refunds.created** (`send`) — `src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt:16`
 
 ```mermaid
 sequenceDiagram
   actor p1 as POST /api/v1/refunds
   participant p2 as RefundController
   participant p3 as Сервис возвратов
-  participant p4 as RefundEventsListener
-  participant p5 as таблица Возвраты
-  participant p6 as внешний API payments
-  participant p7 as топик refunds.created
+  participant p4 as NotificationService
+  participant p5 as RefundEventsListener
+  participant p6 as таблица Возвраты
+  participant p7 as внешний API payments
+  participant p8 as внешний API notify.example.com
+  participant p9 as топик refunds.created
   %% claim c-093eaecdbc291d14
   p1->>p2: create
   %% claim c-1e367b4dee7b1210
   p2->>p3: create
   %% claim c-0a5cc52a5037fd1c
   %% claim c-02fc26133e7b940e
-  p3->>p5: пишет: save (RefundRepository)
+  p3->>p6: пишет: save (RefundRepository)
   %% claim c-09edb9a27f064a05
   %% claim c-0087eb84ac7c8d02
-  p3->>p6: вызывает API: reserve (PaymentsClient)
+  p3->>p7: вызывает API: reserve (PaymentsClient)
+  %% claim c-105727ac2c2ba206
+  p3-)p4: notifyCustomer (асинхронно)
+  %% claim c-1d9d21cc9488c713
+  p4->>p8: вызывает API: notifyCustomer
   %% claim c-1d4598f3099e1007
-  p3-->>p4: event:RefundCreated → onCreated (выведено, требует проверки)
+  p3-->>p5: event:RefundCreated → onCreated (выведено, требует проверки)
   %% claim c-024d3c170906f605
-  p4->>p7: публикует: send
+  p5->>p9: публикует: send
 ```
 
 ## Куда пишет и откуда читает
 
 - таблица **Возвраты**
 - внешний API **payments**
+- внешний API **notify.example.com**
 - топик **refunds.created**
 
 === features/refunds/get-refund/README.md
@@ -396,7 +449,7 @@ _Описание ещё не составлено._
 
 1. GET /api/v1/refunds/{id} вызывает **RefundController** (`get`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:19`
 2. RefundController вызывает **Сервис возвратов** (`get`) — `src/main/kotlin/com/example/refunds/api/RefundController.kt:21`
-3. Сервис возвратов читает **Возвраты** (`findById`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:27`
+3. Сервис возвратов читает **Возвраты** (`findById`) через RefundRepository — `src/main/kotlin/com/example/refunds/service/RefundService.kt:30`
 
 ```mermaid
 sequenceDiagram
@@ -420,27 +473,31 @@ sequenceDiagram
 === diagrams/context.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
 flowchart LR
-  n1[["Refunds<br/>фич: 6"]]:::service
+  n1[["Refunds<br/>фич: 7"]]:::service
   subgraph g1["Кто обращается"]
     n2(["Клиенты API<br/>approvals: 1<br/>ping: 1<br/>refunds: 2"]):::trigger
     n3[/"payments.completed"/]:::queue
     n4(["Расписание<br/>schedule 0 0 * * * * ReconciliationJob.reconcile"]):::trigger
+    n5(["Асинхронные задачи<br/>async CacheWarmer.warmUp"]):::trigger
   end
   subgraph g2["С чем работает"]
-    n5[("База данных (1 табл.)<br/>Возвраты")]:::db
-    n6[/"refunds.approved"/]:::queue
-    n7[/"refunds.created"/]:::queue
-    n8{{"ledger.example.com"}}:::external
-    n9{{"payments"}}:::external
+    n6[("База данных (1 табл.)<br/>Возвраты")]:::db
+    n7[/"refunds.approved"/]:::queue
+    n8[/"refunds.created"/]:::queue
+    n9{{"ledger.example.com"}}:::external
+    n10{{"payments"}}:::external
+    n11{{"notify.example.com"}}:::external
   end
   n2 -->|POST /api/v1/refunds/#123;id#125;/approve, GET /internal/ping, Создание возврата, ещё 1| n1
   n3 -->|получает: kafka payments.completed| n1
   n4 --> n1
-  n1 -->|пишет: POST /api/v1/refunds/#123;id#125;/approve, kafka payments.completed, ещё 1 · читает: kafka payments.completed, schedule 0 0 * * * * ReconciliationJob.reconcile, ещё 1| n5
-  n1 -->|публикует: POST /api/v1/refunds/#123;id#125;/approve| n6
-  n1 -->|публикует: Создание возврата| n7
-  n1 -->|вызывает API: schedule 0 0 * * * * ReconciliationJob.reconcile| n8
-  n1 -->|вызывает API: Создание возврата| n9
+  n5 --> n1
+  n1 -->|пишет: POST /api/v1/refunds/#123;id#125;/approve, kafka payments.completed, ещё 1 · читает: async CacheWarmer.warmUp, kafka payments.completed, ещё 2| n6
+  n1 -->|публикует: POST /api/v1/refunds/#123;id#125;/approve| n7
+  n1 -->|публикует: Создание возврата| n8
+  n1 -->|вызывает API: schedule 0 0 * * * * ReconciliationJob.reconcile| n9
+  n1 -->|вызывает API: Создание возврата| n10
+  n1 -->|вызывает API: Создание возврата| n11
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -452,50 +509,58 @@ flowchart LR
 === diagrams/features.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
 flowchart LR
-  n7[("Возвраты<br/>таблица")]:::db
-  n8[/"refunds.approved<br/>топик"/]:::queue
-  n9[/"payments.completed<br/>топик"/]:::queue
-  n10{{"ledger.example.com<br/>внешний API"}}:::external
-  n11{{"payments<br/>внешний API"}}:::external
-  n12[/"refunds.created<br/>топик"/]:::queue
+  n8[("Возвраты<br/>таблица")]:::db
+  n9[/"refunds.approved<br/>топик"/]:::queue
+  n10[/"payments.completed<br/>топик"/]:::queue
+  n11{{"ledger.example.com<br/>внешний API"}}:::external
+  n12{{"payments<br/>внешний API"}}:::external
+  n13{{"notify.example.com<br/>внешний API"}}:::external
+  n14[/"refunds.created<br/>топик"/]:::queue
   subgraph g1["approvals"]
     n1("POST /api/v1/refunds/{id}/approve<br/>HTTP API"):::feature
   end
-  subgraph g2["payment-events"]
-    n2("kafka payments.completed<br/>сообщение"):::feature
+  subgraph g2["cache-warmer"]
+    n2("async CacheWarmer.warmUp<br/>асинхронно (@Async)"):::feature
   end
-  subgraph g3["ping"]
-    n3("GET /internal/ping<br/>HTTP API"):::feature
+  subgraph g3["payment-events"]
+    n3("kafka payments.completed<br/>сообщение"):::feature
   end
-  subgraph g4["reconciliation"]
-    n4("schedule 0 0 * * * * ReconciliationJob.reconcile<br/>по расписанию"):::feature
+  subgraph g4["ping"]
+    n4("GET /internal/ping<br/>HTTP API"):::feature
   end
-  subgraph g5["refunds"]
-    n5("Создание возврата<br/>HTTP API"):::feature
-    n6("GET /api/v1/refunds/{id}<br/>HTTP API"):::feature
+  subgraph g5["reconciliation"]
+    n5("schedule 0 0 * * * * ReconciliationJob.reconcile<br/>по расписанию"):::feature
+  end
+  subgraph g6["refunds"]
+    n6("Создание возврата<br/>HTTP API"):::feature
+    n7("GET /api/v1/refunds/{id}<br/>HTTP API"):::feature
   end
   %% claim c-031aaff17e5ee300
-  n1 -->|пишет| n7
+  n1 -->|пишет| n8
   %% claim c-04f3d7945589a700
-  n1 -->|публикует| n8
+  n1 -->|публикует| n9
+  %% claim c-04fb6787f3b58300
+  n2 -->|читает| n8
   %% claim c-00901ecfd7a40a0f
-  n9 -->|получает| n2
+  n10 -->|получает| n3
   %% claim c-1b0ee75a39f6491f
-  n2 -->|читает| n7
+  n3 -->|читает| n8
   %% claim c-12803d863b50a50e
-  n2 -->|пишет| n7
+  n3 -->|пишет| n8
   %% claim c-195f2b1fafba1607
-  n4 -->|вызывает API| n10
-  %% claim c-0e96e0157abb2303
-  n4 -->|читает| n7
-  %% claim c-02fc26133e7b940e
-  n5 -->|пишет| n7
-  %% claim c-0087eb84ac7c8d02
   n5 -->|вызывает API| n11
+  %% claim c-0e96e0157abb2303
+  n5 -->|читает| n8
+  %% claim c-02fc26133e7b940e
+  n6 -->|пишет| n8
+  %% claim c-0087eb84ac7c8d02
+  n6 -->|вызывает API| n12
+  %% claim c-1d9d21cc9488c713
+  n6 -->|вызывает API| n13
   %% claim c-024d3c170906f605
-  n5 -->|публикует| n12
+  n6 -->|публикует| n14
   %% claim c-0f71f9f289845d0d
-  n6 -->|читает| n7
+  n7 -->|читает| n8
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -508,40 +573,36 @@ flowchart LR
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
 flowchart LR
   subgraph g1["Точки входа"]
-    n1["RefundController"]:::component
-    n2["PaymentEventsConsumer"]:::component
-    n3["RefundEventsListener"]:::component
+    n1["Контроллеры (1)"]:::component
+    n2["Обработчики (2)"]:::component
   end
   subgraph g2["Логика"]
-    n4["ManualApprovalService"]:::component
-    n5["AutoApprovalService"]:::component
-    n6["Сервис возвратов"]:::component
-    n7["ReconciliationJob"]:::component
+    n3["Сервисы (4)"]:::component
+    n4["Компоненты (2)"]:::component
   end
   subgraph g3["Доступ к данным и API"]
-    n8["RefundRepository"]:::component
-    n9["PaymentsClient"]:::component
+    n5["Репозитории (1)"]:::component
+    n6["Клиенты (1)"]:::component
   end
   subgraph g4["Хранилища и внешние системы"]
-    n10[("База данных (1 табл.)")]:::db
-    n11[/"Очереди и топики (2)"/]:::queue
-    n12{{"Внешние сервисы (2)"}}:::external
+    n7[("База данных (1 табл.)")]:::db
+    n8[/"Очереди и топики (2)"/]:::queue
+    n9{{"Внешние сервисы (3)"}}:::external
   end
-  n1 -.->|вызывает| n4
-  n4 -->|пишет| n10
-  n1 -.->|вызывает| n5
-  n5 -->|публикует| n11
-  n2 -->|вызывает| n6
-  n6 -->|вызывает| n8
-  n8 -->|читает| n10
-  n8 -->|пишет| n10
-  n7 -->|вызывает API| n12
-  n7 -->|вызывает| n8
-  n1 -->|вызывает| n6
-  n6 -->|вызывает| n9
-  n9 -->|вызывает API| n12
-  n6 -.->|вызывает| n3
-  n3 -->|публикует| n11
+  n1 -.->|вызывает| n3
+  n3 -->|пишет| n7
+  n3 -->|публикует| n8
+  n4 -->|вызывает| n5
+  n5 -->|читает| n7
+  n2 -->|вызывает| n3
+  n3 -->|вызывает| n5
+  n5 -->|пишет| n7
+  n4 -->|вызывает API| n9
+  n3 -->|вызывает| n6
+  n6 -->|вызывает API| n9
+  n3 -->|вызывает API| n9
+  n3 -.->|вызывает| n2
+  n2 -->|публикует| n8
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -569,6 +630,18 @@ sequenceDiagram
   p2-->>p4: approve (выведено, требует проверки)
   %% claim c-04f3d7945589a700
   p4->>p6: публикует: send
+
+=== features/cache-warmer/warm-up/flow.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+sequenceDiagram
+  participant p1 as async CacheWarmer.warmUp
+  participant p2 as CacheWarmer
+  participant p3 as таблица Возвраты
+  %% claim c-018ee512758be41a
+  p1->>p2: warmUp
+  %% claim c-1130632493a7bb17
+  %% claim c-04fb6787f3b58300
+  p2->>p3: читает: findAllByStatus (RefundRepository)
 
 === features/payment-events/on-payment-completed/flow.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
@@ -617,24 +690,30 @@ sequenceDiagram
   actor p1 as POST /api/v1/refunds
   participant p2 as RefundController
   participant p3 as Сервис возвратов
-  participant p4 as RefundEventsListener
-  participant p5 as таблица Возвраты
-  participant p6 as внешний API payments
-  participant p7 as топик refunds.created
+  participant p4 as NotificationService
+  participant p5 as RefundEventsListener
+  participant p6 as таблица Возвраты
+  participant p7 as внешний API payments
+  participant p8 as внешний API notify.example.com
+  participant p9 as топик refunds.created
   %% claim c-093eaecdbc291d14
   p1->>p2: create
   %% claim c-1e367b4dee7b1210
   p2->>p3: create
   %% claim c-0a5cc52a5037fd1c
   %% claim c-02fc26133e7b940e
-  p3->>p5: пишет: save (RefundRepository)
+  p3->>p6: пишет: save (RefundRepository)
   %% claim c-09edb9a27f064a05
   %% claim c-0087eb84ac7c8d02
-  p3->>p6: вызывает API: reserve (PaymentsClient)
+  p3->>p7: вызывает API: reserve (PaymentsClient)
+  %% claim c-105727ac2c2ba206
+  p3-)p4: notifyCustomer (асинхронно)
+  %% claim c-1d9d21cc9488c713
+  p4->>p8: вызывает API: notifyCustomer
   %% claim c-1d4598f3099e1007
-  p3-->>p4: event:RefundCreated → onCreated (выведено, требует проверки)
+  p3-->>p5: event:RefundCreated → onCreated (выведено, требует проверки)
   %% claim c-024d3c170906f605
-  p4->>p7: публикует: send
+  p5->>p9: публикует: send
 
 === features/refunds/get-refund/flow.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.

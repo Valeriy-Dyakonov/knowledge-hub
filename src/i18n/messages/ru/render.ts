@@ -24,10 +24,12 @@ export const render = {
   whoTriggers: "Кто обращается",
   whatItUses: "С чем работает",
   via: (c: string) => `через ${c}`,
-  triggerKinds: { HTTP: "HTTP API", MESSAGE: "сообщение", SCHEDULE: "по расписанию", EVENT: "событие", STARTUP: "при запуске", CLI: "CLI" } as Record<string, string>,
+  triggerKinds: { HTTP: "HTTP API", MESSAGE: "сообщение", SCHEDULE: "по расписанию", EVENT: "событие", STARTUP: "при запуске", ASYNC: "асинхронно (@Async)", CLI: "CLI" } as Record<string, string>,
   layers: { entry: "Точки входа", logic: "Логика", data: "Доступ к данным и API", systems: "Хранилища и внешние системы" },
   flowDiagram: "Поток (L3)",
   inferredMark: "(выведено, требует проверки)",
+  asyncMark: "(асинхронно)",
+  asyncJobs: "Асинхронные задачи",
   // diagram nodes
   clients: "Клиенты API",
   schedule: "Расписание",

@@ -125,6 +125,12 @@ fn has_schedule(class: &KtClass) -> bool {
     class.functions.iter().any(|f| f.annotations.iter().any(|a| a.name == "Scheduled"))
 }
 
+/// Methods that run asynchronously: annotated `@Async`, or every method of an `@Async` class.
+fn async_methods(class: &KtClass) -> Vec<&Function> {
+    let whole = class.annotation(&["Async"]).is_some();
+    class.functions.iter().filter(|f| whole || f.annotations.iter().any(|a| a.name == "Async")).collect()
+}
+
 fn join_path(prefix: &str, path: &str) -> String {
     let joined = format!("/{}/{}", prefix.trim_matches('/'), path.trim_matches('/'));
     let mut out = String::new();
@@ -285,6 +291,10 @@ impl<'a> Analysis<'a> {
                 attributes.insert("table".into(), table);
             }
         }
+        let asyncs: Vec<&str> = async_methods(b.class).iter().map(|f| f.name.as_str()).collect();
+        if !asyncs.is_empty() {
+            attributes.insert("async".into(), asyncs.join(","));
+        }
         if let Some(a) = b.class.annotation(&["FeignClient"]) {
             if let Some(n) = a.values(&["name", "value"]).into_iter().next() {
                 attributes.insert("feign.name".into(), n);
@@ -395,6 +405,11 @@ impl<'a> Analysis<'a> {
             }
         }
         self.facts.triggers.extend(found);
+        // @Async methods run in their own thread. Discover decides whether one is an entry point of its own
+        // (nobody in the project calls it) or a step of the calling flow.
+        for f in async_methods(c) {
+            self.facts.triggers.push(TriggerFact { kind: "ASYNC".into(), component_id: c.fqn.clone(), method: f.name.clone(), attributes: BTreeMap::new(), evidence: self.fn_ev(b.file, f) });
+        }
         if c.supertypes.iter().any(|s| matches!(simple(&s.name), "ApplicationRunner" | "CommandLineRunner")) {
             if let Some(f) = c.functions.iter().find(|f| f.name == "run") {
                 self.facts.triggers.push(TriggerFact {

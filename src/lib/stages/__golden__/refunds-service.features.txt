@@ -1,3 +1,9 @@
+FEATURE cache-warmer/warm-up group=cache-warmer owner=@team-refunds :: async CacheWarmer.warmUp
+  STEP 1 CacheWarmer.warmUp [async:com.example.refunds.notify.CacheWarmer.warmUp -CALL-> CacheWarmer STATIC/HIGH]
+  STEP 2 RefundRepository.findAllByStatus [CacheWarmer -CALL-> RefundRepository STATIC/HIGH]
+  STEP 3 RefundRepository.findAllByStatus [RefundRepository -READ-> db_table:refunds STATIC/HIGH]
+  SINK db_table:refunds
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=2 EXISTS/STATIC/HIGH=1 READS/STATIC/HIGH=1
 FEATURE refunds/get-refund group=refunds owner=@team-refunds :: GET /api/v1/refunds/{id}
   STEP 1 RefundController.get [http:GET /api/v1/refunds/{id} -CALL-> RefundController STATIC/HIGH]
   STEP 2 RefundService.get [RefundController -CALL-> RefundService STATIC/HIGH]
@@ -15,12 +21,15 @@ FEATURE refunds/create-refund group=refunds owner=@team-refunds :: POST /api/v1/
   STEP 4 RefundRepository.save [RefundRepository -WRITE-> db_table:refunds STATIC/HIGH]
   STEP 5 PaymentsClient.reserve [RefundService -CALL-> PaymentsClient STATIC/HIGH]
   STEP 6 PaymentsClient.reserve [PaymentsClient -HTTP_CALL-> external_http:payments STATIC/HIGH]
-  STEP 7 RefundEventsListener.onCreated [RefundService -CALL-> RefundEventsListener INFERRED/MEDIUM]
-  STEP 8 RefundEventsListener.send [RefundEventsListener -PUBLISH-> topic:refunds.created STATIC/HIGH]
+  STEP 7 NotificationService.notifyCustomer [RefundService -CALL-> NotificationService STATIC/HIGH]
+  STEP 8 NotificationService.notifyCustomer [NotificationService -HTTP_CALL-> external_http:notify.example.com STATIC/HIGH]
+  STEP 9 RefundEventsListener.onCreated [RefundService -CALL-> RefundEventsListener INFERRED/MEDIUM]
+  STEP 10 RefundEventsListener.send [RefundEventsListener -PUBLISH-> topic:refunds.created STATIC/HIGH]
   SINK db_table:refunds
   SINK external_http:payments
+  SINK external_http:notify.example.com
   SINK topic:refunds.created
-  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=4 EXISTS/STATIC/HIGH=1 HTTP_CALLS/STATIC/HIGH=1 PUBLISHES_TO/STATIC/HIGH=1 WRITES_TO/STATIC/HIGH=1
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=5 EXISTS/STATIC/HIGH=1 HTTP_CALLS/STATIC/HIGH=2 PUBLISHES_TO/STATIC/HIGH=1 WRITES_TO/STATIC/HIGH=1
 FEATURE approvals/approve group=approvals owner=@team-refunds :: POST /api/v1/refunds/{id}/approve
   STEP 1 RefundController.approve [http:POST /api/v1/refunds/{id}/approve -CALL-> RefundController STATIC/HIGH]
   STEP 2 ManualApprovalService.approve [RefundController -CALL-> ManualApprovalService INFERRED/LOW]
@@ -51,4 +60,4 @@ FEATURE reconciliation/reconcile group=reconciliation owner=@team-ledger :: sche
   SINK external_http:ledger.example.com
   SINK db_table:refunds
   CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=2 EXISTS/STATIC/HIGH=1 HTTP_CALLS/STATIC/HIGH=1 READS/STATIC/HIGH=1
-CATALOG components=10 sinks=db_table:refunds,external_http:payments,topic:refunds.created,topic:refunds.approved,topic:payments.completed,external_http:ledger.example.com
+CATALOG components=12 sinks=db_table:refunds,external_http:payments,external_http:notify.example.com,topic:refunds.created,topic:refunds.approved,topic:payments.completed,external_http:ledger.example.com

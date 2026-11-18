@@ -59,7 +59,8 @@ Golden-тест стадий 2–5 работает на реальном выв
 **Входы (триггеры):**
 - `@RestController` / `@Controller` + `@GetMapping`, `@PostMapping`, `@RequestMapping` и др. (с учётом префиксов путей);
 - `@KafkaListener`, `@RabbitListener`, `@JmsListener`, другие слушатели сообщений;
-- `@Scheduled`, `@EventListener`, `ApplicationRunner`/`CommandLineRunner`.
+- `@Scheduled`, `@EventListener`, `ApplicationRunner`/`CommandLineRunner`;
+- `@Async` (на методе или на классе): если метод вызывается из кода проекта — это асинхронный шаг вызывающего потока (в потоке помечен «асинхронно», в L3 — асинхронная стрелка); если никто в проекте его не вызывает — отдельная фича (группа «Асинхронные задачи»). Так же, как внутренние события, — чтобы одни и те же утверждения не проверялись дважды.
 
 **Внутренние узлы:**
 - бины `@Service`, `@Component`, `@Repository`, `@Configuration`, внедрение через конструктор;

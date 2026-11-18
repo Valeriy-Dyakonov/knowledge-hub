@@ -142,6 +142,9 @@ pub struct Edge {
     pub evidence: Option<Evidence>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub claim_id: Option<String>,
+    /// The call goes to an `@Async` method: the caller does not wait for it.
+    #[serde(default, rename = "async", skip_serializing_if = "Option::is_none")]
+    pub is_async: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

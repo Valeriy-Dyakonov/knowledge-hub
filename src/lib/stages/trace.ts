@@ -146,7 +146,8 @@ export class Tracer {
     }
     const [origin, confidence]: [Origin, Confidence] = targets.length > 1 ? ["INFERRED", "LOW"] : ["STATIC", "HIGH"];
     for (const t of targets) {
-      w.edge(self, { type: "COMPONENT", id: t.id }, "CALL", call.targetMethod, origin, confidence, call.evidence, t.id, call.targetMethod);
+      const isAsync = (t.attributes.async ?? "").split(",").includes(call.targetMethod);
+      w.edge(self, { type: "COMPONENT", id: t.id }, "CALL", call.targetMethod, origin, confidence, call.evidence, t.id, call.targetMethod, isAsync);
       this.visit(w, t.id, call.targetMethod, depth + 1);
     }
   }
@@ -190,11 +191,11 @@ class Walk {
     return s;
   }
 
-  edge(from: NodeRef, to: NodeRef, kind: EdgeKind, label: string, origin: Origin, confidence: Confidence, evidence?: Evidence, stepComponent?: string, stepAction?: string) {
+  edge(from: NodeRef, to: NodeRef, kind: EdgeKind, label: string, origin: Origin, confidence: Confidence, evidence?: Evidence, stepComponent?: string, stepAction?: string, isAsync = false) {
     const id = edgeId(from.type, from.id, to.type, to.id, kind, label);
     // The same call made twice (or reached twice) is one step of the flow, not two.
     if (this.edges.has(id)) return;
-    this.edges.set(id, { id, from, to, kind, label, origin, confidence, evidence });
+    this.edges.set(id, { id, from, to, kind, label, origin, confidence, evidence, ...(isAsync ? { async: true } : {}) });
     if (stepComponent && stepAction) this.steps.push({ order: this.steps.length + 1, componentId: stepComponent, action: stepAction, edgeId: id });
     for (const n of [from, to]) if (n.type === "COMPONENT") this.componentIds.add(n.id);
   }

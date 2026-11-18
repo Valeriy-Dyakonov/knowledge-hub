@@ -109,7 +109,7 @@ export function contextDiagram(model: KnowledgeModel, lang: string): string {
   } else {
     for (const [d, fs] of consumed) g.edge(g.node(`in:${d}`, lines(d), "queue", inGroup), svc, `${m.edges.CONSUME}: ${some(fs.map(n.feature), m.more)}`);
   }
-  for (const [type, title] of [["SCHEDULE", m.schedule], ["EVENT", m.events], ["STARTUP", m.startup]] as [TriggerType, string][]) {
+  for (const [type, title] of [["SCHEDULE", m.schedule], ["ASYNC", m.asyncJobs], ["EVENT", m.events], ["STARTUP", m.startup]] as [TriggerType, string][]) {
     const fs = withType(type);
     if (fs.length) g.edge(g.node(type, lines(title, ...fs.slice(0, 3).map(n.feature), fs.length > 3 ? m.more(fs.length - 3) : undefined), "trigger", inGroup), svc, "");
   }
@@ -257,7 +257,10 @@ export function flowDiagram(model: KnowledgeModel, f: Feature, lang: string): st
     const via = s.via ? ` (${n.component(s.via.componentId)})` : "";
     const verb = s.kind === "CALL" ? s.label : `${m.edges[s.kind] ?? s.kind}: ${s.label}${via}`;
     for (const c of s.claimIds) out.push(`  %% claim ${c}`);
-    out.push(`  ${from}${s.origin === "INFERRED" ? "-->>" : "->>"}${to}: ${label(verb)}${s.origin === "INFERRED" ? ` ${label(m.inferredMark)}` : ""}`);
+    // Async calls get Mermaid's open arrow: the caller goes on without waiting.
+    const arrow = s.async ? (s.origin === "INFERRED" ? "--)" : "-)") : s.origin === "INFERRED" ? "-->>" : "->>";
+    const marks = [s.async ? m.asyncMark : "", s.origin === "INFERRED" ? m.inferredMark : ""].filter(Boolean).map(label).join(" ");
+    out.push(`  ${from}${arrow}${to}: ${label(verb)}${marks ? ` ${marks}` : ""}`);
   }
   return out.join("\n") + "\n";
 }

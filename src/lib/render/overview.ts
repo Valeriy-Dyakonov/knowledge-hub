@@ -4,7 +4,7 @@ import { activeEdges, namer } from "./names";
 /** One external party of the service: who calls it, or what it calls, how, and for which features. */
 export interface Interaction {
   direction: "in" | "out";
-  kind: SinkKind | "CLIENTS" | "SCHEDULE" | "EVENT" | "STARTUP";
+  kind: SinkKind | "CLIENTS" | "SCHEDULE" | "ASYNC" | "EVENT" | "STARTUP";
   name: string;
   technicalName?: string;
   actions: EdgeKind[];
@@ -29,7 +29,7 @@ export function interactions(model: KnowledgeModel, lang: string): Interaction[]
     }
   }
   for (const [d, fs] of consumed) out.push({ direction: "in", kind: "TOPIC", name: d, actions: ["CONSUME"], features: fs });
-  for (const t of ["SCHEDULE", "EVENT", "STARTUP"] as const) {
+  for (const t of ["SCHEDULE", "ASYNC", "EVENT", "STARTUP"] as const) {
     const fs = byType(t);
     if (fs.length) out.push({ direction: "in", kind: t, name: "", actions: ["CALL"], features: fs });
   }
