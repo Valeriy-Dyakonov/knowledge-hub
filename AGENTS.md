@@ -17,6 +17,7 @@ Design docs live in `docs/` (Russian); read `docs/00-vision.md` and `docs/01-arc
 | Rust tests | `cargo test` in `src-tauri/` |
 | Regenerate golden files | `UPDATE_GOLDEN=1 cargo test` in `src-tauri/` (scan facts, scan JSON), then `UPDATE_GOLDEN=1 npm test` (features, rendered views, model JSON); review the diffs |
 | Print the tree-sitter tree of a Kotlin file | `cargo run --example sexp -- File.kt` in `src-tauri/` |
+| MCP server (after a build) | `src-tauri/target/debug/knowledge-hub mcp [--knowledge-dir <path>]` (stdio) |
 
 On this Windows machine cargo may be missing from PATH in Git Bash: prefix with `PATH="$HOME/.cargo/bin:$PATH"`.
 Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests if `src-tauri` changed.
@@ -49,9 +50,9 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
 - `redact.rs` — secret masking for configuration values and any text sent to the LLM or stored.
 - `store/` — `KnowledgeStore` on a local folder (`docs/07-storage.md`).
 - `state.rs` — SQLite in `.state/hub.db`: runs, checkpoints, logs, review batches, answers, journal, questions (JSON documents owned by the frontend).
-- `index/` — `Indexer` on SQLite FTS5 (`.state/index.db`).
+- `index/` — `Indexer` on SQLite FTS5 (`.state/index.db`), rebuilt by stage Index and after each closed review batch.
 - `llm.rs` — OpenAI-compatible client. `secrets.rs` — keyring. `settings.rs` — `settings.json`.
-- `mcp/` — `stdio.rs` (transport), `tools.rs` (tool logic, standard envelope).
+- `mcp/` — `stdio.rs` (JSON-RPC over stdio), `tools.rs` (7 tools, standard envelope `{ data, meta }`, errors as codes).
 - `commands/` — Tauri commands grouped by area.
 
 ## Checklists

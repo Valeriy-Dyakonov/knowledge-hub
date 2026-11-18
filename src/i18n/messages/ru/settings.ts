@@ -1,7 +1,11 @@
 export const settings = {
   title: "Настройки",
   back: "Назад",
-  sections: { knowledge: "База знаний", llm: "LLM", review: "Ревью", appearance: "Оформление" },
+  sections: { knowledge: "База знаний", llm: "LLM", review: "Ревью", mcp: "MCP для агентов", appearance: "Оформление" },
+  mcpText: "Агенты (Claude Code, другие harness) получают знания по MCP. Сервер — это само приложение, запущенное с аргументом mcp: окно не открывается, знания только читаются. Добавьте в конфигурацию MCP вашего harness:",
+  mcpTip: "Инструменты: list_features, get_feature, get_flow, get_diagram, search, who_touches, freshness. Каждый ответ содержит статус ревью — непроверенное агент видит как непроверенное.",
+  copy: "Скопировать",
+  copied: "Скопировано",
   knowledgeDir: "Папка базы знаний",
   knowledgeDirTip: "Здесь хранятся модель (YAML), сгенерированные документы и диаграммы. Папку можно положить в git. Рабочие данные лежат в подпапках .state/ и в git не попадают.",
   knowledgeDirDefault: (p: string) => `По умолчанию: ${p}`,

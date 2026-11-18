@@ -21,6 +21,7 @@ export interface ReviewBackend {
   closeBatch(serviceId: string, batchId: string, state: "CLOSED" | "REJECTED", flags: string[]): Promise<void>;
   appendJournal(serviceId: string, entries: JournalEntry[]): Promise<void>;
   addQuestion(serviceId: string, question: ReviewQuestion): Promise<void>;
+  indexService(serviceId: string): Promise<number>;
 }
 
 export interface CloseResult extends CloseDecision {
@@ -93,6 +94,7 @@ export class ReviewService {
     const { model: next, questions } = applyAnswers(model, batch, answers, at);
     await this.backend.saveModel(this.serviceId, next);
     for (const r of RENDERERS) await this.backend.writeGenerated(this.serviceId, r.render(next, { language: this.language }));
+    await this.backend.indexService(this.serviceId); // statuses in search and MCP follow the review
     for (const q of questions) await this.backend.addQuestion(this.serviceId, q);
     await this.backend.closeBatch(this.serviceId, batchId, "CLOSED", decision.flags);
     await this.backend.appendJournal(this.serviceId, journal);

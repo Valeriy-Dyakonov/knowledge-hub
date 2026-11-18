@@ -30,6 +30,7 @@ function fakeBackend(initial: KnowledgeModel) {
     closeBatch: async (_, id, state, flags) => { Object.assign(batches.get(id)!, { state, flags }); },
     appendJournal: async (_, e) => { journal.push(...e); },
     addQuestion: async (_, q) => { questions.push(q); },
+    indexService: async () => 0,
   };
   return { backend, journal, questions, get model() { return model; }, get renders() { return renders; } };
 }

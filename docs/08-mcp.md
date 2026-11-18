@@ -43,6 +43,15 @@ Harness получает знания по MCP и ничего не знает �
 
 Коды, а не проза: `featureNotFound`, `serviceNotIndexed`, `indexUnavailable`. Текст формирует клиент.
 
+## Реализация (M6)
+
+- `src-tauri/src/mcp/tools.rs` — семь инструментов над папкой знаний и индексом; `stdio.rs` — JSON-RPC 2.0 построчно (`initialize`, `notifications/initialized`, `ping`, `tools/list`, `tools/call`). Ответ инструмента — в `structuredContent` и тем же JSON в `content[0].text`; ошибка — `isError: true` и `{ "error": { "code", "params" } }`.
+- Запуск: `knowledge-hub.exe mcp [--knowledge-dir <путь>]`. Без `--knowledge-dir` берётся папка знаний из настроек приложения. Готовый фрагмент конфигурации — в приложении: Настройки → «MCP для агентов».
+- `service` во всех инструментах необязателен: без него `list_features`, `search`, `who_touches`, `freshness` работают по всем сервисам папки, а `get_feature`/`get_flow` ищут фичу во всех.
+- `who_touches(sink)` ищет сток по id (`topic:refunds.created`), техническому имени (`refunds`) или бизнес-названию; отклонённые связи не учитываются.
+- `meta`: `reviewStatus` по claims ответа, `verifiedAtCommit` и `reviewedAt` — самого позднего решения ревью, `staleReasons`, `unverifiedClaims`.
+- Поиск — SQLite FTS5 (`.state/index.db`, токенизатор unicode61: русский и английский, поиск по префиксу). Индекс перестраивается стадией Index и после каждой закрытой пачки ревью.
+
 ## Права
 
 Только чтение. MCP не запускает анализ и не меняет знания; запуск анализа и ревью — в приложении.

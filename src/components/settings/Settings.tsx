@@ -3,17 +3,18 @@ import { api } from "../../api";
 import { LOCALES, setLocale, useLocale, useT, type Locale } from "../../i18n";
 import { setTheme, THEMES, themeText, useTheme, type ThemeId } from "../../theme";
 import type { Settings as S } from "../../types";
-import { Button, Card, Field, Segmented } from "../ui";
+import { Button, Card, Field, InfoTip, Segmented } from "../ui";
 
 export const LLM_SECRET = "llm_key";
 
 interface SectionProps { form: S; set: (patch: Partial<S>) => void }
 
 /** Settings sections in display order; a new section is a component plus an entry here. */
-const SECTIONS: { id: "knowledge" | "llm" | "review" | "appearance"; Body: (p: SectionProps) => ReactNode }[] = [
+const SECTIONS: { id: "knowledge" | "llm" | "review" | "mcp" | "appearance"; Body: (p: SectionProps) => ReactNode }[] = [
   { id: "knowledge", Body: KnowledgeSection },
   { id: "llm", Body: LlmSection },
   { id: "review", Body: ReviewSection },
+  { id: "mcp", Body: McpSection },
   { id: "appearance", Body: AppearanceSection },
 ];
 
@@ -119,6 +120,26 @@ function ReviewSection({ form, set }: SectionProps) {
           onChange={(v) => set({ reviewPolicy: v })}
         />
       </Field>
+    </>
+  );
+}
+
+function McpSection(_: SectionProps) {
+  const t = useT().settings;
+  const [exe, setExe] = useState("");
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { api.mcpCommand().then(setExe).catch(() => {}); }, []);
+  const config = JSON.stringify({ mcpServers: { "knowledge-hub": { command: exe, args: ["mcp"] } } }, null, 2);
+  const copy = async () => {
+    await navigator.clipboard.writeText(config);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <>
+      <p className="muted">{t.mcpText} <InfoTip wide>{t.mcpTip}</InfoTip></p>
+      <pre className="mmd-src">{config}</pre>
+      <Button size="small" onClick={copy}>{copied ? t.copied : t.copy}</Button>
     </>
   );
 }

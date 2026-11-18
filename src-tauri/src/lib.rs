@@ -2,7 +2,9 @@ mod commands;
 mod context;
 mod error;
 mod extract;
+mod index;
 mod llm;
+mod mcp;
 mod model;
 mod redact;
 mod repo;
@@ -12,7 +14,12 @@ mod settings;
 mod state;
 mod store;
 
-use commands::{knowledge, llm as llm_cmd, repo as repo_cmd, review, runs, settings as config};
+use commands::{knowledge, llm as llm_cmd, repo as repo_cmd, review, runs, search, settings as config};
+
+/// `knowledge-hub mcp`: MCP server over stdio, no window (docs/08-mcp.md).
+pub fn run_mcp(args: &[String]) {
+    mcp::run(args)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -48,6 +55,9 @@ pub fn run() {
             review::review_journal,
             review::add_question,
             review::review_questions,
+            search::index_service,
+            search::search,
+            search::mcp_command,
             llm_cmd::llm_chat
         ])
         .run(tauri::generate_context!())

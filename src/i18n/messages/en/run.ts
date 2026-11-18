@@ -24,6 +24,7 @@ export const run: typeof ru = {
     describeSummary: (p) => `Described: ${p.described}, reused from review: ${p.reused}, failed requests: ${p.failedRequests}`,
     assembleSummary: (p) => `Features: ${p.features}, claims: ${p.claims}, unverified: ${p.unverified}, conflicts: ${p.conflicts}`,
     renderSummary: (p) => `Generated files: ${p.files}`,
+    indexSummary: (p) => `Search index updated: ${p.features} features`,
     businessNamesMissing: (p) => `Without business names: ${p.count}`,
   },
   reasons: { disabledByOption: "turned off", notImplemented: "not implemented yet", noRenderers: "no renderers", llmNotConfigured: "LLM not configured" },

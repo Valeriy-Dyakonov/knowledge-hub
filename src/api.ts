@@ -3,7 +3,7 @@ import { t } from "./i18n";
 import type { ErrorParams } from "./i18n/messages/ru/errors";
 import type { ReviewBackend } from "./lib/review/service";
 import type {
-  GeneratedFile, JournalEntry, KnowledgeModel, LogEntry, RepoInfo, ReviewAnswer, ReviewBatch, ReviewQuestion, RunRecord, ScanResult, Settings, StoredBatch,
+  GeneratedFile, JournalEntry, KnowledgeModel, LogEntry, RepoInfo, ReviewAnswer, ReviewBatch, ReviewQuestion, RunRecord, ScanResult, SearchHit, Settings, StoredBatch,
 } from "./types";
 
 /** A backend failure worded in the UI language; `String(e)` gives just the message. */
@@ -46,6 +46,7 @@ export interface Backend {
   saveCheckpoint(serviceId: string, runId: string, state: unknown): Promise<void>;
   loadCheckpoint(serviceId: string, runId: string): Promise<unknown | null>;
   appendRunLog(serviceId: string, runId: string, entries: LogEntry[]): Promise<void>;
+  indexService(serviceId: string): Promise<number>;
   llmChat(system: string, user: string): Promise<string>;
 }
 
@@ -82,6 +83,10 @@ export const api = {
   reviewJournal: (serviceId: string) => call<JournalEntry[]>("review_journal", { serviceId }),
   addQuestion: (serviceId: string, question: ReviewQuestion) => call<void>("add_question", { serviceId, question }),
   reviewQuestions: (serviceId: string) => call<ReviewQuestion[]>("review_questions", { serviceId }),
+
+  indexService: (serviceId: string) => call<number>("index_service", { serviceId }),
+  search: (query: string, serviceId?: string, limit?: number) => call<SearchHit[]>("search", { query, serviceId, limit }),
+  mcpCommand: () => call<string>("mcp_command"),
 
   llmChat: (system: string, user: string) => call<string>("llm_chat", { system, user }),
 };

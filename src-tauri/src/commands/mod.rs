@@ -4,6 +4,7 @@ pub mod llm;
 pub mod repo;
 pub mod review;
 pub mod runs;
+pub mod search;
 pub mod settings;
 
 use crate::error::AppResult;

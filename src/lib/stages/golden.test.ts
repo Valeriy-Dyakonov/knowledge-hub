@@ -62,7 +62,8 @@ describe("Discover + Trace + Assemble on the fixture service", () => {
       saveCheckpoint: async () => {},
       loadCheckpoint: async () => null,
       appendRunLog: async () => {},
-      llmChat: async () => "{}",
+      indexService: async () => 0,
+    llmChat: async () => "{}",
     };
     const options = { serviceId: "refunds", serviceName: "Refunds", repoPath: "/repo", language: "ru", describe: false };
     const first = await runAnalysis(options, { backend });

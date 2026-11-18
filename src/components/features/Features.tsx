@@ -25,13 +25,28 @@ export default function Features(props: { repo: RepoEntry }) {
     api.loadModel(props.repo.serviceId).then(setModel).catch(() => setModel(null));
   }, [props.repo.serviceId]);
 
+  // Full-text search through the index (same as MCP `search`); a plain substring filter if the index is unavailable.
+  const [hits, setHits] = useState<Map<string, string> | null>(null);
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) return setHits(null);
+    const timer = setTimeout(() => {
+      api.search(q, props.repo.serviceId, 50).then(
+        (r) => setHits(new Map(r.map((h) => [h.featureId, h.snippet]))),
+        () => setHits(null),
+      );
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [query, props.repo.serviceId]);
+
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = (model?.features ?? []).filter((f) => !q || `${f.id} ${f.technicalName} ${featureName(f)}`.toLowerCase().includes(q));
+    const list = (model?.features ?? []).filter((f) =>
+      !q || (hits ? hits.has(f.id) : `${f.id} ${f.technicalName} ${featureName(f)}`.toLowerCase().includes(q)));
     const m = new Map<string, Feature[]>();
     for (const f of list) m.set(f.group, [...(m.get(f.group) ?? []), f]);
     return [...m.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [model, query]);
+  }, [model, query, hits]);
 
   if (model === undefined) return null;
   if (model === null) return <Card><Title>{t.title}</Title><p className="muted">{t.empty}</p></Card>;
@@ -42,6 +57,7 @@ export default function Features(props: { repo: RepoEntry }) {
     <div className="features">
       <Card className="fl-list">
         <input className="fl-search" placeholder={t.search} value={query} onChange={(e) => setQuery(e.target.value)} />
+        {groups.length === 0 && <p className="muted">{t.noHits}</p>}
         {groups.map(([group, items]) => (
           <div key={group} className="fl-group">
             <div className="fl-group-name">{group}</div>
@@ -51,7 +67,7 @@ export default function Features(props: { repo: RepoEntry }) {
                 <button key={f.id} className={`fl-item ${f.id === selected ? "on" : ""}`} onClick={() => setSelected(f.id)}>
                   <span className="fl-name">{featureName(f)}</span>
                   <span className={`dot ${tone[s]}`} title={s} />
-                  <span className="hint">{f.technicalName}</span>
+                  <span className="hint">{hits?.get(f.id) || f.technicalName}</span>
                 </button>
               );
             })}

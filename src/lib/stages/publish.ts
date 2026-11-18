@@ -22,10 +22,12 @@ export const renderStage: Stage = {
   },
 };
 
-/** Stage 7: the search index is rebuilt from the model (Rust, M6). */
+/** Stage 7: the full-text index (SQLite FTS5, Rust) is rebuilt from the saved model; MCP `search` reads it. */
 export const indexStage: Stage = {
   id: "index",
   required: false,
-  skipReason: () => "notImplemented",
-  async run() {},
+  async run(ctx) {
+    const n = await ctx.backend.indexService(ctx.options.serviceId);
+    ctx.log("ok", "indexSummary", { features: String(n) });
+  },
 };

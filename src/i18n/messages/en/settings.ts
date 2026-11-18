@@ -3,7 +3,11 @@ import type { settings as ru } from "../ru/settings";
 export const settings: typeof ru = {
   title: "Settings",
   back: "Back",
-  sections: { knowledge: "Knowledge base", llm: "LLM", review: "Review", appearance: "Appearance" },
+  sections: { knowledge: "Knowledge base", llm: "LLM", review: "Review", mcp: "MCP for agents", appearance: "Appearance" },
+  mcpText: "Agents (Claude Code, other harnesses) get the knowledge over MCP. The server is this app started with the mcp argument: no window, read-only. Add this to your harness MCP configuration:",
+  mcpTip: "Tools: list_features, get_feature, get_flow, get_diagram, search, who_touches, freshness. Every answer carries the review status, so the agent sees unverified knowledge as unverified.",
+  copy: "Copy",
+  copied: "Copied",
   knowledgeDir: "Knowledge base folder",
   knowledgeDirTip: "Holds the model (YAML), generated documents and diagrams. The folder can be put under git. Working data lives in .state/ subfolders, which stay out of git.",
   knowledgeDirDefault: (p) => `Default: ${p}`,

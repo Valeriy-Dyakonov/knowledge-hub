@@ -353,5 +353,7 @@ export const defaultSettings: Settings = {
   ideUrl: "vscode://file/{path}:{line}",
 };
 
+export interface SearchHit { service: ServiceId; featureId: FeatureId; title: string; snippet: string; status: FeatureStatus; score: number }
+
 /** A file generated from the model (markdown, Mermaid); path is relative to the service folder. */
 export interface GeneratedFile { relativePath: string; content: string }

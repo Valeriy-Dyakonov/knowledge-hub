@@ -24,6 +24,7 @@ export const run = {
     describeSummary: (p: P) => `Описано фич: ${p.described}, взято из ревью: ${p.reused}, неудачных запросов: ${p.failedRequests}`,
     assembleSummary: (p: P) => `Фич: ${p.features}, утверждений: ${p.claims}, непроверенных: ${p.unverified}, конфликтов: ${p.conflicts}`,
     renderSummary: (p: P) => `Сгенерировано файлов: ${p.files}`,
+    indexSummary: (p: P) => `Поисковый индекс обновлён: фич ${p.features}`,
     businessNamesMissing: (p: P) => `Без бизнес-названий: ${p.count}`,
   } as Record<string, (p: P) => string>,
   reasons: { disabledByOption: "выключено", notImplemented: "ещё не реализовано", noRenderers: "нет рендереров", llmNotConfigured: "LLM не настроена" } as P,

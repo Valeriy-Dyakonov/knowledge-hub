@@ -20,6 +20,7 @@ function fakeBackend() {
     saveCheckpoint: async (_, id, s) => { checkpoints.set(id, JSON.parse(JSON.stringify(s))); },
     loadCheckpoint: async (_, id) => checkpoints.get(id) ?? null,
     appendRunLog: async (_, __, e) => { logs.push(...e); },
+    indexService: async () => 0,
     llmChat: async () => "{}",
   };
   return { backend, runs, logs, checkpoints };
