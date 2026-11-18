@@ -346,8 +346,8 @@
           "commit": "unknown",
           "fingerprint": "6f0e422610773a5b",
           "lines": {
-            "end": 16,
-            "start": 16
+            "end": 17,
+            "start": 17
           },
           "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
           "repo": "refunds-service"
@@ -791,8 +791,8 @@
           "commit": "unknown",
           "fingerprint": "f1c20165cb2b0339",
           "lines": {
-            "end": 8,
-            "start": 7
+            "end": 9,
+            "start": 8
           },
           "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
           "repo": "refunds-service"
@@ -809,14 +809,31 @@
               "commit": "unknown",
               "fingerprint": "9214031c7698b2c5",
               "lines": {
-                "end": 21,
-                "start": 14
+                "end": 22,
+                "start": 15
               },
               "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
               "repo": "refunds-service"
             },
             "name": "warmUp",
             "parameterTypes": []
+          },
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "61e393763b7ad704",
+              "lines": {
+                "end": 26,
+                "start": 25
+              },
+              "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
+              "repo": "refunds-service"
+            },
+            "name": "isWarm",
+            "parameterTypes": [
+              "String",
+              "Boolean"
+            ]
           }
         ],
         "simpleName": "CacheWarmer",
@@ -1671,8 +1688,8 @@
           "commit": "unknown",
           "fingerprint": "e9af2c21abd12a5e",
           "lines": {
-            "end": 15,
-            "start": 14
+            "end": 16,
+            "start": 15
           },
           "path": "src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt",
           "repo": "refunds-service"

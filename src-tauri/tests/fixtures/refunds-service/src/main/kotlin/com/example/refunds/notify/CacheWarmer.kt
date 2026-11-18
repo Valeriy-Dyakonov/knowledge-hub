@@ -1,6 +1,7 @@
 package com.example.refunds.notify
 
 import com.example.refunds.persistence.RefundRepository
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.scheduling.annotation.Async
 import org.springframework.stereotype.Component
 
@@ -19,4 +20,8 @@ class CacheWarmer(private val repository: RefundRepository) {
             "NEW",
         ] = true
     }
+
+    // After a property, an annotation string with `) >`; and a parameter called `dynamic`.
+    @Cacheable(cacheNames = ["statuses"], condition = "#status.length() > 0")
+    fun isWarm(status: String, dynamic: Boolean = false): Boolean = warmed[status] ?: dynamic
 }

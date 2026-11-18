@@ -168,7 +168,8 @@ impl KtClass {
 /// Rewrites what the grammar does not know into what it does, keeping every byte position (so lines and columns
 /// stay): the extra `$` of multi-dollar strings (`$$"…"`, Kotlin 2.1+) become spaces, and so does a trailing comma
 /// before `]` (`map[\n key,\n]`, allowed by Kotlin, unknown to the grammar), and so do quotes ending the text of a
-/// raw string (`"""…"""""`). Otherwise strings and comments are left alone.
+/// raw string (`"""…"""""`); inside strings the space in `) &&` becomes `_`, and the identifier `dynamic` becomes
+/// `dynami_` (see below). Otherwise strings and comments are left alone.
 pub(super) fn sanitize(source: &str) -> String {
     let b = source.as_bytes();
     let mut out = b.to_vec();
@@ -206,6 +207,14 @@ pub(super) fn sanitize(source: &str) -> String {
                 templates.push(depth);
                 depth += 1;
                 continue;
+            }
+            // Grammar quirk: after a class property, an annotation string with `)`, a space and an operator
+            // (`@Around("@annotation(X) && execution(* *(..))")`) loses the rest of the class. `) &&` -> `)_&&`.
+            if b[i] == b')' && matches!(b.get(i + 1), Some(b' ' | b'\t')) {
+                let next = b[i + 1..].iter().copied().find(|c| *c != b' ' && *c != b'\t');
+                if next.is_some_and(|c| c.is_ascii_punctuation() && !matches!(c, b'"' | b'$' | b'\\' | b'{' | b'(')) {
+                    out[i + 1] = b'_';
+                }
             }
             i += 1;
             continue;
@@ -282,6 +291,19 @@ pub(super) fn sanitize(source: &str) -> String {
                 }
                 i += 1;
             }
+            c if c.is_ascii_alphabetic() || c == b'_' || c == b'`' => {
+                // A whole word: `dynamic` is a type keyword in the grammar (Kotlin/JS), so a parameter, named
+                // argument or variable called `dynamic` breaks the parse. Kotlin/JVM has no such type.
+                let start = i;
+                while i < b.len() && (b[i].is_ascii_alphanumeric() || b[i] == b'_') {
+                    i += 1;
+                }
+                if i == start {
+                    i += 1;
+                } else if &b[start..i] == b"dynamic" {
+                    out[i - 1] = b'_';
+                }
+            }
             _ => i += 1,
         }
     }
@@ -294,7 +316,8 @@ pub fn parse(path: &str, original: &str) -> KtFile {
     let mut parser = Parser::new();
     parser.set_language(&tree_sitter_kotlin_ng::LANGUAGE.into()).expect("kotlin grammar");
     let Some(tree) = parser.parse(source, None) else { return KtFile { path: path.into(), ..Default::default() } };
-    let w = Walker { src: source };
+    // Sanitizing keeps every byte position, so names and literals are read from the original text.
+    let w = Walker { src: original };
     let root = tree.root_node();
     let mut file = KtFile { path: path.into(), ..Default::default() };
     for n in named(root) {
@@ -913,10 +936,60 @@ object Topics { const val X = "x.topic" }
         assert!(e.first);
     }
 
+    /// The grammar alone (without `sanitize`) fails on the source: the test covers a real gap.
+    fn grammar_fails(src: &str) -> bool {
+        let mut p = Parser::new();
+        p.set_language(&tree_sitter_kotlin_ng::LANGUAGE.into()).unwrap();
+        p.parse(src, None).unwrap().root_node().has_error()
+    }
+
+    #[test]
+    fn parses_a_parameter_called_dynamic_and_keeps_its_name() {
+        let src = "class A(\n    private val b: B,\n) {\n    fun c(): D? =\n        D(1)\n            .e(\n                f().g(\n                    h(\n                        i = J.K,\n                        dynamic = true,\n                    )?.l(2f),\n                ),\n            )\n\n    fun h(i: J, dynamic: Boolean = false): M? {\n        val dynamic2 = dynamic\n        return null\n    }\n}\n";
+        assert!(grammar_fails(src));
+        let f = parse("A.kt", src);
+        assert!(f.parse_errors.is_empty(), "{:?}", f.parse_errors.first().map(|e| &e.pattern));
+        let h = f.classes[0].functions.iter().find(|x| x.name == "h").expect("h");
+        assert_eq!(h.params.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), ["i", "dynamic"]);
+        assert!(sanitize(src).contains("dynami_ = true") && sanitize(src).contains("dynamic2"));
+        assert_eq!(sanitize("val s = \"dynamic\" // dynamic"), "val s = \"dynamic\" // dynamic");
+    }
+
+    #[test]
+    fn parses_an_operator_after_a_parenthesis_in_an_annotation_string() {
+        let src = r#"class A(
+    private val b: B,
+) {
+    private val c = D<E, F>()
+
+    @G("h(i.j.K) && l(m * *(..))")
+    fun n(o: P): Any? {
+        val q = R.s()
+        return o.t()
+    }
+
+    @U("""v(* *..W.x(..)) || y(z)""")
+    fun a2() {
+        c[R.s()]?.b2(false)
+    }
+}
+"#;
+        assert!(grammar_fails(src));
+        let f = parse("A.kt", src);
+        assert!(f.parse_errors.is_empty(), "{:?}", f.parse_errors.first().map(|e| &e.pattern));
+        let names: Vec<&str> = f.classes[0].functions.iter().map(|x| x.name.as_str()).collect();
+        assert_eq!(names, ["n", "a2"]);
+        assert_eq!(sanitize(src).len(), src.len());
+        assert!(sanitize(src).contains("h(i.j.K)_&& l(m * *(..))"));
+        // Code outside strings is untouched.
+        assert_eq!(sanitize("val x = (a) && b"), "val x = (a) && b");
+    }
+
     #[test]
     fn parses_raw_strings_ending_with_quotes() {
         // JSON with an empty value at the end: `"k": ""` followed by the closing `"""`.
-        let src = "class A {\n    fun f(c: C) = listOf(\n        { r: R -> r.copy(body = \"\"\"\"inn\": \"\"\"\"\") },\n        { r: R -> r.copy(body = \"\"\"\"inn\": \"x\"\"\"\") },\n    )\n\n    fun g() = 1\n}\n";
+        let src = "class A {\n    fun f(c: C) = listOf(\n        { r: R -> r.copy(d = \"\"\"\"k\": \"\"\"\"\") },\n        { r: R -> r.copy(d = \"\"\"\"k\": \"x\"\"\"\") },\n    )\n\n    fun g() = 1\n}\n";
+        assert!(grammar_fails(src));
         let f = parse("A.kt", src);
         assert!(f.parse_errors.is_empty(), "{:?}", f.parse_errors.first().map(|e| &e.pattern));
         assert_eq!(f.classes[0].functions.iter().map(|x| x.name.as_str()).collect::<Vec<_>>(), ["f", "g"]);
