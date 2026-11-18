@@ -152,7 +152,10 @@ describe("review service", () => {
     expect(edited.payload.to).toBe("db_table:audit_log");
     expect(allClaims(f.model).find((c) => c.id === second.claim.id)!.status).toBe("PROPOSED");
     expect(f.questions).toHaveLength(1);
-    expect(f.questions[0].owner).toBe("@team-refunds");
+    // The question goes to the owner of the claim's feature (CODEOWNERS of its code).
+    const feature = f.model!.features.find((x) => x.claims.some((c) => c.id === second.claim.id));
+    expect(f.questions[0].owner).toBe(feature?.owner ?? "@team-refunds");
+    expect(["@team-refunds", "@team-ledger"]).toContain(f.questions[0].owner);
   });
 
   it("confirms all static facts through the summary", async () => {

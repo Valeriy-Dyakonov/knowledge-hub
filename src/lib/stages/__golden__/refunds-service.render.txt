@@ -42,19 +42,20 @@ flowchart LR
   subgraph g4["База данных"]
     direction TB
     n8[("Возвраты")]:::db
-    n9[("refund_items")]:::db
-    n10[("refund-locks")]:::db
+    n9[("payouts")]:::db
+    n10[("refund_items")]:::db
+    n11[("refund-locks")]:::db
   end
   subgraph g5["Публикует в топики"]
     direction TB
-    n11[/"refunds.approved"/]:::queue
-    n12[/"refunds.created"/]:::queue
+    n12[/"refunds.approved"/]:::queue
+    n13[/"refunds.created"/]:::queue
   end
   subgraph g6["Внешние сервисы"]
     direction TB
-    n13{{"ledger.example.com"}}:::external
-    n14{{"notify.example.com"}}:::external
-    n15{{"payments"}}:::external
+    n14{{"ledger.example.com"}}:::external
+    n15{{"notify.example.com"}}:::external
+    n16{{"payments"}}:::external
   end
   g1 -->|5 HTTP| n1
   g2 -->|получает| n1
@@ -107,18 +108,19 @@ flowchart TB
     n9[("Возвраты")]:::db
     n12[("refund-locks")]:::db
     n14[("refund_items")]:::db
+    n15[("payouts")]:::db
   end
   subgraph g8["Топики и очереди"]
     direction LR
     n10[/"refunds.approved"/]:::queue
     n11[/"payments.completed"/]:::queue
-    n17[/"refunds.created"/]:::queue
+    n18[/"refunds.created"/]:::queue
   end
   subgraph g9["Внешние сервисы"]
     direction LR
     n13{{"ledger.example.com"}}:::external
-    n15{{"payments"}}:::external
-    n16{{"notify.example.com"}}:::external
+    n16{{"payments"}}:::external
+    n17{{"notify.example.com"}}:::external
   end
   %% claim c-031aaff17e5ee300
   n1 -->|пишет| n9
@@ -140,6 +142,10 @@ flowchart TB
   n5 -->|читает| n9
   %% claim c-023958b6ac148a18
   n5 -->|читает| n14
+  %% claim c-066617726f81ee16
+  n5 -->|читает| n15
+  %% claim c-0f84d9503dd6db02
+  n5 -->|пишет| n15
   %% claim c-1574bd4eddef9f02
   n6 -.->|пишет| n9
   %% claim c-09e92a905a727f16
@@ -147,11 +153,11 @@ flowchart TB
   %% claim c-02fc26133e7b940e
   n7 -->|пишет| n9
   %% claim c-0087eb84ac7c8d02
-  n7 -->|вызывает API| n15
-  %% claim c-1d9d21cc9488c713
   n7 -->|вызывает API| n16
+  %% claim c-1d9d21cc9488c713
+  n7 -->|вызывает API| n17
   %% claim c-024d3c170906f605
-  n7 -->|публикует| n17
+  n7 -->|публикует| n18
   %% claim c-0f71f9f289845d0d
   n8 -->|читает| n9
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
@@ -187,72 +193,80 @@ flowchart LR
     direction TB
     n10["RefundRepository"]:::component
     n11["RefundLockRepository"]:::component
-    n12["PaymentsClient"]:::component
+    n12["PayoutStore"]:::component
+    n13["PaymentsClient"]:::component
   end
   subgraph g4["Хранилища и внешние системы"]
     direction LR
     subgraph g4c1[" "]
       direction TB
-      n13[("Возвраты<br/>таблица")]:::db
-      n14[/"refunds.approved<br/>топик"/]:::queue
-      n15[("refund-locks<br/>таблица")]:::db
+      n14[("Возвраты<br/>таблица")]:::db
+      n15[/"refunds.approved<br/>топик"/]:::queue
+      n16[("refund-locks<br/>таблица")]:::db
     end
     subgraph g4c2[" "]
       direction TB
-      n16{{"ledger.example.com<br/>внешний API"}}:::external
-      n17[("refund_items<br/>таблица")]:::db
-      n18{{"payments<br/>внешний API"}}:::external
+      n17{{"ledger.example.com<br/>внешний API"}}:::external
+      n18[("refund_items<br/>таблица")]:::db
+      n19[("payouts<br/>таблица")]:::db
     end
     subgraph g4c3[" "]
       direction TB
-      n19{{"notify.example.com<br/>внешний API"}}:::external
-      n20[/"refunds.created<br/>топик"/]:::queue
+      n20{{"payments<br/>внешний API"}}:::external
+      n21{{"notify.example.com<br/>внешний API"}}:::external
+      n22[/"refunds.created<br/>топик"/]:::queue
     end
   end
   %% claim c-15aec0f5d1509c01
   n1 -.->|вызывает| n4
   %% claim c-031aaff17e5ee300
-  n4 -->|пишет| n13
+  n4 -->|пишет| n14
   %% claim c-01664b64827d1904
   n1 -.->|вызывает| n5
   %% claim c-04f3d7945589a700
-  n5 -->|публикует| n14
+  n5 -->|публикует| n15
   %% claim c-1130632493a7bb17
   n6 -->|вызывает| n10
   %% claim c-04fb6787f3b58300
-  n10 -->|читает| n13
+  n10 -->|читает| n14
   %% claim c-0a2454f33f40af01
   n2 -->|вызывает| n7
   %% claim c-11fe0864ed20e71a
   n7 -->|вызывает| n11
   %% claim c-138eabb1f2c3400c
-  n11 -->|пишет| n15
+  n11 -->|пишет| n16
   %% claim c-19f33311ed75690e
   n7 -->|вызывает| n10
   %% claim c-12803d863b50a50e
-  n10 -->|пишет| n13
+  n10 -->|пишет| n14
   %% claim c-195f2b1fafba1607
-  n8 -->|вызывает API| n16
+  n8 -->|вызывает API| n17
   %% claim c-06cd6200b4ffd40b
   n8 -->|вызывает| n10
   %% claim c-023958b6ac148a18
-  n10 -->|читает| n17
+  n10 -->|читает| n18
+  %% claim c-165048be289bf508
+  n8 -->|вызывает| n12
+  %% claim c-066617726f81ee16
+  n12 -->|читает| n19
+  %% claim c-0f84d9503dd6db02
+  n12 -->|пишет| n19
   %% claim c-0741d7bf5df12609
   n1 -->|вызывает| n7
   %% claim c-1574bd4eddef9f02
-  n7 -.->|пишет| n13
+  n7 -.->|пишет| n14
   %% claim c-09edb9a27f064a05
-  n7 -->|вызывает| n12
+  n7 -->|вызывает| n13
   %% claim c-0087eb84ac7c8d02
-  n12 -->|вызывает API| n18
+  n13 -->|вызывает API| n20
   %% claim c-105727ac2c2ba206
   n7 -->|вызывает| n9
   %% claim c-1d9d21cc9488c713
-  n9 -->|вызывает API| n19
+  n9 -->|вызывает API| n21
   %% claim c-1d4598f3099e1007
   n7 -.->|вызывает| n3
   %% claim c-024d3c170906f605
-  n3 -->|публикует| n20
+  n3 -->|публикует| n22
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -439,7 +453,7 @@ sequenceDiagram
 <!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
 # schedule 0 0 \* \* \* \* ReconciliationJob.reconcile
 
-- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 9.
+- Статус: **черновик: есть непроверенные утверждения** — Непроверенных утверждений: 13.
 - Группа: `reconciliation` · `reconciliation/reconcile`
 - Владелец: @team-ledger
 
@@ -447,36 +461,48 @@ _Описание ещё не составлено._
 
 ## Что запускает
 
-- `schedule 0 0 * * * * ReconciliationJob.reconcile` — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:17`
+- `schedule 0 0 * * * * ReconciliationJob.reconcile` — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:21`
 
 ## Поток
 
-1. schedule 0 0 \* \* \* \* ReconciliationJob.reconcile вызывает **ReconciliationJob** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:17`
-2. ReconciliationJob вызывает API **ledger.example.com** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:22`
-3. ReconciliationJob читает **Возвраты** (`findAllByStatus`) через RefundRepository — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:19`
-4. ReconciliationJob читает **refund\_items** (`findBySku`) через RefundRepository — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:20`
+1. schedule 0 0 \* \* \* \* ReconciliationJob.reconcile вызывает **ReconciliationJob** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:21`
+2. ReconciliationJob вызывает API **ledger.example.com** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:30`
+3. ReconciliationJob читает **Возвраты** (`findAllByStatus`) через RefundRepository — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:23`
+4. ReconciliationJob читает **refund\_items** (`findBySku`) через RefundRepository — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:24`
 5. RefundRepository читает **Возвраты** (`findBySku`) — `src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:11`
+6. ReconciliationJob вызывает **PayoutStore** (`latest`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:26`
+7. PayoutStore читает **payouts** (`select`) — `src/main/kotlin/com/example/refunds/persistence/BaseStore.kt:18`
+8. ReconciliationJob пишет **payouts** (`insert`) через PayoutStore — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:27`
 
 ```mermaid
 sequenceDiagram
   participant p1 as schedule 0 0 * * * * ReconciliationJob.reconcile
   participant p2 as ReconciliationJob
   participant p3 as RefundRepository
-  participant p4 as внешний API ledger.example.com
-  participant p5 as таблица Возвраты
-  participant p6 as таблица refund_items
+  participant p4 as PayoutStore
+  participant p5 as внешний API ledger.example.com
+  participant p6 as таблица Возвраты
+  participant p7 as таблица refund_items
+  participant p8 as таблица payouts
   %% claim c-1a9dee328ab9391d
   p1->>p2: reconcile
   %% claim c-195f2b1fafba1607
-  p2->>p4: вызывает API: reconcile
+  p2->>p5: вызывает API: reconcile
   %% claim c-06cd6200b4ffd40b
   %% claim c-0e96e0157abb2303
-  p2->>p5: читает: findAllByStatus (RefundRepository)
+  p2->>p6: читает: findAllByStatus (RefundRepository)
   %% claim c-1b0981e6e1357402
   %% claim c-023958b6ac148a18
-  p2->>p6: читает: findBySku (RefundRepository)
+  p2->>p7: читает: findBySku (RefundRepository)
   %% claim c-0e82bc26b6fb8d12
-  p3->>p5: читает: findBySku
+  p3->>p6: читает: findBySku
+  %% claim c-165048be289bf508
+  p2->>p4: latest
+  %% claim c-066617726f81ee16
+  p4->>p8: читает: select
+  %% claim c-1118f0d751821d0d
+  %% claim c-0f84d9503dd6db02
+  p2->>p8: пишет: insert (PayoutStore)
 ```
 
 ## Куда пишет и откуда читает
@@ -484,6 +510,7 @@ sequenceDiagram
 - внешний API **ledger.example.com**
 - таблица **Возвраты**
 - таблица **refund\_items**
+- таблица **payouts**
 
 === features/refunds/cancel/README.md
 <!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
@@ -651,19 +678,20 @@ flowchart LR
   subgraph g4["База данных"]
     direction TB
     n8[("Возвраты")]:::db
-    n9[("refund_items")]:::db
-    n10[("refund-locks")]:::db
+    n9[("payouts")]:::db
+    n10[("refund_items")]:::db
+    n11[("refund-locks")]:::db
   end
   subgraph g5["Публикует в топики"]
     direction TB
-    n11[/"refunds.approved"/]:::queue
-    n12[/"refunds.created"/]:::queue
+    n12[/"refunds.approved"/]:::queue
+    n13[/"refunds.created"/]:::queue
   end
   subgraph g6["Внешние сервисы"]
     direction TB
-    n13{{"ledger.example.com"}}:::external
-    n14{{"notify.example.com"}}:::external
-    n15{{"payments"}}:::external
+    n14{{"ledger.example.com"}}:::external
+    n15{{"notify.example.com"}}:::external
+    n16{{"payments"}}:::external
   end
   g1 -->|5 HTTP| n1
   g2 -->|получает| n1
@@ -714,18 +742,19 @@ flowchart TB
     n9[("Возвраты")]:::db
     n12[("refund-locks")]:::db
     n14[("refund_items")]:::db
+    n15[("payouts")]:::db
   end
   subgraph g8["Топики и очереди"]
     direction LR
     n10[/"refunds.approved"/]:::queue
     n11[/"payments.completed"/]:::queue
-    n17[/"refunds.created"/]:::queue
+    n18[/"refunds.created"/]:::queue
   end
   subgraph g9["Внешние сервисы"]
     direction LR
     n13{{"ledger.example.com"}}:::external
-    n15{{"payments"}}:::external
-    n16{{"notify.example.com"}}:::external
+    n16{{"payments"}}:::external
+    n17{{"notify.example.com"}}:::external
   end
   %% claim c-031aaff17e5ee300
   n1 -->|пишет| n9
@@ -747,6 +776,10 @@ flowchart TB
   n5 -->|читает| n9
   %% claim c-023958b6ac148a18
   n5 -->|читает| n14
+  %% claim c-066617726f81ee16
+  n5 -->|читает| n15
+  %% claim c-0f84d9503dd6db02
+  n5 -->|пишет| n15
   %% claim c-1574bd4eddef9f02
   n6 -.->|пишет| n9
   %% claim c-09e92a905a727f16
@@ -754,11 +787,11 @@ flowchart TB
   %% claim c-02fc26133e7b940e
   n7 -->|пишет| n9
   %% claim c-0087eb84ac7c8d02
-  n7 -->|вызывает API| n15
-  %% claim c-1d9d21cc9488c713
   n7 -->|вызывает API| n16
+  %% claim c-1d9d21cc9488c713
+  n7 -->|вызывает API| n17
   %% claim c-024d3c170906f605
-  n7 -->|публикует| n17
+  n7 -->|публикует| n18
   %% claim c-0f71f9f289845d0d
   n8 -->|читает| n9
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
@@ -792,72 +825,80 @@ flowchart LR
     direction TB
     n10["RefundRepository"]:::component
     n11["RefundLockRepository"]:::component
-    n12["PaymentsClient"]:::component
+    n12["PayoutStore"]:::component
+    n13["PaymentsClient"]:::component
   end
   subgraph g4["Хранилища и внешние системы"]
     direction LR
     subgraph g4c1[" "]
       direction TB
-      n13[("Возвраты<br/>таблица")]:::db
-      n14[/"refunds.approved<br/>топик"/]:::queue
-      n15[("refund-locks<br/>таблица")]:::db
+      n14[("Возвраты<br/>таблица")]:::db
+      n15[/"refunds.approved<br/>топик"/]:::queue
+      n16[("refund-locks<br/>таблица")]:::db
     end
     subgraph g4c2[" "]
       direction TB
-      n16{{"ledger.example.com<br/>внешний API"}}:::external
-      n17[("refund_items<br/>таблица")]:::db
-      n18{{"payments<br/>внешний API"}}:::external
+      n17{{"ledger.example.com<br/>внешний API"}}:::external
+      n18[("refund_items<br/>таблица")]:::db
+      n19[("payouts<br/>таблица")]:::db
     end
     subgraph g4c3[" "]
       direction TB
-      n19{{"notify.example.com<br/>внешний API"}}:::external
-      n20[/"refunds.created<br/>топик"/]:::queue
+      n20{{"payments<br/>внешний API"}}:::external
+      n21{{"notify.example.com<br/>внешний API"}}:::external
+      n22[/"refunds.created<br/>топик"/]:::queue
     end
   end
   %% claim c-15aec0f5d1509c01
   n1 -.->|вызывает| n4
   %% claim c-031aaff17e5ee300
-  n4 -->|пишет| n13
+  n4 -->|пишет| n14
   %% claim c-01664b64827d1904
   n1 -.->|вызывает| n5
   %% claim c-04f3d7945589a700
-  n5 -->|публикует| n14
+  n5 -->|публикует| n15
   %% claim c-1130632493a7bb17
   n6 -->|вызывает| n10
   %% claim c-04fb6787f3b58300
-  n10 -->|читает| n13
+  n10 -->|читает| n14
   %% claim c-0a2454f33f40af01
   n2 -->|вызывает| n7
   %% claim c-11fe0864ed20e71a
   n7 -->|вызывает| n11
   %% claim c-138eabb1f2c3400c
-  n11 -->|пишет| n15
+  n11 -->|пишет| n16
   %% claim c-19f33311ed75690e
   n7 -->|вызывает| n10
   %% claim c-12803d863b50a50e
-  n10 -->|пишет| n13
+  n10 -->|пишет| n14
   %% claim c-195f2b1fafba1607
-  n8 -->|вызывает API| n16
+  n8 -->|вызывает API| n17
   %% claim c-06cd6200b4ffd40b
   n8 -->|вызывает| n10
   %% claim c-023958b6ac148a18
-  n10 -->|читает| n17
+  n10 -->|читает| n18
+  %% claim c-165048be289bf508
+  n8 -->|вызывает| n12
+  %% claim c-066617726f81ee16
+  n12 -->|читает| n19
+  %% claim c-0f84d9503dd6db02
+  n12 -->|пишет| n19
   %% claim c-0741d7bf5df12609
   n1 -->|вызывает| n7
   %% claim c-1574bd4eddef9f02
-  n7 -.->|пишет| n13
+  n7 -.->|пишет| n14
   %% claim c-09edb9a27f064a05
-  n7 -->|вызывает| n12
+  n7 -->|вызывает| n13
   %% claim c-0087eb84ac7c8d02
-  n12 -->|вызывает API| n18
+  n13 -->|вызывает API| n20
   %% claim c-105727ac2c2ba206
   n7 -->|вызывает| n9
   %% claim c-1d9d21cc9488c713
-  n9 -->|вызывает API| n19
+  n9 -->|вызывает API| n21
   %% claim c-1d4598f3099e1007
   n7 -.->|вызывает| n3
   %% claim c-024d3c170906f605
-  n3 -->|публикует| n20
+  n3 -->|публикует| n22
   classDef trigger fill:#2f6fed,stroke:#1f4fb8,color:#fff
   classDef component fill:#ede7f9,stroke:#8e63d8,color:#2b1d4a
   classDef feature fill:#e8f0fe,stroke:#2f6fed,color:#14274e
@@ -938,21 +979,30 @@ sequenceDiagram
   participant p1 as schedule 0 0 * * * * ReconciliationJob.reconcile
   participant p2 as ReconciliationJob
   participant p3 as RefundRepository
-  participant p4 as внешний API ledger.example.com
-  participant p5 as таблица Возвраты
-  participant p6 as таблица refund_items
+  participant p4 as PayoutStore
+  participant p5 as внешний API ledger.example.com
+  participant p6 as таблица Возвраты
+  participant p7 as таблица refund_items
+  participant p8 as таблица payouts
   %% claim c-1a9dee328ab9391d
   p1->>p2: reconcile
   %% claim c-195f2b1fafba1607
-  p2->>p4: вызывает API: reconcile
+  p2->>p5: вызывает API: reconcile
   %% claim c-06cd6200b4ffd40b
   %% claim c-0e96e0157abb2303
-  p2->>p5: читает: findAllByStatus (RefundRepository)
+  p2->>p6: читает: findAllByStatus (RefundRepository)
   %% claim c-1b0981e6e1357402
   %% claim c-023958b6ac148a18
-  p2->>p6: читает: findBySku (RefundRepository)
+  p2->>p7: читает: findBySku (RefundRepository)
   %% claim c-0e82bc26b6fb8d12
-  p3->>p5: читает: findBySku
+  p3->>p6: читает: findBySku
+  %% claim c-165048be289bf508
+  p2->>p4: latest
+  %% claim c-066617726f81ee16
+  p4->>p8: читает: select
+  %% claim c-1118f0d751821d0d
+  %% claim c-0f84d9503dd6db02
+  p2->>p8: пишет: insert (PayoutStore)
 
 === features/refunds/cancel/flow.mmd
 %% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
@@ -1043,7 +1093,8 @@ sequenceDiagram
 
 - Откуда известна структура: JPA-сущность — `src/main/kotlin/com/example/refunds/persistence/PayoutRecord.kt`
 - Сущность: `com.example.refunds.persistence.PayoutRecord`
-- Обращений в коде не найдено
+- Используется в фичах: schedule 0 0 \* \* \* \* ReconciliationJob.reconcile (читает, пишет)
+- Обращения в коде: `PayoutStore.insert` (пишет); `PayoutStore.remove` (пишет); `PayoutStore.all` (читает)
 
 | Колонка | Тип | Ключи и ограничения | Поле сущности |
 |---|---|---|---|

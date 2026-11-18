@@ -2,12 +2,15 @@ CALL com.example.refunds.api.RefundController.approve -> com.example.refunds.ser
 CALL com.example.refunds.api.RefundController.cancel -> com.example.refunds.service.RefundService.cancel @src/main/kotlin/com/example/refunds/api/RefundController.kt:26-26
 CALL com.example.refunds.api.RefundController.create -> com.example.refunds.service.RefundService.create @src/main/kotlin/com/example/refunds/api/RefundController.kt:17-17
 CALL com.example.refunds.api.RefundController.get -> com.example.refunds.service.RefundService.get @src/main/kotlin/com/example/refunds/api/RefundController.kt:21-21
-CALL com.example.refunds.jobs.ReconciliationJob.reconcile -> com.example.refunds.persistence.RefundRepository.findAllByStatus @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:19-19
-CALL com.example.refunds.jobs.ReconciliationJob.reconcile -> com.example.refunds.persistence.RefundRepository.findBySku @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:20-20
+CALL com.example.refunds.jobs.ReconciliationJob.reconcile -> com.example.refunds.persistence.PayoutStore.insert @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:27-27
+CALL com.example.refunds.jobs.ReconciliationJob.reconcile -> com.example.refunds.persistence.PayoutStore.latest @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:26-26
+CALL com.example.refunds.jobs.ReconciliationJob.reconcile -> com.example.refunds.persistence.RefundRepository.findAllByStatus @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:23-23
+CALL com.example.refunds.jobs.ReconciliationJob.reconcile -> com.example.refunds.persistence.RefundRepository.findBySku @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:24-24
 CALL com.example.refunds.messaging.PaymentEventsConsumer.audit -> com.example.refunds.messaging.PaymentEventsConsumer.table @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:21-21
 CALL com.example.refunds.messaging.PaymentEventsConsumer.onPaymentCompleted -> com.example.refunds.messaging.PaymentEventsConsumer.audit @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:17-17
 CALL com.example.refunds.messaging.PaymentEventsConsumer.onPaymentCompleted -> com.example.refunds.service.RefundService.markPaid @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:16-16
 CALL com.example.refunds.notify.CacheWarmer.warmUp -> com.example.refunds.persistence.RefundRepository.findAllByStatus @src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:17-17
+CALL com.example.refunds.persistence.PayoutStore.latest -> com.example.refunds.persistence.PayoutStore.all @src/main/kotlin/com/example/refunds/persistence/BaseStore.kt:23-23
 CALL com.example.refunds.service.RefundService.cancel -> com.example.refunds.persistence.RefundRepository.findById @src/main/kotlin/com/example/refunds/service/RefundService.kt:46-46
 CALL com.example.refunds.service.RefundService.create -> com.example.refunds.client.PaymentsClient.reserve @src/main/kotlin/com/example/refunds/service/RefundService.kt:28-28
 CALL com.example.refunds.service.RefundService.create -> com.example.refunds.notify.NotificationService.notifyCustomer @src/main/kotlin/com/example/refunds/service/RefundService.kt:30-30
@@ -20,13 +23,14 @@ CALL com.example.refunds.service.RefundService.markPaid -> com.example.refunds.p
 CALL com.example.refunds.service.RefundService.markPaid -> com.example.refunds.persistence.RefundRepository.save @src/main/kotlin/com/example/refunds/service/RefundService.kt:40-40
 CALL com.example.refunds.service.RefundService.preview -> com.example.refunds.persistence.RefundRepository.findById @src/main/kotlin/com/example/refunds/service/RefundService.kt:52-52
 COMPONENT CLIENT com.example.refunds.client.PaymentsClient interface supertypes=[] injected=[] feign.name=payments feign.url=${clients.payments.url} @src/main/kotlin/com/example/refunds/client/PaymentsClient.kt:9-10
-COMPONENT COMPONENT com.example.refunds.jobs.ReconciliationJob supertypes=[] injected=[env:org.springframework.core.env.Environment,limits:com.example.refunds.config.RefundLimits,repository:com.example.refunds.persistence.RefundRepository,restTemplate:org.springframework.web.client.RestTemplate] @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:10-16
+COMPONENT COMPONENT com.example.refunds.jobs.ReconciliationJob supertypes=[] injected=[env:org.springframework.core.env.Environment,limits:com.example.refunds.config.RefundLimits,payouts:com.example.refunds.persistence.PayoutStore,repository:com.example.refunds.persistence.RefundRepository,restTemplate:org.springframework.web.client.RestTemplate] @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:13-20
 COMPONENT COMPONENT com.example.refunds.notify.CacheWarmer supertypes=[] injected=[repository:com.example.refunds.persistence.RefundRepository] async=warmUp @src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:8-9
 COMPONENT CONTROLLER com.example.refunds.api.HealthController supertypes=[] injected=[] @src/main/kotlin/com/example/refunds/api/HealthController.kt:5-7
 COMPONENT CONTROLLER com.example.refunds.api.RefundController supertypes=[] injected=[approvalService:com.example.refunds.service.ApprovalService,refundService:com.example.refunds.service.RefundService] @src/main/kotlin/com/example/refunds/api/RefundController.kt:10-15
 COMPONENT LISTENER com.example.refunds.events.RefundEventsListener supertypes=[] injected=[kafkaTemplate:org.springframework.kafka.core.KafkaTemplate] @src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt:9-13
 COMPONENT LISTENER com.example.refunds.messaging.PaymentEventsConsumer supertypes=[] injected=[jdbcTemplate:org.springframework.jdbc.core.JdbcTemplate,refundService:com.example.refunds.service.RefundService] @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:9-13
 COMPONENT REPOSITORY com.example.refunds.persistence.PayoutRepository interface supertypes=[org.springframework.data.repository.CrudRepository] injected=[] table=payouts @src/main/kotlin/com/example/refunds/persistence/PayoutRecord.kt:17-17
+COMPONENT REPOSITORY com.example.refunds.persistence.PayoutStore supertypes=[com.example.refunds.persistence.BaseStore] injected=[template:org.springframework.data.r2dbc.core.R2dbcEntityTemplate] @src/main/kotlin/com/example/refunds/persistence/BaseStore.kt:21-22
 COMPONENT REPOSITORY com.example.refunds.persistence.RefundLockRepository interface supertypes=[org.springframework.data.repository.CrudRepository] injected=[] table=refund-locks @src/main/kotlin/com/example/refunds/persistence/RefundLock.kt:16-16
 COMPONENT REPOSITORY com.example.refunds.persistence.RefundNoteRepository interface supertypes=[org.springframework.data.jpa.repository.JpaRepository] injected=[] table=refund_note @src/main/kotlin/com/example/refunds/persistence/RefundSnapshot.kt:20-20
 COMPONENT REPOSITORY com.example.refunds.persistence.RefundRepository interface supertypes=[org.springframework.data.jpa.repository.JpaRepository] injected=[] table=refunds @src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:7-7
@@ -38,11 +42,11 @@ COMPONENT SERVICE com.example.refunds.service.RefundService supertypes=[] inject
 CONFIG clients.payments.url <- com.example.refunds.client.PaymentsClient annotation @src/main/kotlin/com/example/refunds/client/PaymentsClient.kt:9-10
 CONFIG payments.topics.completed <- com.example.refunds.messaging.PaymentEventsConsumer.onPaymentCompleted annotation @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:14-15
 CONFIG refunds.limits.* <- com.example.refunds.config.RefundLimits properties @src/main/kotlin/com/example/refunds/config/RefundLimits.kt:5-9
-CONFIG refunds.limits.* <- com.example.refunds.jobs.ReconciliationJob properties @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:10-16
+CONFIG refunds.limits.* <- com.example.refunds.jobs.ReconciliationJob properties @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:13-20
 CONFIG refunds.limits.daily-count <- com.example.refunds.config.RefundLimits properties @src/main/kotlin/com/example/refunds/config/RefundLimits.kt:5-9
 CONFIG refunds.limits.max-amount <- com.example.refunds.config.RefundLimits properties @src/main/kotlin/com/example/refunds/config/RefundLimits.kt:5-9
-CONFIG refunds.reconciliation.cron <- com.example.refunds.jobs.ReconciliationJob.reconcile annotation default=0 0 * * * * @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:17-18
-CONFIG refunds.region <- com.example.refunds.jobs.ReconciliationJob.reconcile environment @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:21-21
+CONFIG refunds.reconciliation.cron <- com.example.refunds.jobs.ReconciliationJob.reconcile annotation default=0 0 * * * * @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:21-22
+CONFIG refunds.region <- com.example.refunds.jobs.ReconciliationJob.reconcile environment @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:29-29
 CONFIG refunds.topics.created <- com.example.refunds.events.RefundEventsListener value @src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt:9-13
 ENTITY com.example.refunds.persistence.PayoutRecord sql:payouts [id=id:Long:pk, refundId=refund_id:UUID, amountCents=amount_cents:Long] @src/main/kotlin/com/example/refunds/persistence/PayoutRecord.kt:10-15
 ENTITY com.example.refunds.persistence.RefundEntity sql:refunds [id=id:UUID:pk, amount=amount:BigDecimal, status=status:String] @src/main/kotlin/com/example/refunds/persistence/RefundEntity.kt:9-15
@@ -53,8 +57,11 @@ ENTITY com.example.refunds.persistence.RefundSnapshot mongo:refund_snapshots [id
 EVENT com.example.refunds.service.RefundService.create -> com.example.refunds.domain.RefundCreated @src/main/kotlin/com/example/refunds/service/RefundService.kt:29-29
 SINK com.example.refunds.client.PaymentsClient.reserve HTTP_CALL EXTERNAL_HTTP:payments httpMethod=POST operation=reserve path=/reservations @src/main/kotlin/com/example/refunds/client/PaymentsClient.kt:11-12
 SINK com.example.refunds.events.RefundEventsListener.onCreated PUBLISH TOPIC:${refunds.topics.created} operation=send @src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt:16-16
-SINK com.example.refunds.jobs.ReconciliationJob.reconcile HTTP_CALL EXTERNAL_HTTP:ledger.example.com httpMethod=GET operation=reconcile path=/api/balance @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:22-22
+SINK com.example.refunds.jobs.ReconciliationJob.reconcile HTTP_CALL EXTERNAL_HTTP:ledger.example.com httpMethod=GET operation=reconcile path=/api/balance @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:30-30
 SINK com.example.refunds.notify.NotificationService.notifyCustomer HTTP_CALL EXTERNAL_HTTP:notify.example.com httpMethod=POST operation=notifyCustomer path=/api/messages @src/main/kotlin/com/example/refunds/notify/NotificationService.kt:12-12
+SINK com.example.refunds.persistence.PayoutStore.all READ DB_TABLE:payouts operation=select @src/main/kotlin/com/example/refunds/persistence/BaseStore.kt:18-18
+SINK com.example.refunds.persistence.PayoutStore.insert WRITE DB_TABLE:payouts operation=insert @src/main/kotlin/com/example/refunds/persistence/BaseStore.kt:14-14
+SINK com.example.refunds.persistence.PayoutStore.remove WRITE DB_TABLE:payouts operation=delete @src/main/kotlin/com/example/refunds/persistence/BaseStore.kt:16-16
 SINK com.example.refunds.persistence.RefundLockRepository.save WRITE DB_TABLE:refund-locks operation=save @src/main/kotlin/com/example/refunds/persistence/RefundLock.kt:16-16
 SINK com.example.refunds.persistence.RefundRepository.findAllByStatus READ DB_TABLE:refunds operation=findAllByStatus @src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:8-8
 SINK com.example.refunds.persistence.RefundRepository.findById READ DB_TABLE:refunds operation=findById @src/main/kotlin/com/example/refunds/persistence/RefundRepository.kt:7-7
@@ -73,5 +80,5 @@ TRIGGER HTTP com.example.refunds.api.RefundController.cancel httpMethod=POST pat
 TRIGGER HTTP com.example.refunds.api.RefundController.create httpMethod=POST path=/api/v1/refunds @src/main/kotlin/com/example/refunds/api/RefundController.kt:16-17
 TRIGGER HTTP com.example.refunds.api.RefundController.get httpMethod=GET path=/api/v1/refunds/{id} @src/main/kotlin/com/example/refunds/api/RefundController.kt:19-20
 TRIGGER MESSAGE com.example.refunds.messaging.PaymentEventsConsumer.onPaymentCompleted broker=kafka destination=${payments.topics.completed} @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:14-15
-TRIGGER SCHEDULE com.example.refunds.jobs.ReconciliationJob.reconcile cron=${refunds.reconciliation.cron:0 0 * * * *} @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:17-18
+TRIGGER SCHEDULE com.example.refunds.jobs.ReconciliationJob.reconcile cron=${refunds.reconciliation.cron:0 0 * * * *} @src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:21-22
 UNRESOLVED com.example.refunds.messaging.PaymentEventsConsumer.audit DYNAMIC_SQL jdbcTemplate.update @src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt:22-22

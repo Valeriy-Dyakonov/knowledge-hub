@@ -71,8 +71,13 @@ FEATURE reconciliation/reconcile group=reconciliation owner=@team-ledger :: sche
   STEP 5 RefundRepository.findBySku [ReconciliationJob -CALL-> RefundRepository STATIC/HIGH]
   STEP 6 RefundRepository.findBySku [RefundRepository -READ-> db_table:refund_items STATIC/HIGH]
   STEP 7 RefundRepository.findBySku [RefundRepository -READ-> db_table:refunds STATIC/HIGH]
+  STEP 8 PayoutStore.latest [ReconciliationJob -CALL-> PayoutStore STATIC/HIGH]
+  STEP 9 PayoutStore.select [PayoutStore -READ-> db_table:payouts STATIC/MEDIUM]
+  STEP 10 PayoutStore.insert [ReconciliationJob -CALL-> PayoutStore STATIC/HIGH]
+  STEP 11 PayoutStore.insert [PayoutStore -WRITE-> db_table:payouts STATIC/MEDIUM]
   SINK external_http:ledger.example.com
   SINK db_table:refunds
   SINK db_table:refund_items
-  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=3 EXISTS/STATIC/HIGH=1 HTTP_CALLS/STATIC/HIGH=1 READS/STATIC/HIGH=3
-CATALOG components=16 sinks=db_table:refunds,external_http:payments,external_http:notify.example.com,topic:refunds.created,topic:refunds.approved,topic:payments.completed,db_table:refund-locks,external_http:ledger.example.com,db_table:refund_items
+  SINK db_table:payouts
+  CLAIMS BELONGS_TO_FEATURE/INFERRED/MEDIUM=1 CALLS/STATIC/HIGH=5 EXISTS/STATIC/HIGH=1 HTTP_CALLS/STATIC/HIGH=1 READS/STATIC/HIGH=3 READS/STATIC/MEDIUM=1 WRITES_TO/STATIC/MEDIUM=1
+CATALOG components=17 sinks=db_table:refunds,external_http:payments,external_http:notify.example.com,topic:refunds.created,topic:refunds.approved,topic:payments.completed,db_table:refund-locks,external_http:ledger.example.com,db_table:refund_items,db_table:payouts

@@ -82,10 +82,10 @@
         "businessName": {},
         "evidence": {
           "commit": "unknown",
-          "fingerprint": "6d0d0fa55ecf121c",
+          "fingerprint": "1e247daf694e6345",
           "lines": {
-            "end": 16,
-            "start": 10
+            "end": 20,
+            "start": 13
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -152,6 +152,22 @@
             "start": 17
           },
           "path": "src/main/kotlin/com/example/refunds/persistence/PayoutRecord.kt",
+          "repo": "refunds-service"
+        }
+      },
+      {
+        "id": "com.example.refunds.persistence.PayoutStore",
+        "kind": "REPOSITORY",
+        "technicalName": "PayoutStore",
+        "businessName": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "8b38c28a0129b1b5",
+          "lines": {
+            "end": 22,
+            "start": 21
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
           "repo": "refunds-service"
         }
       },
@@ -321,6 +337,12 @@
         "id": "db_table:refund_items",
         "kind": "DB_TABLE",
         "technicalName": "refund_items",
+        "businessName": {}
+      },
+      {
+        "id": "db_table:payouts",
+        "kind": "DB_TABLE",
+        "technicalName": "payouts",
         "businessName": {}
       }
     ],
@@ -2084,8 +2106,8 @@
             "commit": "unknown",
             "fingerprint": "24a0f2c22ae5242a",
             "lines": {
-              "end": 18,
-              "start": 17
+              "end": 22,
+              "start": 21
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -2094,12 +2116,14 @@
       ],
       "componentIds": [
         "com.example.refunds.jobs.ReconciliationJob",
-        "com.example.refunds.persistence.RefundRepository"
+        "com.example.refunds.persistence.RefundRepository",
+        "com.example.refunds.persistence.PayoutStore"
       ],
       "sinkIds": [
         "external_http:ledger.example.com",
         "db_table:refunds",
-        "db_table:refund_items"
+        "db_table:refund_items",
+        "db_table:payouts"
       ],
       "edges": [
         {
@@ -2120,8 +2144,8 @@
             "commit": "unknown",
             "fingerprint": "24a0f2c22ae5242a",
             "lines": {
-              "end": 18,
-              "start": 17
+              "end": 22,
+              "start": 21
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -2146,8 +2170,8 @@
             "commit": "unknown",
             "fingerprint": "8c0271841668fd14",
             "lines": {
-              "end": 22,
-              "start": 22
+              "end": 30,
+              "start": 30
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -2172,8 +2196,8 @@
             "commit": "unknown",
             "fingerprint": "95a5e112ccaa4e82",
             "lines": {
-              "end": 19,
-              "start": 19
+              "end": 23,
+              "start": 23
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -2224,8 +2248,8 @@
             "commit": "unknown",
             "fingerprint": "928799eb42fbce8c",
             "lines": {
-              "end": 20,
-              "start": 20
+              "end": 24,
+              "start": 24
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -2283,6 +2307,110 @@
             "repo": "refunds-service"
           },
           "claimId": "c-0e82bc26b6fb8d12"
+        },
+        {
+          "id": "e-0e183e63712c",
+          "from": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.jobs.ReconciliationJob"
+          },
+          "to": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.persistence.PayoutStore"
+          },
+          "kind": "CALL",
+          "label": "latest",
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "aa73458b3c067e07",
+            "lines": {
+              "end": 26,
+              "start": 26
+            },
+            "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+            "repo": "refunds-service"
+          },
+          "claimId": "c-165048be289bf508"
+        },
+        {
+          "id": "e-0efccce31110",
+          "from": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.persistence.PayoutStore"
+          },
+          "to": {
+            "type": "SINK",
+            "id": "db_table:payouts"
+          },
+          "kind": "READ",
+          "label": "select",
+          "origin": "STATIC",
+          "confidence": "MEDIUM",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "8987c99e3486a6f4",
+            "lines": {
+              "end": 18,
+              "start": 18
+            },
+            "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+            "repo": "refunds-service"
+          },
+          "claimId": "c-066617726f81ee16"
+        },
+        {
+          "id": "e-1835f109b912",
+          "from": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.jobs.ReconciliationJob"
+          },
+          "to": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.persistence.PayoutStore"
+          },
+          "kind": "CALL",
+          "label": "insert",
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "7f869c0ae3076d20",
+            "lines": {
+              "end": 27,
+              "start": 27
+            },
+            "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+            "repo": "refunds-service"
+          },
+          "claimId": "c-1118f0d751821d0d"
+        },
+        {
+          "id": "e-1c679bdaa8af",
+          "from": {
+            "type": "COMPONENT",
+            "id": "com.example.refunds.persistence.PayoutStore"
+          },
+          "to": {
+            "type": "SINK",
+            "id": "db_table:payouts"
+          },
+          "kind": "WRITE",
+          "label": "insert",
+          "origin": "STATIC",
+          "confidence": "MEDIUM",
+          "evidence": {
+            "commit": "unknown",
+            "fingerprint": "ca711afb5b526d17",
+            "lines": {
+              "end": 14,
+              "start": 14
+            },
+            "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+            "repo": "refunds-service"
+          },
+          "claimId": "c-0f84d9503dd6db02"
         }
       ],
       "steps": [
@@ -2327,6 +2455,30 @@
           "componentId": "com.example.refunds.persistence.RefundRepository",
           "action": "findBySku",
           "edgeId": "e-14a456b1e315"
+        },
+        {
+          "order": 8,
+          "componentId": "com.example.refunds.persistence.PayoutStore",
+          "action": "latest",
+          "edgeId": "e-0e183e63712c"
+        },
+        {
+          "order": 9,
+          "componentId": "com.example.refunds.persistence.PayoutStore",
+          "action": "select",
+          "edgeId": "e-0efccce31110"
+        },
+        {
+          "order": 10,
+          "componentId": "com.example.refunds.persistence.PayoutStore",
+          "action": "insert",
+          "edgeId": "e-1835f109b912"
+        },
+        {
+          "order": 11,
+          "componentId": "com.example.refunds.persistence.PayoutStore",
+          "action": "insert",
+          "edgeId": "e-1c679bdaa8af"
         }
       ],
       "breaks": [],
@@ -2348,8 +2500,8 @@
               "commit": "unknown",
               "fingerprint": "24a0f2c22ae5242a",
               "lines": {
-                "end": 18,
-                "start": 17
+                "end": 22,
+                "start": 21
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2381,8 +2533,8 @@
               "commit": "unknown",
               "fingerprint": "24a0f2c22ae5242a",
               "lines": {
-                "end": 18,
-                "start": 17
+                "end": 22,
+                "start": 21
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2417,8 +2569,8 @@
               "commit": "unknown",
               "fingerprint": "24a0f2c22ae5242a",
               "lines": {
-                "end": 18,
-                "start": 17
+                "end": 22,
+                "start": 21
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2455,8 +2607,8 @@
               "commit": "unknown",
               "fingerprint": "8c0271841668fd14",
               "lines": {
-                "end": 22,
-                "start": 22
+                "end": 30,
+                "start": 30
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2493,8 +2645,8 @@
               "commit": "unknown",
               "fingerprint": "95a5e112ccaa4e82",
               "lines": {
-                "end": 19,
-                "start": 19
+                "end": 23,
+                "start": 23
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2569,8 +2721,8 @@
               "commit": "unknown",
               "fingerprint": "928799eb42fbce8c",
               "lines": {
-                "end": 20,
-                "start": 20
+                "end": 24,
+                "start": 24
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2661,6 +2813,158 @@
             "toType": "SINK",
             "label": "findBySku",
             "edgeKind": "READ"
+          }
+        },
+        {
+          "id": "c-165048be289bf508",
+          "featureId": "reconciliation/reconcile",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-0e183e63712c"
+          },
+          "kind": "CALLS",
+          "payload": {
+            "from": "com.example.refunds.jobs.ReconciliationJob",
+            "to": "com.example.refunds.persistence.PayoutStore",
+            "toType": "COMPONENT",
+            "label": "latest",
+            "edgeKind": "CALL"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "aa73458b3c067e07",
+              "lines": {
+                "end": 26,
+                "start": 26
+              },
+              "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "com.example.refunds.jobs.ReconciliationJob",
+            "to": "com.example.refunds.persistence.PayoutStore",
+            "toType": "COMPONENT",
+            "label": "latest",
+            "edgeKind": "CALL"
+          }
+        },
+        {
+          "id": "c-066617726f81ee16",
+          "featureId": "reconciliation/reconcile",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-0efccce31110"
+          },
+          "kind": "READS",
+          "payload": {
+            "from": "com.example.refunds.persistence.PayoutStore",
+            "to": "db_table:payouts",
+            "toType": "SINK",
+            "label": "select",
+            "edgeKind": "READ"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "8987c99e3486a6f4",
+              "lines": {
+                "end": 18,
+                "start": 18
+              },
+              "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "MEDIUM",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "com.example.refunds.persistence.PayoutStore",
+            "to": "db_table:payouts",
+            "toType": "SINK",
+            "label": "select",
+            "edgeKind": "READ"
+          }
+        },
+        {
+          "id": "c-1118f0d751821d0d",
+          "featureId": "reconciliation/reconcile",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-1835f109b912"
+          },
+          "kind": "CALLS",
+          "payload": {
+            "from": "com.example.refunds.jobs.ReconciliationJob",
+            "to": "com.example.refunds.persistence.PayoutStore",
+            "toType": "COMPONENT",
+            "label": "insert",
+            "edgeKind": "CALL"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "7f869c0ae3076d20",
+              "lines": {
+                "end": 27,
+                "start": 27
+              },
+              "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "HIGH",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "com.example.refunds.jobs.ReconciliationJob",
+            "to": "com.example.refunds.persistence.PayoutStore",
+            "toType": "COMPONENT",
+            "label": "insert",
+            "edgeKind": "CALL"
+          }
+        },
+        {
+          "id": "c-0f84d9503dd6db02",
+          "featureId": "reconciliation/reconcile",
+          "subject": {
+            "type": "EDGE",
+            "id": "e-1c679bdaa8af"
+          },
+          "kind": "WRITES_TO",
+          "payload": {
+            "from": "com.example.refunds.persistence.PayoutStore",
+            "to": "db_table:payouts",
+            "toType": "SINK",
+            "label": "insert",
+            "edgeKind": "WRITE"
+          },
+          "evidence": [
+            {
+              "commit": "unknown",
+              "fingerprint": "ca711afb5b526d17",
+              "lines": {
+                "end": 14,
+                "start": 14
+              },
+              "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+              "repo": "refunds-service"
+            }
+          ],
+          "origin": "STATIC",
+          "confidence": "MEDIUM",
+          "status": "PROPOSED",
+          "analysisPayload": {
+            "from": "com.example.refunds.persistence.PayoutStore",
+            "to": "db_table:payouts",
+            "toType": "SINK",
+            "label": "insert",
+            "edgeKind": "WRITE"
           }
         }
       ],
@@ -4437,7 +4741,57 @@
           "path": "src/main/kotlin/com/example/refunds/persistence/PayoutRecord.kt",
           "repo": "refunds-service"
         },
-        "entity": "com.example.refunds.persistence.PayoutRecord"
+        "entity": "com.example.refunds.persistence.PayoutRecord",
+        "accesses": [
+          {
+            "componentId": "com.example.refunds.persistence.PayoutStore",
+            "method": "insert",
+            "kind": "WRITE",
+            "origin": "STATIC",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "ca711afb5b526d17",
+              "lines": {
+                "end": 14,
+                "start": 14
+              },
+              "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+              "repo": "refunds-service"
+            }
+          },
+          {
+            "componentId": "com.example.refunds.persistence.PayoutStore",
+            "method": "remove",
+            "kind": "WRITE",
+            "origin": "STATIC",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "55b8ae232831b20a",
+              "lines": {
+                "end": 16,
+                "start": 16
+              },
+              "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+              "repo": "refunds-service"
+            }
+          },
+          {
+            "componentId": "com.example.refunds.persistence.PayoutStore",
+            "method": "all",
+            "kind": "READ",
+            "origin": "STATIC",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "8987c99e3486a6f4",
+              "lines": {
+                "end": 18,
+                "start": 18
+              },
+              "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+              "repo": "refunds-service"
+            }
+          }
+        ]
       },
       {
         "name": "refund_items",
@@ -4871,10 +5225,10 @@
             "kind": "properties",
             "evidence": {
               "commit": "unknown",
-              "fingerprint": "6d0d0fa55ecf121c",
+              "fingerprint": "1e247daf694e6345",
               "lines": {
-                "end": 16,
-                "start": 10
+                "end": 20,
+                "start": 13
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -4911,10 +5265,10 @@
             "kind": "properties",
             "evidence": {
               "commit": "unknown",
-              "fingerprint": "6d0d0fa55ecf121c",
+              "fingerprint": "1e247daf694e6345",
               "lines": {
-                "end": 16,
-                "start": 10
+                "end": 20,
+                "start": 13
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -4939,8 +5293,8 @@
               "commit": "unknown",
               "fingerprint": "24a0f2c22ae5242a",
               "lines": {
-                "end": 18,
-                "start": 17
+                "end": 22,
+                "start": 21
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -4962,8 +5316,8 @@
               "commit": "unknown",
               "fingerprint": "9c2fc62ef2f11304",
               "lines": {
-                "end": 21,
-                "start": 21
+                "end": 29,
+                "start": 29
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"

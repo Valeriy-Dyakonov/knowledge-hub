@@ -22,6 +22,17 @@ const REPOSITORY_BASES: [&str; 24] = [
     "ReactiveCassandraRepository", "Neo4jRepository", "ReactiveNeo4jRepository", "CouchbaseRepository",
     "QuerydslPredicateExecutor", "RevisionRepository",
 ];
+/// Spring Data / JPA templates that take the entity as an argument, with the store they write to.
+const ENTITY_TEMPLATES: [(&str, &str); 15] = [
+    ("R2dbcEntityTemplate", "sql"), ("R2dbcEntityOperations", "sql"), ("JdbcAggregateTemplate", "sql"),
+    ("JdbcAggregateOperations", "sql"), ("EntityManager", "sql"), ("MongoTemplate", "mongo"),
+    ("ReactiveMongoTemplate", "mongo"), ("MongoOperations", "mongo"), ("ReactiveMongoOperations", "mongo"),
+    ("ElasticsearchOperations", "elasticsearch"), ("ElasticsearchTemplate", "elasticsearch"),
+    ("ReactiveElasticsearchOperations", "elasticsearch"), ("CassandraTemplate", "cassandra"),
+    ("ReactiveCassandraTemplate", "cassandra"), ("CassandraOperations", "cassandra"),
+];
+const TEMPLATE_WRITES: [&str; 13] = ["insert", "update", "delete", "save", "persist", "merge", "remove", "upsert", "findAndModify", "findAndRemove", "findAllAndRemove", "findAndReplace", "truncate"];
+const TEMPLATE_READS: [&str; 10] = ["select", "selectOne", "find", "count", "exists", "getReference", "query", "aggregate", "search", "stream"];
 const MAPPINGS: [(&str, &str); 5] = [("GetMapping", "GET"), ("PostMapping", "POST"), ("PutMapping", "PUT"), ("DeleteMapping", "DELETE"), ("PatchMapping", "PATCH")];
 const LISTENERS: [&str; 5] = ["KafkaListener", "RabbitListener", "JmsListener", "SqsListener", "EventListener"];
 const WRITE_PREFIXES: [&str; 9] = ["save", "delete", "remove", "insert", "update", "persist", "merge", "flush", "truncate"];
@@ -105,6 +116,35 @@ impl<'a> Index<'a> {
 
 fn simple(name: &str) -> &str {
     name.rsplit('.').next().unwrap_or(name)
+}
+
+/// A class with its file and the concrete types bound to its type parameters (empty for the bean itself).
+struct Scope<'a> {
+    class: &'a KtClass,
+    file: &'a KtFile,
+    types: HashMap<String, String>,
+}
+
+/// Declared type of a constructor parameter or property.
+fn field_type(class: &KtClass, name: &str) -> Option<String> {
+    class
+        .constructor_params
+        .iter()
+        .find(|p| p.name == name)
+        .map(|p| p.type_name.clone())
+        .or_else(|| class.properties.iter().find(|p| p.name == name).and_then(|p| p.type_name.clone()))
+        .filter(|t| !t.is_empty())
+}
+
+/// Type arguments of a `KClass<T>` / `Class<T>` field.
+fn field_type_args(class: &KtClass, name: &str) -> Option<Vec<String>> {
+    let (ty, args) = class
+        .constructor_params
+        .iter()
+        .find(|p| p.name == name)
+        .map(|p| (p.type_name.clone(), p.type_args.clone()))
+        .or_else(|| class.properties.iter().find(|p| p.name == name).map(|p| (p.type_name.clone().unwrap_or_default(), p.type_args.clone())))?;
+    matches!(simple(&ty), "KClass" | "Class").then_some(args)
 }
 
 fn is_repository_interface(class: &KtClass) -> bool {
@@ -494,7 +534,23 @@ impl<'a> Analysis<'a> {
     }
 
     fn bodies(&mut self, b: &Bean) {
-        let own: BTreeSet<&str> = b.class.functions.iter().map(|f| f.name.as_str()).collect();
+        let bases = self.bases(b.class, b.file);
+        // Template calls in inherited methods belong to this bean, with the base's type parameters bound.
+        for (k, scope) in bases.iter().enumerate() {
+            for f in &scope.class.functions {
+                for call in &f.calls {
+                    let Some(r) = &call.receiver else { continue };
+                    let Some(ty) = field_type(scope.class, r) else { continue };
+                    let Some(&(_, store)) = ENTITY_TEMPLATES.iter().find(|(t, _)| *t == simple(&ty)) else { continue };
+                    let ev = self.ev(scope.file, call.line, call.line);
+                    // The method's own class first, then the classes above it.
+                    let scopes: Vec<Scope> = bases[k..].iter().map(|s| Scope { class: s.class, file: s.file, types: s.types.clone() }).collect();
+                    self.template_access(&b.class.fqn, f, &scopes, store, call, ev);
+                }
+            }
+        }
+        let inherited: BTreeSet<&str> = bases.iter().flat_map(|s| s.class.functions.iter().map(|f| f.name.as_str())).collect();
+        let own: BTreeSet<&str> = b.class.functions.iter().map(|f| f.name.as_str()).chain(inherited.iter().copied()).collect();
         for f in &b.class.functions {
             for call in &f.calls {
                 let ev = self.ev(b.file, call.line, call.line);
@@ -515,6 +571,119 @@ impl<'a> Analysis<'a> {
                 }
             }
         }
+    }
+
+    /// Project superclasses of a class, nearest first, with their type parameters bound to the concrete types
+    /// (`RefundDao : AbstractRepository<RefundEntity, UUID>` binds T -> RefundEntity).
+    fn bases(&self, class: &'a KtClass, file: &'a KtFile) -> Vec<Scope<'a>> {
+        let mut out = Vec::new();
+        let (mut current, mut cfile, mut types) = (class, file, HashMap::<String, String>::new());
+        for _ in 0..5 {
+            let next = current.supertypes.iter().find_map(|s| {
+                let fqn = self.index.resolve(&s.name, cfile);
+                let &(i, c) = self.index.classes.get(&fqn)?;
+                (c.kind == ClassKind::Class).then_some((s, i, c))
+            });
+            let Some((st, i, base)) = next else { break };
+            let bound: HashMap<String, String> = base
+                .type_params
+                .iter()
+                .zip(st.args.iter())
+                .map(|(p, a)| (p.clone(), types.get(a).cloned().unwrap_or_else(|| self.index.resolve(a, cfile))))
+                .collect();
+            out.push(Scope { class: base, file: &self.index.files[i], types: bound.clone() });
+            (current, cfile, types) = (base, &self.index.files[i], bound);
+        }
+        out
+    }
+
+    /// A call on an entity template (`template.insert(entity)`, `template.select(q, Foo::class.java)`,
+    /// `em.createQuery("from Foo")`): the entity comes from the arguments, type parameters bound by `scope`.
+    fn template_access(&mut self, component: &str, f: &Function, scopes: &[Scope], store: &str, call: &Call, ev: Option<Evidence>) {
+        let m = call.method.as_str();
+        let write = TEMPLATE_WRITES.iter().any(|w| m.starts_with(w));
+        let read = TEMPLATE_READS.iter().any(|r| m.starts_with(r));
+        let mut tables: Vec<(String, bool)> = Vec::new();
+        if matches!(m, "createQuery" | "createNativeQuery") {
+            if let Some(q) = call.args.first().and_then(|a| a.string.clone()) {
+                let (w, r) = self.query_tables(&q, m == "createNativeQuery");
+                tables.extend(w.into_iter().map(|t| (t, true)).chain(r.into_iter().map(|t| (t, false))));
+            }
+        } else if write || read {
+            if let Some(entity) = call.args.iter().find_map(|a| self.arg_entity(a, f, scopes)) {
+                tables.push((self.table_of(&entity, store), write));
+            }
+        }
+        if tables.is_empty() && (write || read || m.starts_with("create")) {
+            self.facts.unresolved.push(UnresolvedFact {
+                component_id: component.to_string(),
+                method: f.name.clone(),
+                reason: "UNRESOLVED_CALL".into(),
+                detail: format!("{m}: entity type not found"),
+                attributes: BTreeMap::new(),
+                evidence: ev,
+            });
+            return;
+        }
+        for (table, write) in tables {
+            self.facts.sink_accesses.push(SinkAccessFact {
+                component_id: component.to_string(),
+                method: f.name.clone(),
+                sink_kind: "DB_TABLE".into(),
+                sink_name: table,
+                edge_kind: if write { "WRITE" } else { "READ" }.into(),
+                origin: "STATIC".into(),
+                // Bound through a generic base: the type is right, the call may be overridden.
+                confidence: if scopes[0].types.is_empty() { "HIGH" } else { "MEDIUM" }.into(),
+                attributes: [("operation".to_string(), m.to_string())].into(),
+                evidence: ev.clone(),
+            });
+        }
+    }
+
+    /// The entity an argument stands for: `Foo::class.java`, `Foo(...)`, a parameter typed `Foo` or `T`, a
+    /// `KClass<T>`/`Class<T>` field (`kClazz.java`).
+    fn arg_entity(&self, a: &Arg, f: &Function, scopes: &[Scope]) -> Option<String> {
+        let bind = |s: &Scope, t: &str| s.types.get(t).cloned().unwrap_or_else(|| self.index.resolve(t, s.file));
+        let project = |fqn: String| self.index.is_project(&fqn).then_some(fqn);
+        let own = scopes.first()?;
+        if let Some(c) = &a.constructed {
+            return project(bind(own, c));
+        }
+        let r = a.reference.as_deref()?;
+        let base = r.trim_end_matches(".java").trim_end_matches(".class").trim_end_matches(".kotlin");
+        if let Some(p) = f.params.iter().find(|p| p.name == base) {
+            return match simple(&p.type_name) {
+                "KClass" | "Class" => p.type_args.first().and_then(|t| project(bind(own, t))),
+                t => project(bind(own, t)),
+            };
+        }
+        // `kClazz.java`: a KClass<T> field of this class or of a base, T bound in that base's scope.
+        for s in scopes {
+            if let Some(args) = field_type_args(s.class, base) {
+                return args.first().and_then(|t| project(bind(s, t)));
+            }
+        }
+        base.chars().next().filter(|c| c.is_uppercase()).and_then(|_| project(bind(own, base)))
+    }
+
+    /// Table (collection...) of an entity class: from its mapping, or the store's default name.
+    fn table_of(&self, entity: &str, store: &str) -> String {
+        if let Some(e) = self.facts.entities.iter().find(|e| e.id == entity) {
+            return e.table.clone();
+        }
+        let via = match store {
+            "mongo" => "MongoRepository",
+            "elasticsearch" => "ElasticsearchRepository",
+            "cassandra" => "CassandraRepository",
+            _ => "R2dbcRepository",
+        };
+        self.index
+            .classes
+            .get(entity)
+            .and_then(|&(i, c)| self.storage(c, &self.index.files[i], Some(via)))
+            .map(|(_, name)| name)
+            .unwrap_or_else(|| snake_case(simple(entity)))
     }
 
     /// JPA dirty checking: in a `@Transactional` (not read-only) method, an entity loaded through a repository and
@@ -610,6 +779,12 @@ impl<'a> Analysis<'a> {
     }
 
     fn library_call(&mut self, b: &Bean, f: &Function, field: &str, ty: &str, call: &Call, ev: Option<Evidence>) {
+        if let Some(&(_, store)) = ENTITY_TEMPLATES.iter().find(|(t, _)| *t == ty) {
+            let mut scopes = vec![Scope { class: b.class, file: b.file, types: HashMap::new() }];
+            scopes.extend(self.bases(b.class, b.file));
+            self.template_access(&b.class.fqn, f, &scopes, store, call, ev);
+            return;
+        }
         let m = call.method.as_str();
         let op = vec![("operation", m.to_string())];
         match ty {

@@ -86,6 +86,8 @@ pub struct Param {
     /// The type is marked `?`.
     pub nullable: bool,
     pub annotations: Vec<Annotation>,
+    /// Type arguments of the type: `KClass<T>` -> ["T"].
+    pub type_args: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -133,6 +135,8 @@ pub struct Property {
     pub modifiers: Vec<String>,
     pub string_value: Option<String>,
     pub nullable: bool,
+    /// Type arguments of the declared type: `Class<T>` -> ["T"].
+    pub type_args: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -157,6 +161,8 @@ pub struct KtClass {
     pub annotations: Vec<Annotation>,
     pub constructor_params: Vec<Param>,
     pub supertypes: Vec<TypeRef>,
+    /// `class Base<T : Any, ID>` -> ["T", "ID"].
+    pub type_params: Vec<String>,
     pub functions: Vec<Function>,
     pub properties: Vec<Property>,
     pub start_line: u32,
@@ -569,6 +575,9 @@ impl<'s> Walker<'s> {
         let supertypes = find(n, "delegation_specifiers")
             .map(|ds| named(ds).into_iter().filter_map(|d| self.supertype(d)).collect())
             .unwrap_or_default();
+        let type_params = find(n, "type_parameters")
+            .map(|tp| named(tp).into_iter().filter(|c| c.kind() == "type_parameter").filter_map(|c| find(c, "identifier")).map(|i| self.text(i).to_string()).collect())
+            .unwrap_or_default();
         let body = find(n, "class_body").or_else(|| find(n, "enum_class_body"));
         let header_end_line = body.map(|b| line(b)).unwrap_or_else(|| end_line(n));
         let mut class = KtClass {
@@ -578,6 +587,7 @@ impl<'s> Walker<'s> {
             annotations,
             constructor_params,
             supertypes,
+            type_params,
             start_line: line(n),
             header_end_line,
             ..Default::default()
@@ -732,7 +742,16 @@ impl<'s> Walker<'s> {
             type_name: named(n).into_iter().find_map(|c| (c.kind() != "modifiers").then(|| self.type_name_of(c)).flatten()).unwrap_or_default(),
             nullable: named(n).into_iter().any(|c| c.kind() == "nullable_type"),
             annotations: named(n).into_iter().filter(|c| c.kind() == "modifiers" || c.kind() == "parameter_modifiers").flat_map(|m| self.annotations(m)).collect(),
+            type_args: named(n).into_iter().find_map(|c| self.type_args_of(c)).unwrap_or_default(),
         }
+    }
+
+    /// Type arguments of the first user type under `n`: `KClass<T>` -> ["T"].
+    fn type_args_of(&self, n: Node) -> Option<Vec<String>> {
+        if n.kind() == "user_type" {
+            return Some(find(n, "type_arguments").map(|ta| named(ta).into_iter().filter_map(|p| self.type_name_of(p)).collect()).unwrap_or_default());
+        }
+        named(n).into_iter().find_map(|c| self.type_args_of(c))
     }
 
     fn function(&self, n: Node) -> Function {
@@ -779,6 +798,7 @@ impl<'s> Walker<'s> {
             modifiers,
             string_value: find(n, "string_literal").map(|s| self.string(s)),
             nullable: var.is_some_and(|v| named(v).into_iter().any(|c| c.kind() == "nullable_type")),
+            type_args: var.and_then(|v| named(v).into_iter().filter(|c| c.kind() != "identifier").find_map(|c| self.type_args_of(c))).unwrap_or_default(),
         }
     }
 

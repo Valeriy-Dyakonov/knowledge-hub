@@ -304,8 +304,8 @@
           "commit": "unknown",
           "fingerprint": "95a5e112ccaa4e82",
           "lines": {
-            "end": 19,
-            "start": 19
+            "end": 23,
+            "start": 23
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -320,8 +320,8 @@
           "commit": "unknown",
           "fingerprint": "928799eb42fbce8c",
           "lines": {
-            "end": 20,
-            "start": 20
+            "end": 24,
+            "start": 24
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -330,6 +330,38 @@
         "fromMethod": "reconcile",
         "targetMethod": "findBySku",
         "targetType": "com.example.refunds.persistence.RefundRepository"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "aa73458b3c067e07",
+          "lines": {
+            "end": 26,
+            "start": 26
+          },
+          "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.jobs.ReconciliationJob",
+        "fromMethod": "reconcile",
+        "targetMethod": "latest",
+        "targetType": "com.example.refunds.persistence.PayoutStore"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "7f869c0ae3076d20",
+          "lines": {
+            "end": 27,
+            "start": 27
+          },
+          "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.jobs.ReconciliationJob",
+        "fromMethod": "reconcile",
+        "targetMethod": "insert",
+        "targetType": "com.example.refunds.persistence.PayoutStore"
       },
       {
         "evidence": {
@@ -394,6 +426,22 @@
         "fromMethod": "warmUp",
         "targetMethod": "findAllByStatus",
         "targetType": "com.example.refunds.persistence.RefundRepository"
+      },
+      {
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "7797957194dabb36",
+          "lines": {
+            "end": 23,
+            "start": 23
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+          "repo": "refunds-service"
+        },
+        "fromComponent": "com.example.refunds.persistence.PayoutStore",
+        "fromMethod": "latest",
+        "targetMethod": "all",
+        "targetType": "com.example.refunds.persistence.PayoutStore"
       },
       {
         "evidence": {
@@ -779,10 +827,10 @@
         "attributes": {},
         "evidence": {
           "commit": "unknown",
-          "fingerprint": "6d0d0fa55ecf121c",
+          "fingerprint": "1e247daf694e6345",
           "lines": {
-            "end": 16,
-            "start": 10
+            "end": 20,
+            "start": 13
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -791,6 +839,7 @@
         "injected": {
           "env": "org.springframework.core.env.Environment",
           "limits": "com.example.refunds.config.RefundLimits",
+          "payouts": "com.example.refunds.persistence.PayoutStore",
           "repository": "com.example.refunds.persistence.RefundRepository",
           "restTemplate": "org.springframework.web.client.RestTemplate"
         },
@@ -800,10 +849,10 @@
           {
             "evidence": {
               "commit": "unknown",
-              "fingerprint": "b20eed021c5bb4d3",
+              "fingerprint": "bdfece59006f1f7f",
               "lines": {
-                "end": 23,
-                "start": 17
+                "end": 31,
+                "start": 21
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -981,6 +1030,45 @@
         ],
         "simpleName": "NotificationService",
         "supertypes": []
+      },
+      {
+        "attributes": {},
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "8b38c28a0129b1b5",
+          "lines": {
+            "end": 22,
+            "start": 21
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+          "repo": "refunds-service"
+        },
+        "id": "com.example.refunds.persistence.PayoutStore",
+        "injected": {
+          "template": "org.springframework.data.r2dbc.core.R2dbcEntityTemplate"
+        },
+        "isInterface": false,
+        "kind": "REPOSITORY",
+        "methods": [
+          {
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "7797957194dabb36",
+              "lines": {
+                "end": 23,
+                "start": 23
+              },
+              "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+              "repo": "refunds-service"
+            },
+            "name": "latest",
+            "parameterTypes": []
+          }
+        ],
+        "simpleName": "PayoutStore",
+        "supertypes": [
+          "com.example.refunds.persistence.BaseStore"
+        ]
       },
       {
         "attributes": {
@@ -1424,8 +1512,8 @@
           "commit": "unknown",
           "fingerprint": "24a0f2c22ae5242a",
           "lines": {
-            "end": 18,
-            "start": 17
+            "end": 22,
+            "start": 21
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -1440,8 +1528,8 @@
           "commit": "unknown",
           "fingerprint": "9c2fc62ef2f11304",
           "lines": {
-            "end": 21,
-            "start": 21
+            "end": 29,
+            "start": 29
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -1454,10 +1542,10 @@
         "componentId": "com.example.refunds.jobs.ReconciliationJob",
         "evidence": {
           "commit": "unknown",
-          "fingerprint": "6d0d0fa55ecf121c",
+          "fingerprint": "1e247daf694e6345",
           "lines": {
-            "end": 16,
-            "start": 10
+            "end": 20,
+            "start": 13
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -1790,8 +1878,8 @@
           "commit": "unknown",
           "fingerprint": "8c0271841668fd14",
           "lines": {
-            "end": 22,
-            "start": 22
+            "end": 30,
+            "start": 30
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -1824,6 +1912,72 @@
         "origin": "STATIC",
         "sinkKind": "EXTERNAL_HTTP",
         "sinkName": "notify.example.com"
+      },
+      {
+        "attributes": {
+          "operation": "insert"
+        },
+        "componentId": "com.example.refunds.persistence.PayoutStore",
+        "confidence": "MEDIUM",
+        "edgeKind": "WRITE",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "ca711afb5b526d17",
+          "lines": {
+            "end": 14,
+            "start": 14
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+          "repo": "refunds-service"
+        },
+        "method": "insert",
+        "origin": "STATIC",
+        "sinkKind": "DB_TABLE",
+        "sinkName": "payouts"
+      },
+      {
+        "attributes": {
+          "operation": "delete"
+        },
+        "componentId": "com.example.refunds.persistence.PayoutStore",
+        "confidence": "MEDIUM",
+        "edgeKind": "WRITE",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "55b8ae232831b20a",
+          "lines": {
+            "end": 16,
+            "start": 16
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+          "repo": "refunds-service"
+        },
+        "method": "remove",
+        "origin": "STATIC",
+        "sinkKind": "DB_TABLE",
+        "sinkName": "payouts"
+      },
+      {
+        "attributes": {
+          "operation": "select"
+        },
+        "componentId": "com.example.refunds.persistence.PayoutStore",
+        "confidence": "MEDIUM",
+        "edgeKind": "READ",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "8987c99e3486a6f4",
+          "lines": {
+            "end": 18,
+            "start": 18
+          },
+          "path": "src/main/kotlin/com/example/refunds/persistence/BaseStore.kt",
+          "repo": "refunds-service"
+        },
+        "method": "all",
+        "origin": "STATIC",
+        "sinkKind": "DB_TABLE",
+        "sinkName": "payouts"
       },
       {
         "attributes": {
@@ -2150,8 +2304,8 @@
           "commit": "unknown",
           "fingerprint": "24a0f2c22ae5242a",
           "lines": {
-            "end": 18,
-            "start": 17
+            "end": 22,
+            "start": 21
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -2236,11 +2390,11 @@
       "kind": "extractor",
       "millis": 0,
       "stats": {
-        "calls": 21,
-        "components": 16,
+        "calls": 24,
+        "components": 17,
         "events": 1,
-        "files": 19,
-        "sinkAccesses": 13,
+        "files": 20,
+        "sinkAccesses": 16,
         "triggers": 10,
         "unresolved": 1
       },
