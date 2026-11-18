@@ -1,54 +1,83 @@
 # Knowledge Hub — notes for agents and contributors
 
-A standalone service that analyses a source repository (first target: Kotlin + Spring Boot), splits it into **features**, traces each process from its trigger to the sink (database, queue, external service), and stores the result as a **human-reviewed knowledge base**. Harnesses/agents consume it through **MCP**. Design docs live in `docs/` (Russian); read `docs/00-vision.md` and `docs/01-architecture.md` first.
+Desktop app (Tauri 2 + React/TypeScript, Rust backend — same stack and rules as worklog-tracker) that analyses a source repository, splits it into **features**, traces each process from its trigger to the sink (database, queue, external service), and stores the result as a **human-reviewed knowledge base**. Pick a repository, run the analysis, browse features, flows and diagrams, review claims — all in one window. Harnesses/agents consume the knowledge through **MCP**: the same executable started with the `mcp` argument (no window, stdio).
 
-**Current phase: design / M0.** There is no code yet. The milestone list is in `docs/09-roadmap.md`. Do not add CI/GitLab triggers, webhooks or auto-update on merge — out of scope for now.
+Kotlin + Spring Boot is the first stack of **analysed** repositories, not the hub's own stack.
 
-## Stack (planned)
-- Kotlin, Spring Boot, Gradle (Kotlin DSL), multi-module.
-- Persistence for runs/reviews/index: SQLite (FTS5) to start; behind ports, so it can change.
-- MCP server module; LLM through an OpenAI-compatible port (corporate gateway).
+Design docs live in `docs/` (Russian); read `docs/00-vision.md` and `docs/01-architecture.md` first. Milestones: `docs/09-roadmap.md`. Do not add CI/GitLab triggers, webhooks or auto-update on merge — out of scope for now.
 
 ## Commands
-Not available yet. When the skeleton exists, document here: build, test, run the app, run one analysis from CLI. Keep this table in sync with `build.gradle.kts`.
 
-## Planned layout (Gradle modules)
-- `kb-domain` — pure Kotlin, no Spring: `Service`, `Feature`, `Trigger`, `Step`, `Component`, `Sink`, `Claim`, `Evidence`, `ReviewItem`. Nothing here depends on any other module.
-- `kb-ports` — interfaces only (SPI): `Extractor`, `ContextSource`, `LlmClient`, `KnowledgeStore`, `Indexer`, `Renderer`, `ReviewPolicy`, `KnowledgeEndpoint`.
-- `kb-pipeline` — `AnalysisPipeline`, `Stage`, `RunContext`, run persistence/resume. Orchestrates only; no parsing, no LLM calls inline.
-- `kb-extractor-kotlin-spring` — first `Extractor` (annotations -> entry points and sinks).
-- `kb-llm-openai` — `LlmClient` for an OpenAI-compatible API.
-- `kb-store-fs` — `KnowledgeStore` on a local folder (git-friendly layout, see `docs/07-storage.md`).
-- `kb-index-sqlite` — `Indexer` (FTS5); vector index is a later adapter.
-- `kb-render-markdown` — markdown + Mermaid `Renderer`s generated from the model.
-- `kb-review` — `ReviewPolicy` implementations and review use-cases (HTTP API for the UI).
-- `kb-mcp` — MCP server (`KnowledgeEndpoint`).
-- `kb-app` — Spring Boot wiring only (component scan, config, CLI entry).
+| What | Command (repo root unless noted) |
+|---|---|
+| Dev app | `npm run tauri dev` |
+| Typecheck | `npx tsc --noEmit -p .` |
+| Frontend tests | `npm test` (vitest, `src/**/*.test.ts`) |
+| Frontend build | `npx vite build` |
+| Rust tests | `cargo test` in `src-tauri/` |
+| MCP server (after a build) | `src-tauri/target/debug/knowledge-hub mcp` |
 
-Dependency rule: adapters depend on `kb-ports` and `kb-domain`; `kb-domain` depends on nothing; only `kb-app` knows all modules. Plugins are discovered by injecting `List<Port>` — adding a module to the classpath must be enough to enable it.
+On this Windows machine cargo may be missing from PATH in Git Bash: prefix with `PATH="$HOME/.cargo/bin:$PATH"`.
+Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests if `src-tauri` changed.
+
+## Layout
+
+### Frontend `src/`
+- `api.ts` — the only place that calls Tauri `invoke`; one function per Rust command.
+- `types.ts` — domain model and settings (`Service`, `Feature`, `Trigger`, `Component`, `Step`, `Sink`, `Edge`, `Claim`, `Evidence`, `ReviewItem`, `Settings`...). Must mirror `src-tauri/src/model/` and `settings.rs`.
+- `i18n/` — `locale.ts`, `format.ts`, `index.ts` (`useT()`/`t()`), `messages/{ru,en}/<namespace>.ts`.
+- `lib/` — pure logic, no React:
+  - `pipeline.ts` — `runAnalysis()`: orchestrates stages only; checkpoints after each stage.
+  - `steps.ts` — the single skip/required/warning policy.
+  - `stages/` — one file per stage (`scan`, `discover`, `trace`, `describe`, `assemble`, `render`, `index`), registry `STAGES`.
+  - `model/` — claim ids, claim building, merge with the previous model, statuses.
+  - `review/` — `ReviewPolicy` implementations (strict, lenient), registry, review use-cases.
+  - `render/` — `Renderer`s (markdown, Mermaid L1–L3), registry `RENDERERS`.
+  - `prompt.ts` — LLM prompts per language.
+- `components/` — `ui/` (kit), one folder per screen: `repos/`, `run/`, `features/`, `diagrams/`, `review/`, `settings/`.
+- `styles/` — all CSS; colors only in `tokens.css`/`themes.css`.
+
+### Backend `src-tauri/src/`
+- `lib.rs` — module list and `run()` only; `main.rs` — starts the UI, or the MCP server when the first argument is `mcp`.
+- `error.rs` — `AppError { code, params }`; never return user-facing prose.
+- `model/` — serde mirror of `src/types.ts`.
+- `repo.rs` — read-only repository snapshot (file listing, reads inside the root only, commit from `.git`).
+- `extract/` — `Extractor` trait + registry; `extract/kotlin_spring/` — tree-sitter based extractor.
+- `context/` — `ContextSource` trait + registry (`application.yml`, OpenAPI, migrations, CODEOWNERS).
+- `store/` — `KnowledgeStore` on a local folder (`docs/07-storage.md`).
+- `state.rs` — SQLite in `.state/hub.db`: runs, checkpoints, logs, review batches, answers, journal, questions.
+- `index/` — `Indexer` on SQLite FTS5 (`.state/index.db`).
+- `llm.rs` — OpenAI-compatible client. `secrets.rs` — keyring. `settings.rs` — `settings.json`.
+- `mcp/` — `stdio.rs` (transport), `tools.rs` (tool logic, standard envelope).
+- `commands/` — Tauri commands grouped by area.
 
 ## Checklists
 
-**New extractor** (another language/framework):
-1. New module `kb-extractor-<name>` implementing `Extractor`; `supports(repo)` decides applicability.
-2. Emit only facts with `Evidence` (path, lines, commit). Anything inferred is `origin = INFERRED` with a confidence.
-3. Register as a Spring bean (auto-configuration); no change to `kb-pipeline`.
-4. Fixture repo + golden test of extracted entry points/sinks.
+**New extractor** (another language/framework of analysed code):
+1. Module `src-tauri/src/extract/<name>/` implementing `Extractor`; `supports(repo)` decides applicability.
+2. Emit only facts with `Evidence` (path, lines, commit, fingerprint). Anything guessed is `origin = INFERRED` with a confidence.
+3. Add it to the registry in `extract/mod.rs`; no change to the pipeline.
+4. Fixture repo in `src-tauri/tests/fixtures/` + golden test of extracted entry points/sinks.
 
-**New context source** (OpenAPI, migrations, Jira, runtime mappings): implement `ContextSource`, same evidence rules.
+**New context source** (OpenAPI, migrations, Jira, runtime mappings): implement `ContextSource` in `context/`, add to the registry, same evidence rules.
 
-**New renderer**: implement `Renderer` (input: reviewed model, output: files). Never read the repository, never call the LLM.
+**New stage**: file in `lib/stages/`, add to `STAGES` with its order; must be idempotent (state comes from `RunState`, result goes back into it).
 
-**New store / index / LLM adapter**: implement the port in its own module; contract tests live next to the port.
+**New renderer**: implement `Renderer` in `lib/render/`, add to `RENDERERS`. Never read the repository, never call the LLM; output starts with the generated header.
 
-**New MCP tool**: add to `kb-mcp`, response uses the standard envelope (`docs/08-mcp.md`) with review status and verified commit.
+**New review rule**: implement `ReviewPolicy` (or a rule inside it) in `lib/review/`; document in `docs/04-review.md`.
 
-**New review rule**: implement `ReviewPolicy` or a rule inside it; document in `docs/04-review.md`.
+**New store / index / LLM adapter**: implement the trait in its own Rust module; contract tests next to the trait.
 
-## Contracts that must not break (once they exist)
+**New MCP tool**: add to `mcp/tools.rs`; response uses the standard envelope (`docs/08-mcp.md`) with review status and verified commit.
+
+**New setting**: `settings.rs` + `types.ts` (same camelCase name, default in both) + settings UI + texts in `messages/{ru,en}/settings.ts`.
+
+## Contracts that must not break
 - The on-disk knowledge layout and the model schema version (`schemaVersion` in `service.yaml`).
 - MCP tool names, arguments and the response envelope.
 - Claim and evidence identifiers (stable across re-runs, so reviews survive re-analysis).
+- Tauri command names, arguments and returned JSON shapes (see `api.ts`); `settings.json` format and keyring entry names.
 
 ## Rules
 - **Read-only toward analysed repositories.** The hub never writes to them.
@@ -56,13 +85,17 @@ Dependency rule: adapters depend on `kb-ports` and `kb-domain`; `kb-domain` depe
 - **Deterministic first, LLM second.** Static facts are the baseline; if the LLM fails, the run still produces the static model (like `HeuristicAllocator` fallback in worklog-tracker).
 - **Views are generated.** Markdown and diagrams come from the model through `Renderer`s; do not hand-edit generated files (they carry a header saying so).
 - **No bulk approval.** Review actions are per claim/diff; see `docs/04-review.md`. Do not add "approve all".
-- **Errors are codes.** Use `HubError(code, params)`; user-facing text is produced by the UI/i18n layer, never by services.
-- **Secrets never leave the process.** Redact tokens/keys before anything goes to the LLM or the store.
-- **Reviewed vs pending is explicit.** Anything served over MCP carries its review status.
+- **Errors are codes.** `AppError { code, params }`; user-facing text comes from i18n.
+- **Secrets never leave the process.** Redact tokens/keys before anything goes to the LLM or the store; tokens live in keyring.
+- **Reviewed vs pending is explicit.** Anything shown in the app or served over MCP carries its review status.
+
+## Localization
+- No user-visible string literals in components or `lib/`: keys in **both** `messages/ru` and `messages/en` (en typed `typeof ru`).
+- AI prompts are per language; the AI answers in the configured language.
 
 ## Conventions
-- Small focused modules; prefer a registry/strategy (injected `List<Port>`) over a growing `when`.
+- Small focused modules; prefer a registry/strategy over a growing `switch`/`match`.
 - Comments only for a non-obvious "why".
 - Code, comments, commit messages: English. Docs in `docs/`: Russian.
-- User-visible strings (review UI, business labels) are localized (ru/en); AI prompts are per language and the AI answers in the configured language.
+- Anything whose purpose isn't obvious in the UI gets an `InfoTip`.
 - Update `docs/` in the same change as the behaviour it describes.

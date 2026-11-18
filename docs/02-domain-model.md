@@ -1,6 +1,6 @@
 # 02. Доменная модель
 
-Модель хранится структурно (YAML/JSON в `KnowledgeStore`). Всё остальное — представления.
+Модель хранится структурно (YAML в `KnowledgeStore`). Всё остальное — представления. Типы описаны в `src/types.ts` и зеркально в Rust (`src-tauri/src/model/`), как `Settings` в worklog-tracker.
 
 ## Сущности
 
@@ -20,27 +20,29 @@
 
 Каждый факт модели оборачивается в claim, потому что именно claim ревьюится.
 
-```kotlin
-data class Claim(
-    val id: ClaimId,                 // stable across re-runs (hash of subject + kind + key evidence)
-    val subject: SubjectRef,         // Feature / Trigger / Step / Edge / Sink ...
-    val kind: ClaimKind,             // EXISTS, BELONGS_TO_FEATURE, WRITES_TO, CALLS, DESCRIBES, ...
-    val payload: ClaimPayload,       // structured value
-    val evidence: List<Evidence>,
-    val origin: Origin,              // STATIC, INFERRED, HUMAN
-    val confidence: Confidence,      // HIGH / MEDIUM / LOW
-    val status: ClaimStatus,         // PROPOSED, CONFIRMED, EDITED, REJECTED, STALE
-    val review: ReviewInfo?,         // who, when, comment
-    val verifiedAt: CommitRef?,      // commit at which it was last confirmed
-)
+```ts
+// src/types.ts (mirrored by src-tauri/src/model/)
+type Claim = {
+  id: ClaimId;                  // stable across re-runs (hash of scope + kind + subject + key)
+  featureId: FeatureId | null;  // null for service-level claims (catalog names)
+  subject: SubjectRef;          // Feature / Trigger / Step / Edge / Sink ...
+  kind: ClaimKind;              // EXISTS, BELONGS_TO_FEATURE, WRITES_TO, CALLS, DESCRIBES, ...
+  payload: Record<string, string>; // structured value
+  evidence: Evidence[];
+  origin: Origin;               // STATIC, INFERRED, HUMAN
+  confidence: Confidence;       // HIGH / MEDIUM / LOW
+  status: ClaimStatus;          // PROPOSED, CONFIRMED, EDITED, REJECTED, STALE
+  review?: ReviewInfo;          // who, when, comment
+  verifiedAt?: string;          // commit at which it was last confirmed
+};
 
-data class Evidence(
-    val repo: String,
-    val path: String,
-    val lines: IntRange?,
-    val commit: String,
-    val fingerprint: String,         // hash of the referenced fragment, used for staleness
-)
+type Evidence = {
+  repo: string;
+  path: string;
+  lines?: { start: number; end: number };
+  commit: string;
+  fingerprint: string;          // hash of the referenced fragment, used for staleness
+};
 ```
 
 ### Origin и confidence

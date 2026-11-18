@@ -1,77 +1,84 @@
-# 05. Точки расширения (SPI)
+# 05. Точки расширения
 
-Каждая ось — интерфейс в `kb-ports`. Реализации регистрируются как Spring-бины; потребители получают `List<Port>`. Выбор и порядок — через `supports(...)`/`@Order` и конфигурацию. Паттерн тот же, что `SourceCollector` + `COLLECT_STEPS` в worklog-tracker.
+Каждая ось — интерфейс (TypeScript в `src/lib/`) или трейт (Rust в `src-tauri/src/`). Реализации регистрируются в реестре — массиве или списке, который перебирают потребители. Выбор и порядок — через `supports(...)`/`enabled(...)` и настройки. Паттерн тот же, что `SourceCollector` + `COLLECT_STEPS` в worklog-tracker.
 
 ## Таблица осей
 
-| Ось | Порт | Первая реализация | Позже |
-|---|---|---|---|
-| Язык/стек | `Extractor` | Kotlin + Spring Boot | Java, TypeScript, Python |
-| Доп. источники | `ContextSource` | OpenAPI, миграции, `application.yml` | Jira, Confluence, runtime-маппинги |
-| ИИ | `LlmClient` | OpenAI-совместимый шлюз | локальная модель |
-| Хранилище знаний | `KnowledgeStore` | локальная папка | git-репозиторий, GitLab |
-| Индекс | `Indexer` | SQLite FTS5 | вектор, граф |
-| Представления | `Renderer` | markdown, Mermaid | D2, C4, PDF |
-| Ревью | `ReviewPolicy` | строгая | мягкая |
-| Отдача | `KnowledgeEndpoint` | MCP | REST, экспорт |
-| Стадии | `Stage` | 7 стадий из `03-pipeline.md` | дополнительные |
+| Ось | Интерфейс | Где | Первая реализация | Позже |
+|---|---|---|---|---|
+| Язык анализируемого кода | `Extractor` | Rust `extract/` | Kotlin + Spring Boot (tree-sitter) | Java, TypeScript, Python |
+| Доп. источники | `ContextSource` | Rust `context/` | `application.yml`, OpenAPI, миграции, CODEOWNERS | Jira, Confluence, runtime-маппинги |
+| ИИ | LLM-клиент | Rust `llm.rs` | OpenAI-совместимый шлюз | локальная модель |
+| Хранилище знаний | `KnowledgeStore` | Rust `store/` | локальная папка (YAML) | git-репозиторий, GitLab |
+| Индекс | `Indexer` | Rust `index/` | SQLite FTS5 | вектор, граф |
+| Представления | `Renderer` | TS `lib/render/` | markdown, Mermaid L1–L3 | D2, C4, PDF |
+| Ревью | `ReviewPolicy` | TS `lib/review/` | строгая | мягкая |
+| Отдача | MCP-инструмент | Rust `mcp/` | 7 инструментов из `08-mcp.md` | REST, экспорт |
+| Стадии | `Stage` | TS `lib/stages/` | 7 стадий из `03-pipeline.md` | дополнительные |
 
 ## Эскизы интерфейсов
 
-```kotlin
-interface Extractor {
-    val id: String
-    fun supports(repo: RepoSnapshot): Boolean
-    suspend fun extract(repo: RepoSnapshot, ctx: RunContext): ExtractionResult  // facts with Evidence only
+```rust
+// src-tauri/src/extract/mod.rs
+pub trait Extractor: Send + Sync {
+    fn id(&self) -> &'static str;
+    fn version(&self) -> &'static str;
+    fn supports(&self, repo: &RepoSnapshot) -> bool;
+    fn extract(&self, repo: &RepoSnapshot) -> Result<SourceFacts, AppError>; // facts with Evidence only
 }
 
-interface ContextSource {
-    val id: String
-    fun enabled(ctx: RunContext): Boolean
-    val required: Boolean get() = false
-    suspend fun collect(ctx: RunContext): ContextFacts
+// src-tauri/src/context/mod.rs
+pub trait ContextSource: Send + Sync {
+    fn id(&self) -> &'static str;
+    fn required(&self) -> bool { false }
+    fn collect(&self, repo: &RepoSnapshot) -> Result<ContextFacts, AppError>;
 }
 
-interface LlmClient {
-    suspend fun complete(request: LlmRequest): LlmResponse   // JSON mode with fallback, retries
+pub trait KnowledgeStore {
+    fn load(&self, service: &str) -> Result<Option<KnowledgeModel>, AppError>;
+    fn save(&self, service: &str, model: &KnowledgeModel) -> Result<(), AppError>;
+    fn history(&self, service: &str, feature: &str) -> Result<Vec<ModelRevision>, AppError>;
+    fn write_generated(&self, service: &str, files: &[GeneratedFile]) -> Result<(), AppError>;
 }
 
-interface KnowledgeStore {
-    fun load(service: ServiceId): KnowledgeModel?
-    fun save(service: ServiceId, model: KnowledgeModel)
-    fun history(service: ServiceId, feature: FeatureId): List<ModelRevision>
-}
-
-interface Indexer {
-    fun index(model: KnowledgeModel)
-    fun search(query: SearchQuery): List<SearchHit>
-}
-
-interface Renderer {
-    val id: String
-    fun render(model: KnowledgeModel, view: ViewSpec): List<RenderedFile>
-}
-
-interface ReviewPolicy {
-    fun selectForReview(claims: List<Claim>): List<ReviewBatch>
-    fun canClose(batch: ReviewBatch, answers: List<ReviewAnswer>): CloseDecision
-}
-
-interface Stage {
-    val title: String
-    suspend fun run(ctx: RunContext)
+pub trait Indexer {
+    fn index(&self, model: &KnowledgeModel) -> Result<(), AppError>;
+    fn search(&self, query: &SearchQuery) -> Result<Vec<SearchHit>, AppError>;
 }
 ```
 
-Эскизы ориентировочные; точные сигнатуры фиксируются в M1 вместе с контрактными тестами.
+```ts
+// src/lib/stages/types.ts
+interface Stage {
+  id: string;
+  required: boolean;
+  skipReason?(ctx: RunContext): string | null;
+  run(ctx: RunContext): Promise<void>;
+}
+
+// src/lib/render/types.ts — never reads the repository, never calls the LLM
+interface Renderer {
+  id: string;
+  render(model: KnowledgeModel, view: ViewSpec): GeneratedFile[];
+}
+
+// src/lib/review/types.ts
+interface ReviewPolicy {
+  id: string;
+  selectForReview(sel: ReviewSelection): ReviewBatch[];
+  canClose(batch: ReviewBatch, answers: ReviewAnswer[]): CloseDecision;
+}
+```
+
+Эскизы ориентировочные; точные сигнатуры — в коде вместе с контрактными тестами.
 
 ## Принципы расширяемости
 
-- **Реестр вместо `when`.** Новый вариант — новый класс, а не новая ветка в существующем коде.
-- **Нет знания о реализациях в ядре.** Пайплайн работает только с портами.
-- **Общая политика ошибок.** Включение, обязательность и обработка сбоя — в одном месте.
-- **Контрактные тесты на порт.** Любая реализация обязана их проходить.
-- **Конфигурация, а не код.** Включить/выключить реализацию — настройкой.
+- **Реестр вместо `switch`/`match`.** Новый вариант — новый модуль и запись в реестре, а не новая ветка в существующем коде.
+- **Нет знания о реализациях в ядре.** Пайплайн работает только с интерфейсами.
+- **Общая политика ошибок.** Включение, обязательность и обработка сбоя — в одном месте (`lib/steps.ts`).
+- **Контрактные тесты на интерфейс.** Любая реализация обязана их проходить.
+- **Настройки, а не код.** Включить/выключить реализацию — настройкой.
 
 ## Чеклисты
 
