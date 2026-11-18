@@ -30,6 +30,9 @@ pub struct ParseError {
     pub unparsed: String,
     /// The first error of the file: later ones are often only its consequences.
     pub first: bool,
+    /// When the grammar gave up on a whole `{ … }` body, the body is parsed alone: where it fails there
+    /// (tree context and anonymised pattern) is usually the real cause.
+    pub inner: Option<(String, String)>,
 }
 
 #[derive(Debug, Clone)]
@@ -159,26 +162,120 @@ impl KtClass {
     }
 }
 
-/// Multi-dollar strings (`$$"…"`, Kotlin 2.1+) are not in the grammar: the extra `$` signs become spaces before
-/// parsing (same length, so positions and lines stay). Templates inside are then read as ordinary `$x` ones.
+/// Rewrites what the grammar does not know into what it does, keeping every byte position (so lines and columns
+/// stay): the extra `$` of multi-dollar strings (`$$"…"`, Kotlin 2.1+) become spaces, and so does a trailing comma
+/// before `]` (`map[\n key,\n]`, allowed by Kotlin, unknown to the grammar). Strings and comments are left alone.
 fn sanitize(source: &str) -> String {
     let b = source.as_bytes();
     let mut out = b.to_vec();
+    // Open strings: (raw, dollars) — nested through `${…}` templates, whose code is scanned as code.
+    let mut strings: Vec<(bool, usize)> = Vec::new();
+    // Brace depth of each open template, to find its closing `}`.
+    let mut templates: Vec<usize> = Vec::new();
+    let mut depth = 0usize;
     let mut i = 0;
     while i < b.len() {
-        if b[i] == b'$' {
-            let start = i;
-            while i < b.len() && b[i] == b'$' {
-                i += 1;
+        if let Some(&(raw, dollars)) = strings.last().filter(|_| templates.len() < strings.len()) {
+            // Inside string text.
+            if raw && b[i..].starts_with(b"\"\"\"") {
+                i += 3;
+                while i < b.len() && b[i] == b'"' {
+                    i += 1;
+                }
+                strings.pop();
+                continue;
             }
-            let prev_ident = start > 0 && (b[start - 1].is_ascii_alphanumeric() || b[start - 1] == b'_');
-            if i - start >= 2 && i < b.len() && b[i] == b'"' && !prev_ident {
-                for k in start..i {
-                    out[k] = b' ';
+            if !raw && b[i] == b'\\' {
+                i += 2;
+                continue;
+            }
+            if !raw && (b[i] == b'"' || b[i] == b'\n') {
+                i += 1;
+                strings.pop();
+                continue;
+            }
+            if b[i..].iter().take(dollars).all(|&c| c == b'$') && b.get(i + dollars) == Some(&b'{') && i + dollars < b.len() {
+                i += dollars + 1;
+                templates.push(depth);
+                depth += 1;
+                continue;
+            }
+            i += 1;
+            continue;
+        }
+        match b[i] {
+            b'/' if b.get(i + 1) == Some(&b'/') => {
+                while i < b.len() && b[i] != b'\n' {
+                    i += 1;
                 }
             }
-        } else {
-            i += 1;
+            b'/' if b.get(i + 1) == Some(&b'*') => {
+                let mut nest = 0;
+                while i < b.len() {
+                    if b[i..].starts_with(b"/*") {
+                        nest += 1;
+                        i += 2;
+                    } else if b[i..].starts_with(b"*/") {
+                        nest -= 1;
+                        i += 2;
+                        if nest == 0 {
+                            break;
+                        }
+                    } else {
+                        i += 1;
+                    }
+                }
+            }
+            b'\'' => {
+                // Char literal: '"', '\'', '\u0041'.
+                i += 1;
+                while i < b.len() && b[i] != b'\'' && b[i] != b'\n' {
+                    i += if b[i] == b'\\' { 2 } else { 1 };
+                }
+                i += 1;
+            }
+            b'$' => {
+                let start = i;
+                while i < b.len() && b[i] == b'$' {
+                    i += 1;
+                }
+                let prev_ident = start > 0 && (b[start - 1].is_ascii_alphanumeric() || b[start - 1] == b'_');
+                if i - start >= 2 && b.get(i) == Some(&b'"') && !prev_ident {
+                    for k in start..i {
+                        out[k] = b' ';
+                    }
+                    let raw = b[i..].starts_with(b"\"\"\"");
+                    strings.push((raw, i - start));
+                    i += if raw { 3 } else { 1 };
+                }
+            }
+            b'"' => {
+                let raw = b[i..].starts_with(b"\"\"\"");
+                strings.push((raw, 1));
+                i += if raw { 3 } else { 1 };
+            }
+            b'{' => {
+                depth += 1;
+                i += 1;
+            }
+            b'}' => {
+                depth = depth.saturating_sub(1);
+                if templates.last() == Some(&depth) {
+                    templates.pop();
+                }
+                i += 1;
+            }
+            b',' => {
+                let mut j = i + 1;
+                while j < b.len() && b[j].is_ascii_whitespace() {
+                    j += 1;
+                }
+                if b.get(j) == Some(&b']') {
+                    out[i] = b' ';
+                }
+                i += 1;
+            }
+            _ => i += 1,
         }
     }
     String::from_utf8(out).unwrap_or_else(|_| source.to_string())
@@ -207,7 +304,7 @@ pub fn parse(path: &str, original: &str) -> KtFile {
     }
     if root.has_error() {
         // Reports show the original code (with `$$`), not the sanitized one.
-        collect_errors(root, original, &mut Vec::new(), &mut file.parse_errors);
+        collect_errors(root, original, &mut Vec::new(), &mut file.parse_errors, 0);
         if let Some(e) = file.parse_errors.first_mut() {
             e.first = true;
         }
@@ -217,7 +314,7 @@ pub fn parse(path: &str, original: &str) -> KtFile {
     file
 }
 
-fn collect_errors<'a>(n: Node<'a>, source: &str, path: &mut Vec<&'static str>, out: &mut Vec<ParseError>) {
+fn collect_errors<'a>(n: Node<'a>, source: &str, path: &mut Vec<&'static str>, out: &mut Vec<ParseError>, nesting: usize) {
     if n.is_error() || n.is_missing() {
         // The first line of the unparsed text tells a developer where the grammar gave up.
         let text = source[n.byte_range()].lines().find(|l| !l.trim().is_empty()).unwrap_or("").trim();
@@ -232,6 +329,7 @@ fn collect_errors<'a>(n: Node<'a>, source: &str, path: &mut Vec<&'static str>, o
             pattern: pattern(source, line(n), end_line(n)),
             unparsed: if n.is_missing() { String::new() } else { super::anon::anonymise(&dedent(&unparsed)) },
             first: false,
+            inner: if n.is_missing() || nesting > 1 { None } else { inner_cause(source, n.start_byte(), nesting) },
         });
         return;
     }
@@ -239,10 +337,80 @@ fn collect_errors<'a>(n: Node<'a>, source: &str, path: &mut Vec<&'static str>, o
     let mut c = n.walk();
     for ch in n.children(&mut c) {
         if ch.has_error() || ch.is_missing() {
-            collect_errors(ch, source, path, out);
+            collect_errors(ch, source, path, out, nesting);
         }
     }
     path.pop();
+}
+
+/// An error starting at `{`: the grammar dropped the whole body. Parsed alone (its members as top-level code), the
+/// body usually fails right at the construct that made the grammar give up.
+fn inner_cause(source: &str, start: usize, nesting: usize) -> Option<(String, String)> {
+    if !source[start..].starts_with('{') {
+        return None;
+    }
+    let close = closing_brace(source, start)?;
+    let body = &source[start + 1..close];
+    let mut parser = Parser::new();
+    parser.set_language(&tree_sitter_kotlin_ng::LANGUAGE.into()).ok()?;
+    let tree = parser.parse(sanitize(body), None)?;
+    if !tree.root_node().has_error() {
+        return None;
+    }
+    let mut found = Vec::new();
+    collect_errors(tree.root_node(), body, &mut Vec::new(), &mut found, nesting + 1);
+    let e = found.into_iter().next()?;
+    Some(e.inner.unwrap_or((e.context, e.pattern)))
+}
+
+/// Byte index of the `}` closing the `{` at `open`; strings, chars and comments are skipped (roughly: enough to
+/// cut a class body out of a file).
+fn closing_brace(s: &str, open: usize) -> Option<usize> {
+    let b = s.as_bytes();
+    let mut depth = 0usize;
+    let mut i = open;
+    while i < b.len() {
+        match b[i] {
+            b'"' => {
+                if b[i..].starts_with(b"\"\"\"") {
+                    i += 3;
+                    while i < b.len() && !b[i..].starts_with(b"\"\"\"") {
+                        i += 1;
+                    }
+                    i += 3;
+                } else {
+                    i += 1;
+                    while i < b.len() && b[i] != b'"' && b[i] != b'\n' {
+                        i += if b[i] == b'\\' { 2 } else { 1 };
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+            b'\'' => {
+                i += 1;
+                while i < b.len() && b[i] != b'\'' && b[i] != b'\n' {
+                    i += if b[i] == b'\\' { 2 } else { 1 };
+                }
+            }
+            b'/' if b.get(i + 1) == Some(&b'/') => {
+                while i < b.len() && b[i] != b'\n' {
+                    i += 1;
+                }
+                continue;
+            }
+            b'{' => depth += 1,
+            b'}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i);
+                }
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    None
 }
 
 fn dedent(text: &str) -> String {
@@ -734,6 +902,37 @@ object Topics { const val X = "x.topic" }
         assert!(e.context.ends_with("ERROR"), "{e:?}");
         assert_eq!(e.pattern, "class A1 { companion object { val A2 = 0 } }  // <-- parse error");
         assert!(e.first);
+    }
+
+    #[test]
+    fn parses_a_trailing_comma_in_brackets() {
+        let src = "class A {\n    fun f(m: Map<String, Int>, k: String): Int? {\n        val s = \"a, ]\"\n        return m[\n            k,\n        ]\n    }\n}\n";
+        let f = parse("A.kt", src);
+        assert!(f.parse_errors.is_empty(), "{:?}", f.parse_errors.first().map(|e| &e.pattern));
+        assert_eq!(f.classes[0].functions[0].name, "f");
+        // Strings keep their commas.
+        assert_eq!(sanitize(src).len(), src.len());
+        assert!(sanitize(src).contains("\"a, ]\""));
+    }
+
+    #[test]
+    fn finds_the_cause_inside_a_dropped_class_body() {
+        // When the grammar drops a whole `{ … }` body, the body is parsed alone to find what broke it.
+        let src = "class A {
+    val s = \"}\"
+    fun ok() = 1
+
+    fun bad() {
+        val y = listOf(1,, 2)
+    }
+}
+";
+        let open = src.find('{').unwrap();
+        assert_eq!(closing_brace(src, open), Some(src.len() - 2));
+        let (context, pattern) = inner_cause(src, open, 0).expect("inner cause");
+        assert!(context.ends_with("ERROR"), "{context}");
+        assert!(pattern.contains("listOf(0,, 0)") && pattern.contains(ERROR_MARK), "{pattern}");
+        assert!(inner_cause("class A { val ok = 1 }", 8, 0).is_none());
     }
 
     #[test]

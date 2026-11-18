@@ -2,10 +2,14 @@ import { t } from "../i18n";
 import { redact } from "./redact";
 
 /** One parse error as logged by stage Scan: file and line stay local, context and pattern are anonymous. */
-export interface ParseProblem { file: string; detail: string; context?: string; pattern?: string; unparsed?: string; first?: boolean }
+export interface ParseProblem {
+  file: string; detail: string; context?: string; pattern?: string; unparsed?: string; first?: boolean;
+  /** The grammar dropped a whole `{ … }` body; parsed alone, the body fails here. */
+  innerContext?: string; innerPattern?: string;
+}
 
 /** A construct the grammar could not parse, with how often and where it occurs. */
-export interface ParseConstruct { context: string; pattern: string; unparsed: string; files: string[]; count: number; first: boolean }
+export interface ParseConstruct { context: string; pattern: string; unparsed: string; files: string[]; count: number; first: boolean; innerContext?: string; innerPattern?: string }
 
 /** Groups errors by construct (same place in the tree and same anonymised code), most frequent first. */
 export function constructs(problems: ParseProblem[]): ParseConstruct[] {
@@ -14,7 +18,7 @@ export function constructs(problems: ParseProblem[]): ParseConstruct[] {
     const context = p.context ?? "";
     const pattern = p.pattern ?? "";
     const key = `${context}\u0000${pattern}`;
-    const c = by.get(key) ?? { context, pattern, unparsed: p.unparsed ?? "", files: [], count: 0, first: false };
+    const c = by.get(key) ?? { context, pattern, unparsed: p.unparsed ?? "", files: [], count: 0, first: false, innerContext: p.innerContext || undefined, innerPattern: p.innerPattern || undefined };
     c.count++;
     c.first ||= !!p.first;
     if (!c.files.includes(p.file)) c.files.push(p.file);
@@ -39,6 +43,7 @@ export function parseReport(problems: ParseProblem[], meta: { extractor: string;
     // The pattern is anonymised in Rust already; redaction is a second line of defence.
     out.push("```kotlin", redact(c.pattern || "?"), "```", "");
     if (c.unparsed) out.push(m.unparsed, "```kotlin", redact(c.unparsed), "```", "");
+    if (c.innerPattern) out.push(m.inner, m.context(c.innerContext || "?"), "", "```kotlin", redact(c.innerPattern), "```", "");
   });
   if (list.length > 15) out.push(m.more(list.length - 15));
   return out.join("\n");

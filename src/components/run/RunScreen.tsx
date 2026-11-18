@@ -290,7 +290,10 @@ function ParseProblems(props: { log: LogEntry[]; run: RunRecord | null }) {
   const [copied, setCopied] = useState(false);
   const problems = props.log
     .filter((e) => e.code === "parseError" && e.params?.file)
-    .map((e) => ({ file: e.params!.file, detail: e.params!.detail ?? "", context: e.params!.context, pattern: e.params!.pattern, unparsed: e.params!.unparsed, first: e.params!.first === "true" }));
+    .map((e) => ({
+      file: e.params!.file, detail: e.params!.detail ?? "", context: e.params!.context, pattern: e.params!.pattern, unparsed: e.params!.unparsed,
+      first: e.params!.first === "true", innerContext: e.params!.innerContext, innerPattern: e.params!.innerPattern,
+    }));
   if (!problems.length) return null;
   const list = constructs(problems);
   const copy = async () => {
@@ -311,6 +314,12 @@ function ParseProblems(props: { log: LogEntry[]; run: RunRecord | null }) {
           <b>{t.constructTitle(i + 1, c.files.length, c.count)}</b> <span className={c.first ? "badge warn" : "badge"}>{c.first ? t.parseReport.firstShort : t.parseReport.consequenceShort}</span>
           <div className="hint">{t.context}: <code>{c.context || "?"}</code></div>
           <pre className="mmd-src">{c.pattern || "?"}</pre>
+          {c.innerPattern && (
+            <>
+              <div className="hint">{t.parseReport.inner} <code>{c.innerContext}</code></div>
+              <pre className="mmd-src">{c.innerPattern}</pre>
+            </>
+          )}
           <details className="help">
             <summary>{t.where}</summary>
             <ul className="plain">{c.files.map((f) => <li key={f}><code>{f}</code></li>)}</ul>

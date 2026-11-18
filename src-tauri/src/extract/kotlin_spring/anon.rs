@@ -146,10 +146,12 @@ impl Anon {
                 break;
             }
             if !raw && c[i] == '\\' {
-                if !text {
-                    out.push('…');
-                    text = true;
+                // Escapes say nothing about the project, and `\$` or `\"` may be what the grammar trips on.
+                out.push('\\');
+                if let Some(&e) = c.get(i + 1).filter(|e| e.is_ascii_punctuation() || matches!(e, 'n' | 'r' | 't' | 'b' | 'u')) {
+                    out.push(e);
                 }
+                text = false;
                 i += 2;
                 continue;
             }
@@ -181,6 +183,10 @@ impl Anon {
             if c[i] == '\n' {
                 out.push('\n');
                 text = false;
+            } else if STRING_PUNCTUATION.contains(&c[i]) {
+                // The shape of the text without its words: quotes, `$`, braces and brackets stay.
+                out.push(c[i]);
+                text = false;
             } else if !text {
                 out.push('…');
                 text = true;
@@ -191,6 +197,9 @@ impl Anon {
         i
     }
 }
+
+/// Characters of string text shown as they are: they carry no project names and are what the grammar can trip on.
+const STRING_PUNCTUATION: [char; 8] = ['$', '"', '\'', '{', '}', '[', ']', '\\'];
 
 /// Index of the `}` closing the `{` at `open`, skipping nested braces and strings.
 fn matching_brace(c: &[char], open: usize, end: usize) -> usize {
@@ -240,8 +249,10 @@ class RefundAudit(private val repo: RefundRepo) { // secret note
     #[test]
     fn keeps_string_templates_and_kinds() {
         assert_eq!(anonymise(r#"x.copy(status = "${order.id}-${"done"}")"#), r#"x1.copy(x2 = "${x3.x4}…${"…"}")"#);
-        assert_eq!(anonymise(r#"val s = "Hello $name, \"q\"""#), r#"val x1 = "…$x2…""#);
-        assert_eq!(anonymise("val j = $$\"\"\"\n{\"k\": \"$$value\"}\n\"\"\""), "val x1 = $$\"\"\"\n…$$value…\n\"\"\"");
+        assert_eq!(anonymise(r#"val s = "Hello $name, \"q\"""#), r#"val x1 = "…$x2…\"…\"""#);
+        // Punctuation of the text stays: a lone `$`, JSON braces, regex escapes.
+        assert_eq!(anonymise(r#"jsonPath("$.items[0].id", """{"a": "\d+"}""")"#), r#"x1("$…[…]…", """{"…"…"\…"}""")"#);
+        assert_eq!(anonymise("val j = $$\"\"\"\n{\"k\": \"$$value\"}\n\"\"\""), "val x1 = $$\"\"\"\n{\"…\"…\"$$value\"}\n\"\"\"");
         assert_eq!(anonymise("val sql = \"\"\"\n  select * from t\n\"\"\".trimIndent()"), "val x1 = \"\"\"\n…\n\"\"\".trimIndent()");
     }
 }

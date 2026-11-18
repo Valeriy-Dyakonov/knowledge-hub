@@ -245,12 +245,19 @@ impl<'a> Analysis<'a> {
                     method: String::new(),
                     reason: "PARSE_ERROR".into(),
                     detail: format!("line {}: `{}`", e.line, e.near),
-                    attributes: BTreeMap::from([
-                        ("context".to_string(), e.context.clone()),
-                        ("pattern".to_string(), e.pattern.clone()),
-                        ("unparsed".to_string(), e.unparsed.clone()),
-                        ("first".to_string(), e.first.to_string()),
-                    ]),
+                    attributes: {
+                        let mut a = BTreeMap::from([
+                            ("context".to_string(), e.context.clone()),
+                            ("pattern".to_string(), e.pattern.clone()),
+                            ("unparsed".to_string(), e.unparsed.clone()),
+                            ("first".to_string(), e.first.to_string()),
+                        ]);
+                        if let Some((context, pattern)) = &e.inner {
+                            a.insert("innerContext".into(), context.clone());
+                            a.insert("innerPattern".into(), pattern.clone());
+                        }
+                        a
+                    },
                     evidence: ev,
                 });
             }

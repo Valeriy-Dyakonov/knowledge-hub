@@ -20,7 +20,7 @@ export const scanStage: Stage = {
     const f = result.facts;
     for (const u of f.unresolved.filter((x) => x.reason === "PARSE_ERROR")) {
       const a = u.attributes ?? {};
-      ctx.warn("parseError", { file: u.componentId, detail: u.detail, context: a.context ?? "", pattern: a.pattern ?? "", unparsed: a.unparsed ?? "", first: a.first ?? "false" });
+      ctx.warn("parseError", { file: u.componentId, detail: u.detail, context: a.context ?? "", pattern: a.pattern ?? "", unparsed: a.unparsed ?? "", first: a.first ?? "false", innerContext: a.innerContext ?? "", innerPattern: a.innerPattern ?? "" });
     }
     ctx.log("ok", "scanSummary", {
       components: String(f.components.length),

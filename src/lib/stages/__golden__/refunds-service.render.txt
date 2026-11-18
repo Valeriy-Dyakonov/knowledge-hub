@@ -292,12 +292,12 @@ _Описание ещё не составлено._
 
 ## Что запускает
 
-- `async CacheWarmer.warmUp` — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:9`
+- `async CacheWarmer.warmUp` — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:11`
 
 ## Поток
 
-1. async CacheWarmer.warmUp вызывает **CacheWarmer** (`warmUp`) — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:9`
-2. CacheWarmer читает **Возвраты** (`findAllByStatus`) через RefundRepository — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:11`
+1. async CacheWarmer.warmUp вызывает **CacheWarmer** (`warmUp`) — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:11`
+2. CacheWarmer читает **Возвраты** (`findAllByStatus`) через RefundRepository — `src/main/kotlin/com/example/refunds/notify/CacheWarmer.kt:13`
 
 ```mermaid
 sequenceDiagram

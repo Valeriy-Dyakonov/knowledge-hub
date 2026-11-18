@@ -6,8 +6,14 @@ import org.springframework.stereotype.Component
 
 @Component
 class CacheWarmer(private val repository: RefundRepository) {
+    private val warmed = mutableMapOf<String, Boolean>()
+
     @Async
     fun warmUp() {
         repository.findAllByStatus("NEW")
+        // Trailing comma inside brackets: valid Kotlin the grammar does not know.
+        warmed[
+            "NEW",
+        ] = true
     }
 }
