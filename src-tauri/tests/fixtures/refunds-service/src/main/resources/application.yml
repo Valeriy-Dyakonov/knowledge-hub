@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: refunds
+  datasource:
+    url: jdbc:postgresql://db:5432/refunds
+    username: refunds
+    password: s3cr3t-value
+payments:
+  topics:
+    completed: payments.completed
+refunds:
+  topics:
+    created: refunds.created
+clients:
+  payments:
+    url: http://payments:8080
+    api-key: abcdef123456

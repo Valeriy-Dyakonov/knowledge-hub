@@ -15,6 +15,8 @@ Design docs live in `docs/` (Russian); read `docs/00-vision.md` and `docs/01-arc
 | Frontend tests | `npm test` (vitest, `src/**/*.test.ts`) |
 | Frontend build | `npx vite build` |
 | Rust tests | `cargo test` in `src-tauri/` |
+| Regenerate extractor golden files | `UPDATE_GOLDEN=1 cargo test golden` in `src-tauri/`, then review the diff |
+| Print the tree-sitter tree of a Kotlin file | `cargo run --example sexp -- File.kt` in `src-tauri/` |
 
 On this Windows machine cargo may be missing from PATH in Git Bash: prefix with `PATH="$HOME/.cargo/bin:$PATH"`.
 Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests if `src-tauri` changed.
@@ -41,8 +43,9 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
 - `error.rs` — `AppError { code, params }`; never return user-facing prose.
 - `model/` — serde mirror of `src/types.ts`.
 - `repo.rs` — read-only repository snapshot (file listing, reads inside the root only, commit from `.git`).
-- `extract/` — `Extractor` trait + registry; `extract/kotlin_spring/` — tree-sitter based extractor.
-- `context/` — `ContextSource` trait + registry (`application.yml`, OpenAPI, migrations, CODEOWNERS).
+- `extract/` — `Extractor` trait + registry; `extract/kotlin_spring/` — tree-sitter based extractor: `syntax.rs` (tree -> small Kotlin model), `spring.rs` (Spring semantics -> facts), `golden.rs` (golden test over `tests/fixtures/refunds-service`).
+- `context/` — `ContextSource` trait + registry (`spring_config`, `openapi`, `migrations`, `codeowners`).
+- `redact.rs` — secret masking for configuration values and any text sent to the LLM or stored.
 - `store/` — `KnowledgeStore` on a local folder (`docs/07-storage.md`).
 - `state.rs` — SQLite in `.state/hub.db`: runs, checkpoints, logs, review batches, answers, journal, questions.
 - `index/` — `Indexer` on SQLite FTS5 (`.state/index.db`).

@@ -94,6 +94,20 @@ mod tests {
     }
 
     #[test]
+    fn scans_the_fixture_with_the_registered_sources() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/refunds-service");
+        let res = scan(&RepoSnapshot::open(path.to_str().unwrap()).unwrap()).unwrap();
+        assert!(res.steps.iter().all(|s| s.status == "done"), "{:?}", res.steps);
+        assert_eq!(res.steps.iter().filter(|s| s.kind == "extractor").map(|s| s.id).collect::<Vec<_>>(), vec!["kotlin-spring"]);
+        assert_eq!(res.facts.triggers.len(), 7);
+        let json = serde_json::to_value(&res).unwrap();
+        // Contract with src/types.ts (ScanResult / SourceFacts).
+        assert!(json["facts"]["sinkAccesses"].is_array());
+        assert!(json["facts"]["components"][0]["isInterface"].is_boolean());
+        assert!(json["context"]["apiOperations"].is_array());
+    }
+
+    #[test]
     fn optional_extractor_failure_is_reported_not_fatal() {
         let (_d, r) = repo();
         let res = scan_with(&r, &[Box::new(Fake(true, true))], &[]).unwrap();

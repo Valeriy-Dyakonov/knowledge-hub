@@ -114,7 +114,8 @@ export interface Edge {
 /** Ordered step of a flow: a component performing an action, reached through `edgeId`. */
 export interface Step { order: number; componentId: string; action: string; edgeId?: string }
 
-export type BreakReason = "MULTIPLE_IMPLEMENTATIONS" | "UNRESOLVED_CALL" | "EVENT" | "REFLECTION" | "DYNAMIC_SQL" | "UNRESOLVED_PLACEHOLDER";
+export type BreakReason =
+  | "MULTIPLE_IMPLEMENTATIONS" | "UNRESOLVED_CALL" | "EVENT" | "REFLECTION" | "DYNAMIC_SQL" | "UNRESOLVED_PLACEHOLDER" | "PARSE_ERROR";
 
 /** A place where static tracing could not follow the flow; shown to reviewers. */
 export interface FlowBreak { componentId: string; method: string; reason: BreakReason; detail: string; evidence?: Evidence }

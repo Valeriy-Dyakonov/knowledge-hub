@@ -4,6 +4,7 @@ mod error;
 mod extract;
 mod llm;
 mod model;
+mod redact;
 mod repo;
 mod scan;
 mod secrets;

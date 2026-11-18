@@ -1,0 +1,18 @@
+openapi: 3.0.3
+info:
+  title: Refunds
+  version: 1.0.0
+paths:
+  /api/v1/refunds:
+    post:
+      operationId: createRefund
+      tags: [refunds]
+      summary: Create a refund
+  /api/v1/refunds/{id}:
+    get:
+      operationId: getRefund
+      tags: [refunds]
+  /api/v1/refunds/{id}/approve:
+    post:
+      tags: [approvals]
+      summary: Approve a refund
