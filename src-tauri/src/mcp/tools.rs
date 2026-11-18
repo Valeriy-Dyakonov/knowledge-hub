@@ -27,6 +27,10 @@ pub fn definitions() -> Value {
           "inputSchema": s(json!({ "query": { "type": "string" }, "limit": { "type": "integer", "minimum": 1, "maximum": 50 }, "service": service }), &["query"]) },
         { "name": "who_touches", "description": "Which features read, write, publish to or call a table, topic/queue or external service (by name or id, e.g. 'refunds' or 'topic:refunds.created').",
           "inputSchema": s(json!({ "sink": { "type": "string" }, "service": service }), &["sink"]) },
+        { "name": "get_schema", "description": "Database schema of a service: without 'table' the datasources and the list of tables; with 'table' its columns (type, PK, FK, mapped entity field), the tables referencing it and the features reading or writing it. Structure comes from migrations and JPA entities.",
+          "inputSchema": s(json!({ "table": { "type": "string" }, "service": service }), &[]) },
+        { "name": "config_usage", "description": "Configuration properties: without 'key' all of them (value, profiles, how many places read them, missing ones); with 'key' (exact key or a prefix such as 'payments.topics') the values per profile, the code reading it (@Value, annotations, Environment, @ConfigurationProperties) and the features going through that code. Secrets are masked.",
+          "inputSchema": s(json!({ "key": { "type": "string" }, "service": service }), &[]) },
         { "name": "freshness", "description": "Review status of a feature (or the whole service): verified commit, review time, why it is stale, how many claims are unverified.",
           "inputSchema": s(json!({ "id": { "type": "string" }, "service": service }), &[]) },
     ])
@@ -73,6 +77,8 @@ impl Tools {
             "search" => self.search(args),
             "who_touches" => self.who_touches(args),
             "freshness" => self.freshness(args),
+            "get_schema" => self.get_schema(args),
+            "config_usage" => self.config_usage(args),
             _ => Err(AppError::new("unknownTool").with("name", name)),
         }
     }
@@ -270,6 +276,96 @@ impl Tools {
         Ok(json!({ "data": data, "meta": meta(&claims) }))
     }
 
+    /// Database and configuration are static facts with evidence, not claims reviewed one by one.
+    fn facts_meta(m: &KnowledgeModel) -> Value {
+        json!({ "reviewStatus": "STATIC", "verifiedAtCommit": m.service.last_analyzed_commit, "reviewedAt": null, "staleReasons": [], "unverifiedClaims": 0 })
+    }
+
+    /// Features whose active edges touch `sink_id`, with what they do there.
+    fn features_touching(m: &KnowledgeModel, sink_id: &str) -> Vec<Value> {
+        m.features
+            .iter()
+            .filter_map(|f| {
+                let rejected: Vec<&str> = f.claims.iter().filter(|c| c.status == "REJECTED").map(|c| c.id.as_str()).collect();
+                let mut actions: Vec<String> = f
+                    .edges
+                    .iter()
+                    .filter(|e| e.claim_id.as_ref().is_none_or(|c| !rejected.contains(&c.as_str())))
+                    .filter(|e| e.to.kind == "SINK" && e.to.id.eq_ignore_ascii_case(sink_id))
+                    .map(|e| e.kind.clone())
+                    .collect();
+                actions.sort();
+                actions.dedup();
+                (!actions.is_empty()).then(|| json!({ "feature": f.id, "featureName": first_name(&f.business_name).unwrap_or_else(|| f.technical_name.clone()), "actions": actions, "status": status_of(&f.claims) }))
+            })
+            .collect()
+    }
+
+    fn get_schema(&self, args: &Value) -> AppResult<Value> {
+        let m = self.models(arg(args, "service"))?.into_iter().next().unwrap();
+        let db = m.database.clone().ok_or_else(|| AppError::new("schemaNotFound").with("service", m.service.id.clone()))?;
+        let empty = vec![];
+        let tables = db["tables"].as_array().unwrap_or(&empty);
+        let Some(name) = arg(args, "table") else {
+            let list: Vec<Value> = tables
+                .iter()
+                .map(|t| json!({ "name": t["name"], "source": t["source"], "entity": t["entity"], "columns": t["columns"].as_array().map_or(0, Vec::len) }))
+                .collect();
+            return Ok(json!({ "data": { "service": m.service.id, "datasources": db["datasources"], "tables": list }, "meta": Self::facts_meta(&m) }));
+        };
+        let name = name.to_lowercase();
+        let table = tables.iter().find(|t| t["name"].as_str() == Some(name.as_str())).ok_or_else(|| AppError::new("tableNotFound").with("table", name.clone()))?;
+        let referenced_by: Vec<Value> = tables
+            .iter()
+            .flat_map(|t| {
+                t["columns"].as_array().unwrap_or(&empty).iter().filter(|c| c["references"]["table"].as_str() == Some(name.as_str())).map(move |c| json!({ "table": t["name"], "column": c["name"] }))
+            })
+            .collect();
+        let mut data = table.clone();
+        data["evidence"] = json!(table["evidence"]["path"].as_str());
+        data["referencedBy"] = json!(referenced_by);
+        data["features"] = json!(Self::features_touching(&m, &format!("db_table:{name}")));
+        Ok(json!({ "data": data, "meta": Self::facts_meta(&m) }))
+    }
+
+    fn config_usage(&self, args: &Value) -> AppResult<Value> {
+        let m = self.models(arg(args, "service"))?.into_iter().next().unwrap();
+        let cfg = m.config.clone().ok_or_else(|| AppError::new("configNotFound").with("service", m.service.id.clone()))?;
+        let empty = vec![];
+        let props = cfg["properties"].as_array().unwrap_or(&empty);
+        let Some(key) = arg(args, "key") else {
+            let list: Vec<Value> = props
+                .iter()
+                .map(|p| json!({ "key": p["key"], "value": p["value"], "profiles": p["profiles"], "readBy": p["usages"].as_array().map_or(0, Vec::len), "missing": p["missing"] }))
+                .collect();
+            return Ok(json!({ "data": { "service": m.service.id, "profiles": cfg["profiles"], "properties": list }, "meta": Self::facts_meta(&m) }));
+        };
+        let prefix = format!("{}.", key.trim_end_matches(".*").trim_end_matches('.'));
+        let found: Vec<&Value> = props.iter().filter(|p| p["key"].as_str().is_some_and(|k| k == key || k.starts_with(&prefix))).collect();
+        if found.is_empty() {
+            return Err(AppError::new("propertyNotFound").with("key", key));
+        }
+        let data: Vec<Value> = found
+            .into_iter()
+            .map(|p| {
+                let usages = p["usages"].as_array().unwrap_or(&empty);
+                let components: Vec<&str> = usages.iter().filter_map(|u| u["componentId"].as_str()).collect();
+                let features: Vec<Value> = m
+                    .features
+                    .iter()
+                    .filter(|f| components.iter().any(|c| f.component_ids.iter().any(|x| x == c) || f.triggers.iter().any(|t| t.component_id == *c)))
+                    .map(|f| json!({ "feature": f.id, "featureName": first_name(&f.business_name).unwrap_or_else(|| f.technical_name.clone()), "status": status_of(&f.claims) }))
+                    .collect();
+                let readers: Vec<Value> = usages
+                    .iter()
+                    .map(|u| json!({ "component": u["componentId"], "method": u["method"], "kind": u["kind"], "default": u["default"], "viaPrefix": u["viaPrefix"], "evidence": u["evidence"]["path"] }))
+                    .collect();
+                json!({ "key": p["key"], "value": p["value"], "profiles": p["profiles"], "source": p["source"], "secret": p["secret"], "missing": p["missing"], "readBy": readers, "features": features })
+            })
+            .collect();
+        Ok(json!({ "data": data, "meta": Self::facts_meta(&m) }))
+    }
+
     fn freshness(&self, args: &Value) -> AppResult<Value> {
         if arg(args, "id").is_some() {
             let (m, f) = self.feature(args)?;
@@ -345,6 +441,26 @@ mod tests {
         assert_eq!(t.call("get_diagram", &json!({ "level": "context" })).unwrap()["data"]["diagram"], "flowchart LR\n");
         assert_eq!(t.call("get_diagram", &json!({ "level": "context", "format": "svg" })).unwrap_err().code, "formatUnsupported");
         assert_eq!(t.call("get_diagram", &json!({ "id": "approvals/approve" })).unwrap_err().code, "diagramNotFound");
+    }
+
+    #[test]
+    fn describes_the_schema_and_who_reads_configuration() {
+        let (_d, t) = tools();
+        let all = t.call("get_schema", &json!({})).unwrap();
+        assert_eq!(all["meta"]["reviewStatus"], "STATIC");
+        assert!(all["data"]["tables"].as_array().unwrap().iter().any(|x| x["name"] == "refund_items"));
+        let refunds = t.call("get_schema", &json!({ "table": "REFUNDS" })).unwrap();
+        assert!(refunds["data"]["referencedBy"].as_array().unwrap().iter().any(|r| r["table"] == "refund_items"));
+        assert!(refunds["data"]["features"].as_array().unwrap().iter().any(|f| f["feature"] == "refunds/create-refund"));
+        assert_eq!(t.call("get_schema", &json!({ "table": "nope" })).unwrap_err().code, "tableNotFound");
+
+        let topic = t.call("config_usage", &json!({ "key": "payments.topics.completed" })).unwrap();
+        assert_eq!(topic["data"][0]["profiles"]["prod"], "prod.payments.completed");
+        assert!(!topic["data"][0]["features"].as_array().unwrap().is_empty());
+        assert!(t.call("config_usage", &json!({ "key": "refunds.limits" })).unwrap()["data"].as_array().unwrap().len() >= 2);
+        let pw = t.call("config_usage", &json!({})).unwrap();
+        assert!(pw["data"]["properties"].as_array().unwrap().iter().filter(|p| p["key"] == "spring.datasource.password").all(|p| p["value"] == "***"));
+        assert_eq!(t.call("config_usage", &json!({ "key": "nope" })).unwrap_err().code, "propertyNotFound");
     }
 
     #[test]

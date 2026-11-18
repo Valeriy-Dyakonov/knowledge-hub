@@ -32,12 +32,12 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
   - `pipeline.ts` — `runAnalysis()`: orchestrates stages only; checkpoints after each stage.
   - `steps.ts` — the single skip/required/warning policy.
   - `stages/` — one file per stage (`scan`, `discover`, `trace`, `describe`, `assemble`, `render`, `index`), registry `STAGES`.
-  - `model/` — `ids.ts` (stable ids), `claims.ts` (claim creation and review transitions), `merge.ts` (merge with the previous model + projection of names), `placeholders.ts`, `status.ts`.
+  - `model/` — `ids.ts` (stable ids), `claims.ts` (claim creation and review transitions), `merge.ts` (merge with the previous model + projection of names), `placeholders.ts`, `status.ts`, `database.ts` (tables from migrations + entities, datasources), `config.ts` (properties per profile and who reads them), `usage.ts` (table/component -> features).
   - `review/` — `policy.ts` (`ReviewPolicy`, strict and lenient, registry `POLICIES`), `controls.ts` (control items), `service.ts` (`ReviewService`: next batch, answer, close and apply), `statement.ts` (claim in plain words).
-  - `render/` — `Renderer`s (`markdown.ts`, `mermaid.ts` with L1–L3), registry `RENDERERS`; `render.test.ts` runs under jsdom and checks every diagram with `mermaid.parse`.
+  - `render/` — `Renderer`s (`markdown.ts`, `mermaid.ts` with L1–L3, `reference.ts` with database.md, config.md, ER diagram), registry `RENDERERS`; `render.test.ts` runs under jsdom and checks every diagram with `mermaid.parse`.
   - `testing/fixture.ts` — the fixture service (Rust scan JSON) run through stages 2–5, shared by tests.
   - `prompt.ts` — LLM prompts per language.
-- `components/` — `ui/` (kit), `code/CodeView.tsx` (read-only CodeMirror viewer), one folder per screen: `repos/`, `run/`, `features/`, `diagrams/` (`Diagram.tsx` renders Mermaid lazily), `review/`, `settings/` (`Settings.tsx` side menu + registry, `sections.tsx`).
+- `components/` — `ui/` (kit), `code/CodeView.tsx` (read-only CodeMirror viewer), one folder per screen: `repos/`, `run/`, `features/`, `diagrams/` (`Diagram.tsx` renders Mermaid lazily), `database/` (tables, columns, ER), `config/` (properties, profiles, readers), `review/`, `settings/` (`Settings.tsx` side menu + registry, `sections.tsx`).
 - `styles/` — all CSS; colors only in `tokens.css`/`themes.css`.
 
 ### Backend `src-tauri/src/`
@@ -52,7 +52,7 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
 - `state.rs` — SQLite in `.state/hub.db`: runs, checkpoints, logs, review batches, answers, journal, questions (JSON documents owned by the frontend).
 - `index/` — `Indexer` on SQLite FTS5 (`.state/index.db`), rebuilt by stage Index and after each closed review batch.
 - `llm.rs` — OpenAI-compatible client. `secrets.rs` — keyring. `settings.rs` — `settings.json`.
-- `mcp/` — `stdio.rs` (JSON-RPC over stdio), `tools.rs` (7 tools, standard envelope `{ data, meta }`, errors as codes).
+- `mcp/` — `stdio.rs` (JSON-RPC over stdio), `tools.rs` (9 tools, standard envelope `{ data, meta }`, errors as codes).
 - `commands/` — Tauri commands grouped by area.
 
 ## Checklists

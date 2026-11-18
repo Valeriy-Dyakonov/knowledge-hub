@@ -145,11 +145,57 @@ export interface Feature {
 /** Service-wide nodes shared by features; their business names are service-level claims. */
 export interface Catalog { components: Component[]; sinks: Sink[]; claims: Claim[] }
 
+// ---- Database and configuration: reference facts with evidence (not reviewed claim by claim) ----
+
+export interface ColumnInfo {
+  name: string;
+  dataType: string;
+  nullable: boolean;
+  primaryKey: boolean;
+  references?: { table: string; column: string };
+  /** Entity field mapped to the column. */
+  field?: string;
+}
+
+export interface TableInfo {
+  name: string;
+  columns: ColumnInfo[];
+  /** JPA entity mapped to the table (FQN). */
+  entity?: string;
+  /** Where the structure comes from: migrations, the entity only, or only a reference in code. */
+  source: "migration" | "entity" | "both" | "code";
+  evidence?: Evidence;
+}
+
+export interface Datasource { property: string; profile?: string; kind: string; host?: string; database?: string; url: string }
+
+export interface DatabaseInfo { datasources: Datasource[]; tables: TableInfo[] }
+
+export interface ConfigUsage { componentId: string; method?: string; kind: string; default?: string; evidence?: Evidence; viaPrefix?: string }
+
+export interface ConfigProperty {
+  key: string;
+  /** Value without a profile (secrets masked). */
+  value?: string;
+  /** Profile -> value. */
+  profiles: Record<string, string>;
+  /** "path:line" where it is defined. */
+  source?: string;
+  usages: ConfigUsage[];
+  secret: boolean;
+  /** Read by code but defined nowhere and without a default. */
+  missing: boolean;
+}
+
+export interface ConfigInfo { profiles: string[]; properties: ConfigProperty[] }
+
 export interface KnowledgeModel {
   schemaVersion: number;
   service: Service;
   catalog: Catalog;
   features: Feature[];
+  database?: DatabaseInfo;
+  config?: ConfigInfo;
 }
 
 // ---- Static facts produced by Rust extractors (stage Scan) ----
@@ -191,6 +237,13 @@ export interface EventPublishFact { componentId: string; method: string; eventTy
 /** PARSE_ERROR facts carry `context` (grammar nodes around the error) and `pattern` (anonymised code) in attributes. */
 export interface UnresolvedFact { componentId: string; method: string; reason: BreakReason; detail: string; attributes?: Record<string, string>; evidence?: Evidence }
 
+export interface EntityColumnFact { field: string; column: string; kotlinType: string; nullable: boolean; primaryKey: boolean; referencesEntity?: string }
+
+export interface EntityFact { id: string; table: string; columns: EntityColumnFact[]; evidence?: Evidence }
+
+/** A place where code reads configuration; `key` ends with `.*` for a whole prefix. */
+export interface ConfigUsageFact { key: string; componentId: string; method?: string; kind: string; default?: string; evidence?: Evidence }
+
 export interface SourceFacts {
   components: ComponentFact[];
   triggers: TriggerFact[];
@@ -198,6 +251,8 @@ export interface SourceFacts {
   sinkAccesses: SinkAccessFact[];
   events: EventPublishFact[];
   unresolved: UnresolvedFact[];
+  entities?: EntityFact[];
+  configUsages?: ConfigUsageFact[];
 }
 
 export interface ApiOperation { method: string; path: string; operationId?: string; tags: string[]; summary?: string; evidence?: Evidence }
@@ -205,10 +260,17 @@ export interface ApiOperation { method: string; path: string; operationId?: stri
 export interface OwnershipRule { pattern: string; owners: string[] }
 
 /** Facts from configuration, API specs, migrations, ownership. Secret values are already redacted. */
+export interface ColumnFact { name: string; dataType: string; nullable: boolean; primaryKey: boolean; references?: { table: string; column: string } }
+
+export interface TableFact { name: string; columns: ColumnFact[]; evidence?: Evidence }
+
 export interface ContextFacts {
   properties: Record<string, string>;
+  profiles?: Record<string, Record<string, string>>;
+  propertySources?: Record<string, string>;
   apiOperations: ApiOperation[];
   tables: string[];
+  schema?: TableFact[];
   ownership: OwnershipRule[];
 }
 

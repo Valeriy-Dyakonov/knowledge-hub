@@ -134,3 +134,9 @@ table.matrix { border-collapse: separate; border-spacing: 0; font-size: 13px; }
 .diagram-viewport:active { cursor: grabbing; }
 .diagram-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .diagram-canvas g.node.clickable { cursor: pointer; }
+
+/* database and configuration */
+.ds-item { padding: 4px 8px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-group-name.on { color: var(--accent); }
+.warn-text { color: var(--warn); }
+table.grid th[scope], table.grid tbody th { width: 30%; }

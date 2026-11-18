@@ -59,10 +59,10 @@ export function Diagram(props: { text: string; nodes?: Record<string, string>; o
           el.setAttribute("width", String(size.current.w));
           el.setAttribute("height", String(size.current.h));
         }
-        // Mermaid gives flowchart nodes DOM ids like "...flowchart-n3-12": map them back to our node keys.
+        // Mermaid gives nodes DOM ids like "...flowchart-n3-12" or "...entity-refunds-0": map them back to our node keys.
         if (props.nodes) {
           for (const node of canvas.current.querySelectorAll<SVGGElement>("g.node")) {
-            const id = /flowchart-(n\d+)-\d+$/.exec(node.id)?.[1];
+            const id = /(?:flowchart|entity)-(\w+?)-\d+$/.exec(node.id)?.[1];
             const key = id ? props.nodes[id] : undefined;
             if (!key) continue;
             node.classList.add("clickable");

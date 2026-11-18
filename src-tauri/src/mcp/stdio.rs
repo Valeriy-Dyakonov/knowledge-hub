@@ -95,7 +95,7 @@ mod tests {
         let replies: Vec<Value> = String::from_utf8(out).unwrap().lines().map(|l| serde_json::from_str(l).unwrap()).collect();
         assert_eq!(replies.len(), 6, "the notification gets no reply");
         assert_eq!(replies[0]["result"]["protocolVersion"], "2025-03-26");
-        assert_eq!(replies[1]["result"]["tools"].as_array().unwrap().len(), 7);
+        assert_eq!(replies[1]["result"]["tools"].as_array().unwrap().len(), 9);
         assert_eq!(replies[2]["result"]["isError"], false);
         assert_eq!(replies[2]["result"]["structuredContent"]["meta"]["reviewStatus"], "DRAFT");
         assert_eq!(replies[3]["result"]["isError"], true);

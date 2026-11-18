@@ -131,6 +131,31 @@ fn async_methods(class: &KtClass) -> Vec<&Function> {
     class.functions.iter().filter(|f| whole || f.annotations.iter().any(|a| a.name == "Async")).collect()
 }
 
+/// `${key:default}` placeholders in a string: (key, default).
+pub fn placeholders(text: &str) -> Vec<(String, Option<String>)> {
+    let mut out = Vec::new();
+    let mut rest = text;
+    while let Some(start) = rest.find("${") {
+        let after = &rest[start + 2..];
+        let Some(end) = after.find('}') else { break };
+        let inner = &after[..end];
+        let (key, default) = match inner.split_once(':') {
+            Some((k, d)) => (k.trim().to_string(), Some(d.to_string())),
+            None => (inner.trim().to_string(), None),
+        };
+        if !key.is_empty() {
+            out.push((key, default));
+        }
+        rest = &after[end + 1..];
+    }
+    out
+}
+
+/// Spring relaxed binding of a field: `maxAmount` -> `max-amount`.
+pub fn kebab_case(name: &str) -> String {
+    snake_case(name).replace('_', "-")
+}
+
 fn join_path(prefix: &str, path: &str) -> String {
     let joined = format!("/{}/{}", prefix.trim_matches('/'), path.trim_matches('/'));
     let mut out = String::new();
@@ -234,6 +259,8 @@ impl<'a> Analysis<'a> {
         for bean in &beans {
             self.component(bean);
         }
+        self.entities();
+        self.config_usages(&beans);
         for bean in &beans {
             self.triggers(bean);
             self.bodies(bean);
@@ -630,6 +657,107 @@ impl<'a> Analysis<'a> {
         }
     }
 
+    /// JPA entities: table, columns (named by `@Column`/`@JoinColumn` or Spring's snake_case), keys, relations.
+    fn entities(&mut self) {
+        for f in self.index.files {
+            for c in f.classes.iter().filter(|c| c.annotation(&["Entity", "Document"]).is_some()) {
+                let table = c
+                    .annotation(&["Table"])
+                    .and_then(|a| a.values(&["name", "value"]).into_iter().next())
+                    .or_else(|| c.annotation(&["Document"]).and_then(|a| a.values(&["collection", "value"]).into_iter().next()))
+                    .unwrap_or_else(|| snake_case(&c.name));
+                let fields = c
+                    .constructor_params
+                    .iter()
+                    .map(|p| (p.name.clone(), p.type_name.clone(), p.nullable, p.annotations.clone()))
+                    .chain(c.properties.iter().filter(|p| !p.modifiers.iter().any(|m| m == "const")).map(|p| (p.name.clone(), p.type_name.clone().unwrap_or_default(), p.nullable, p.annotations.clone())));
+                let mut columns = Vec::new();
+                for (name, ty, nullable, anns) in fields {
+                    let has = |n: &[&str]| anns.iter().any(|a| n.contains(&a.name.as_str()));
+                    if has(&["Transient", "OneToMany", "ManyToMany", "Embedded"]) {
+                        continue;
+                    }
+                    let relation = has(&["ManyToOne", "OneToOne"]);
+                    let named = |ann: &str| anns.iter().find(|a| a.name == ann).and_then(|a| a.values(&["name", "value"]).into_iter().next());
+                    let column = if relation { named("JoinColumn").unwrap_or_else(|| format!("{}_id", snake_case(&name))) } else { named("Column").unwrap_or_else(|| snake_case(&name)) };
+                    columns.push(EntityColumnFact {
+                        field: name,
+                        column,
+                        kotlin_type: ty.clone(),
+                        nullable,
+                        primary_key: has(&["Id", "EmbeddedId"]),
+                        references_entity: relation.then(|| self.index.resolve(&ty, f)),
+                    });
+                }
+                let evidence = self.ev(f, c.start_line, c.header_end_line);
+                self.facts.entities.push(EntityFact { id: c.fqn.clone(), table, columns, evidence });
+            }
+        }
+    }
+
+    /// Where code reads configuration: `@Value`, placeholders in annotations, `@ConfigurationProperties` (and the
+    /// beans that inject them), `Environment.getProperty`.
+    fn config_usages(&mut self, beans: &[Bean]) {
+        let mut out: Vec<ConfigUsageFact> = Vec::new();
+        let usage = |key: String, component: &str, method: Option<String>, kind: &str, default: Option<String>, evidence: Option<Evidence>| ConfigUsageFact {
+            key, component_id: component.to_string(), method, kind: kind.into(), default, evidence,
+        };
+        // @ConfigurationProperties classes: the prefix and each field of it.
+        let mut prefixes: BTreeMap<String, String> = BTreeMap::new();
+        for f in self.index.files {
+            for c in f.classes.iter() {
+                let Some(prefix) = c.annotation(&["ConfigurationProperties"]).and_then(|a| a.values(&["prefix", "value"]).into_iter().next()) else { continue };
+                prefixes.insert(c.fqn.clone(), prefix.clone());
+                let ev = self.ev(f, c.start_line, c.header_end_line);
+                out.push(usage(format!("{prefix}.*"), &c.fqn, None, "properties", None, ev.clone()));
+                for p in c.constructor_params.iter().map(|p| p.name.clone()).chain(c.properties.iter().map(|p| p.name.clone())) {
+                    out.push(usage(format!("{prefix}.{}", kebab_case(&p)), &c.fqn, None, "properties", None, ev.clone()));
+                }
+            }
+        }
+        for b in beans {
+            let header = self.ev(b.file, b.class.start_line, b.class.header_end_line);
+            for v in b.values.values() {
+                for (key, default) in placeholders(v) {
+                    out.push(usage(key, &b.class.fqn, None, "value", default, header.clone()));
+                }
+            }
+            for a in &b.class.annotations {
+                for s in a.args.iter().flat_map(|x| x.strings.iter()) {
+                    for (key, default) in placeholders(s) {
+                        out.push(usage(key, &b.class.fqn, None, "annotation", default, header.clone()));
+                    }
+                }
+            }
+            for f in &b.class.functions {
+                let fev = self.fn_ev(b.file, f);
+                for a in &f.annotations {
+                    for s in a.args.iter().flat_map(|x| x.strings.iter()) {
+                        for (key, default) in placeholders(s) {
+                            out.push(usage(key, &b.class.fqn, Some(f.name.clone()), "annotation", default, fev.clone()));
+                        }
+                    }
+                }
+                for call in &f.calls {
+                    let env = call.receiver.as_ref().and_then(|r| b.injected.get(r)).is_some_and(|t| simple(t) == "Environment");
+                    if env && matches!(call.method.as_str(), "getProperty" | "getRequiredProperty" | "containsProperty") {
+                        if let Some(key) = call.args.first().and_then(|a| a.string.clone()) {
+                            let default = call.args.get(1).and_then(|a| a.string.clone());
+                            out.push(usage(key, &b.class.fqn, Some(f.name.clone()), "environment", default, self.ev(b.file, call.line, call.line)));
+                        }
+                    }
+                }
+            }
+            // A bean that injects a @ConfigurationProperties class depends on its whole prefix.
+            for ty in b.injected.values() {
+                if let Some(prefix) = prefixes.get(ty) {
+                    out.push(usage(format!("{prefix}.*"), &b.class.fqn, None, "properties", None, header.clone()));
+                }
+            }
+        }
+        self.facts.config_usages.extend(out);
+    }
+
     fn unresolved_class(&mut self, b: &Bean, reason: &str, detail: &str) {
         let ev = self.ev(b.file, b.class.start_line, b.class.header_end_line);
         self.facts.unresolved.push(UnresolvedFact { component_id: b.class.fqn.clone(), method: String::new(), reason: reason.into(), detail: detail.into(), attributes: BTreeMap::new(), evidence: ev });
@@ -646,6 +774,13 @@ mod tests {
         assert_eq!(sql_tables("INSERT INTO audit_log (x) SELECT y FROM refunds"), (vec!["audit_log".to_string()], vec!["refunds".to_string()]));
         assert_eq!(sql_tables("select * from a join b on a.id = b.id"), (vec![], vec!["a".to_string(), "b".to_string()]));
         assert_eq!(sql_tables("delete from refunds where id = ?"), (vec!["refunds".to_string()], vec![]));
+    }
+
+    #[test]
+    fn reads_placeholders() {
+        assert_eq!(placeholders("${a.b}"), vec![("a.b".to_string(), None)]);
+        assert_eq!(placeholders("x ${a:1} ${b.c:0 0 * * * *}"), vec![("a".to_string(), Some("1".to_string())), ("b.c".to_string(), Some("0 0 * * * *".to_string()))]);
+        assert_eq!(kebab_case("maxAmount"), "max-amount");
     }
 
     #[test]

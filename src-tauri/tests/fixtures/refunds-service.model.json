@@ -82,10 +82,10 @@
         "businessName": {},
         "evidence": {
           "commit": "unknown",
-          "fingerprint": "9a95a56133e9d2a9",
+          "fingerprint": "6d0d0fa55ecf121c",
           "lines": {
-            "end": 12,
-            "start": 8
+            "end": 16,
+            "start": 10
           },
           "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
           "repo": "refunds-service"
@@ -1864,10 +1864,10 @@
           },
           "evidence": {
             "commit": "unknown",
-            "fingerprint": "95432d34e26e6072",
+            "fingerprint": "24a0f2c22ae5242a",
             "lines": {
-              "end": 14,
-              "start": 13
+              "end": 18,
+              "start": 17
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -1899,10 +1899,10 @@
           "confidence": "HIGH",
           "evidence": {
             "commit": "unknown",
-            "fingerprint": "95432d34e26e6072",
+            "fingerprint": "24a0f2c22ae5242a",
             "lines": {
-              "end": 14,
-              "start": 13
+              "end": 18,
+              "start": 17
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -1927,8 +1927,8 @@
             "commit": "unknown",
             "fingerprint": "8c0271841668fd14",
             "lines": {
-              "end": 16,
-              "start": 16
+              "end": 21,
+              "start": 21
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -1953,8 +1953,8 @@
             "commit": "unknown",
             "fingerprint": "95a5e112ccaa4e82",
             "lines": {
-              "end": 15,
-              "start": 15
+              "end": 19,
+              "start": 19
             },
             "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
             "repo": "refunds-service"
@@ -2031,10 +2031,10 @@
           "evidence": [
             {
               "commit": "unknown",
-              "fingerprint": "95432d34e26e6072",
+              "fingerprint": "24a0f2c22ae5242a",
               "lines": {
-                "end": 14,
-                "start": 13
+                "end": 18,
+                "start": 17
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2064,10 +2064,10 @@
           "evidence": [
             {
               "commit": "unknown",
-              "fingerprint": "95432d34e26e6072",
+              "fingerprint": "24a0f2c22ae5242a",
               "lines": {
-                "end": 14,
-                "start": 13
+                "end": 18,
+                "start": 17
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2100,10 +2100,10 @@
           "evidence": [
             {
               "commit": "unknown",
-              "fingerprint": "95432d34e26e6072",
+              "fingerprint": "24a0f2c22ae5242a",
               "lines": {
-                "end": 14,
-                "start": 13
+                "end": 18,
+                "start": 17
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2140,8 +2140,8 @@
               "commit": "unknown",
               "fingerprint": "8c0271841668fd14",
               "lines": {
-                "end": 16,
-                "start": 16
+                "end": 21,
+                "start": 21
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -2178,8 +2178,8 @@
               "commit": "unknown",
               "fingerprint": "95a5e112ccaa4e82",
               "lines": {
-                "end": 15,
-                "start": 15
+                "end": 19,
+                "start": 19
               },
               "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
               "repo": "refunds-service"
@@ -3450,5 +3450,403 @@
       ],
       "owner": "@team-refunds"
     }
-  ]
+  ],
+  "database": {
+    "datasources": [
+      {
+        "property": "spring.datasource.url",
+        "kind": "postgresql",
+        "host": "db:5432",
+        "database": "refunds",
+        "url": "jdbc:postgresql://db:5432/refunds"
+      }
+    ],
+    "tables": [
+      {
+        "name": "audit_log",
+        "columns": [
+          {
+            "dataType": "varchar(255)",
+            "name": "text",
+            "nullable": true,
+            "primaryKey": false
+          },
+          {
+            "dataType": "uuid",
+            "name": "refund_id",
+            "nullable": true,
+            "primaryKey": false,
+            "references": {
+              "column": "id",
+              "table": "refunds"
+            }
+          }
+        ],
+        "source": "migration",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "f8e7db4dbb085e2e",
+          "lines": {
+            "end": 7,
+            "start": 7
+          },
+          "path": "src/main/resources/db/migration/V1__init.sql",
+          "repo": "refunds-service"
+        }
+      },
+      {
+        "name": "refund_items",
+        "columns": [
+          {
+            "dataType": "bigserial",
+            "name": "id",
+            "nullable": false,
+            "primaryKey": true,
+            "field": "id"
+          },
+          {
+            "dataType": "uuid",
+            "name": "refund_id",
+            "nullable": false,
+            "primaryKey": false,
+            "references": {
+              "column": "id",
+              "table": "refunds"
+            },
+            "field": "refund"
+          },
+          {
+            "dataType": "varchar(64)",
+            "name": "sku",
+            "nullable": false,
+            "primaryKey": false,
+            "field": "stockKeepingUnit"
+          },
+          {
+            "dataType": "int",
+            "name": "quantity",
+            "nullable": false,
+            "primaryKey": false,
+            "field": "quantity"
+          }
+        ],
+        "source": "both",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "b73e45f24d90b81a",
+          "lines": {
+            "end": 2,
+            "start": 2
+          },
+          "path": "src/main/resources/db/migration/V2__items.sql",
+          "repo": "refunds-service"
+        },
+        "entity": "com.example.refunds.persistence.RefundItemEntity"
+      },
+      {
+        "name": "refunds",
+        "columns": [
+          {
+            "dataType": "uuid",
+            "name": "id",
+            "nullable": false,
+            "primaryKey": true,
+            "field": "id"
+          },
+          {
+            "dataType": "numeric",
+            "name": "amount",
+            "nullable": false,
+            "primaryKey": false,
+            "field": "amount"
+          },
+          {
+            "dataType": "varchar(32)",
+            "name": "status",
+            "nullable": false,
+            "primaryKey": false,
+            "field": "status"
+          },
+          {
+            "dataType": "text",
+            "name": "refund_reason",
+            "nullable": true,
+            "primaryKey": false
+          },
+          {
+            "dataType": "timestamp",
+            "name": "created_at",
+            "nullable": false,
+            "primaryKey": false
+          }
+        ],
+        "source": "both",
+        "evidence": {
+          "commit": "unknown",
+          "fingerprint": "88ccc302a4957ab7",
+          "lines": {
+            "end": 1,
+            "start": 1
+          },
+          "path": "src/main/resources/db/migration/V1__init.sql",
+          "repo": "refunds-service"
+        },
+        "entity": "com.example.refunds.persistence.RefundEntity"
+      }
+    ]
+  },
+  "config": {
+    "profiles": [
+      "prod"
+    ],
+    "properties": [
+      {
+        "key": "clients.payments.api-key",
+        "profiles": {},
+        "usages": [],
+        "secret": true,
+        "missing": false,
+        "source": "src/main/resources/application.yml:17",
+        "value": "***"
+      },
+      {
+        "key": "clients.payments.url",
+        "profiles": {
+          "prod": "https://payments.prod.example.com"
+        },
+        "usages": [
+          {
+            "componentId": "com.example.refunds.client.PaymentsClient",
+            "kind": "annotation",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "912b4fbbc7f03e98",
+              "lines": {
+                "end": 10,
+                "start": 9
+              },
+              "path": "src/main/kotlin/com/example/refunds/client/PaymentsClient.kt",
+              "repo": "refunds-service"
+            }
+          }
+        ],
+        "secret": false,
+        "missing": false,
+        "source": "src/main/resources/application.yml:5",
+        "value": "http://payments:8080"
+      },
+      {
+        "key": "payments.topics.completed",
+        "profiles": {
+          "prod": "prod.payments.completed"
+        },
+        "usages": [
+          {
+            "componentId": "com.example.refunds.messaging.PaymentEventsConsumer",
+            "method": "onPaymentCompleted",
+            "kind": "annotation",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "cc7cad2be4a13ac0",
+              "lines": {
+                "end": 15,
+                "start": 14
+              },
+              "path": "src/main/kotlin/com/example/refunds/messaging/PaymentEventsConsumer.kt",
+              "repo": "refunds-service"
+            }
+          }
+        ],
+        "secret": false,
+        "missing": false,
+        "source": "src/main/resources/application.yml:10",
+        "value": "payments.completed"
+      },
+      {
+        "key": "refunds.limits.daily-count",
+        "profiles": {},
+        "usages": [
+          {
+            "componentId": "com.example.refunds.config.RefundLimits",
+            "kind": "properties",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "783b8f2ea10bc8aa",
+              "lines": {
+                "end": 9,
+                "start": 5
+              },
+              "path": "src/main/kotlin/com/example/refunds/config/RefundLimits.kt",
+              "repo": "refunds-service"
+            }
+          },
+          {
+            "componentId": "com.example.refunds.jobs.ReconciliationJob",
+            "kind": "properties",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "6d0d0fa55ecf121c",
+              "lines": {
+                "end": 16,
+                "start": 10
+              },
+              "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+              "repo": "refunds-service"
+            },
+            "viaPrefix": "refunds.limits.*"
+          }
+        ],
+        "secret": false,
+        "missing": false
+      },
+      {
+        "key": "refunds.limits.max-amount",
+        "profiles": {
+          "prod": "100000"
+        },
+        "usages": [
+          {
+            "componentId": "com.example.refunds.config.RefundLimits",
+            "kind": "properties",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "783b8f2ea10bc8aa",
+              "lines": {
+                "end": 9,
+                "start": 5
+              },
+              "path": "src/main/kotlin/com/example/refunds/config/RefundLimits.kt",
+              "repo": "refunds-service"
+            },
+            "viaPrefix": "refunds.limits.*"
+          },
+          {
+            "componentId": "com.example.refunds.jobs.ReconciliationJob",
+            "kind": "properties",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "6d0d0fa55ecf121c",
+              "lines": {
+                "end": 16,
+                "start": 10
+              },
+              "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+              "repo": "refunds-service"
+            },
+            "viaPrefix": "refunds.limits.*"
+          }
+        ],
+        "secret": false,
+        "missing": false,
+        "source": "src/main/resources/application-prod.yml:9"
+      },
+      {
+        "key": "refunds.reconciliation.cron",
+        "profiles": {},
+        "usages": [
+          {
+            "componentId": "com.example.refunds.jobs.ReconciliationJob",
+            "method": "reconcile",
+            "kind": "annotation",
+            "default": "0 0 * * * *",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "24a0f2c22ae5242a",
+              "lines": {
+                "end": 18,
+                "start": 17
+              },
+              "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+              "repo": "refunds-service"
+            }
+          }
+        ],
+        "secret": false,
+        "missing": false
+      },
+      {
+        "key": "refunds.region",
+        "profiles": {},
+        "usages": [
+          {
+            "componentId": "com.example.refunds.jobs.ReconciliationJob",
+            "method": "reconcile",
+            "kind": "environment",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "9c2fc62ef2f11304",
+              "lines": {
+                "end": 20,
+                "start": 20
+              },
+              "path": "src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt",
+              "repo": "refunds-service"
+            }
+          }
+        ],
+        "secret": false,
+        "missing": true
+      },
+      {
+        "key": "refunds.topics.created",
+        "profiles": {},
+        "usages": [
+          {
+            "componentId": "com.example.refunds.events.RefundEventsListener",
+            "kind": "value",
+            "evidence": {
+              "commit": "unknown",
+              "fingerprint": "810aced5b5ac24f3",
+              "lines": {
+                "end": 13,
+                "start": 9
+              },
+              "path": "src/main/kotlin/com/example/refunds/events/RefundEventsListener.kt",
+              "repo": "refunds-service"
+            }
+          }
+        ],
+        "secret": false,
+        "missing": false,
+        "source": "src/main/resources/application.yml:13",
+        "value": "refunds.created"
+      },
+      {
+        "key": "spring.application.name",
+        "profiles": {},
+        "usages": [],
+        "secret": false,
+        "missing": false,
+        "source": "src/main/resources/application.yml:3",
+        "value": "refunds"
+      },
+      {
+        "key": "spring.datasource.password",
+        "profiles": {},
+        "usages": [],
+        "secret": true,
+        "missing": false,
+        "source": "src/main/resources/application.yml:7",
+        "value": "***"
+      },
+      {
+        "key": "spring.datasource.url",
+        "profiles": {},
+        "usages": [],
+        "secret": false,
+        "missing": false,
+        "source": "src/main/resources/application.yml:5",
+        "value": "jdbc:postgresql://db:5432/refunds"
+      },
+      {
+        "key": "spring.datasource.username",
+        "profiles": {},
+        "usages": [],
+        "secret": false,
+        "missing": false,
+        "source": "src/main/resources/application.yml:6",
+        "value": "refunds"
+      }
+    ]
+  }
 }

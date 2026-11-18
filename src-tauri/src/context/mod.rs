@@ -39,7 +39,15 @@ mod tests {
         assert_eq!(p["clients.payments.url"], "http://payments:8080");
         assert_eq!(p["spring.datasource.password"], crate::redact::MASK);
         assert_eq!(p["clients.payments.api-key"], crate::redact::MASK);
-        assert_eq!(facts.tables, vec!["refunds", "audit_log"]);
+        assert_eq!(facts.tables, vec!["refunds", "audit_log", "refund_items"]);
+        let refunds = &facts.schema[0];
+        let cols: Vec<&str> = refunds.columns.iter().map(|c| c.name.as_str()).collect();
+        assert_eq!(cols, vec!["id", "amount", "status", "refund_reason", "created_at"], "V10 renamed reason; tmp_import dropped");
+        assert!(refunds.columns[0].primary_key);
+        assert_eq!(refunds.evidence.as_ref().unwrap().path, "src/main/resources/db/migration/V1__init.sql");
+        let items = &facts.schema[2];
+        assert_eq!(items.columns.iter().find(|c| c.name == "refund_id").unwrap().references.as_ref().unwrap().table, "refunds");
+        assert_eq!(facts.profiles["prod"]["payments.topics.completed"], "prod.payments.completed");
         let ops: Vec<String> = facts.api_operations.iter().map(|o| format!("{} {} {:?} {:?}", o.method, o.path, o.operation_id, o.tags)).collect();
         assert_eq!(
             ops,

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, inTauri } from "./api";
+import Config from "./components/config/Config";
+import Database from "./components/database/Database";
 import Diagrams from "./components/diagrams/Diagrams";
 import Features from "./components/features/Features";
 import Repos from "./components/repos/Repos";
@@ -11,8 +13,8 @@ import { useRunning } from "./components/run/runStore";
 import { useLocale, useT } from "./i18n";
 import { defaultSettings, reviewerOf, type GitUser, type RepoEntry, type Settings as S } from "./types";
 
-type Tab = "repos" | "run" | "features" | "diagrams" | "review";
-const TABS: Tab[] = ["repos", "run", "features", "diagrams", "review"];
+type Tab = "repos" | "run" | "features" | "diagrams" | "database" | "config" | "review";
+const TABS: Tab[] = ["repos", "run", "features", "diagrams", "database", "config", "review"];
 const REPO_KEY = "hub.repo";
 
 function readSelected(): string | null {
@@ -95,6 +97,8 @@ export default function App() {
               {tab === "run" && repo && <RunScreen repo={repo} settings={settings} />}
               {tab === "features" && repo && <Features repo={repo} focus={featureFocus} />}
               {tab === "diagrams" && repo && <Diagrams repo={repo} onOpenFeature={openFeature} />}
+              {tab === "database" && repo && <Database repo={repo} onOpenFeature={openFeature} />}
+              {tab === "config" && repo && <Config repo={repo} onOpenFeature={openFeature} />}
               {tab === "review" && repo && <Review repo={repo} settings={settings} reviewer={reviewerOf(settings, git)} />}
             </main>
           </div>

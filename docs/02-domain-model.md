@@ -63,6 +63,14 @@ type Evidence = {
 
 У `Feature`, `Component`, `Sink` есть `technicalName` и `businessName` (локализуемое, ru/en). Диаграммы для нетехнических читателей используют `businessName`. Бизнес-название — отдельный claim (`DESCRIBES`) и тоже ревьюится.
 
+## База данных и конфигурация
+
+Справочные факты рядом с фичами (`database` и `config` в модели, файлы `database.yaml` и `config.yaml`). Это не claims: они получены детерминированно, у каждого есть evidence, и по одному они не ревьюятся; в MCP идут с `reviewStatus = STATIC`.
+
+- **Таблица** (`TableInfo`): колонки (тип, nullable, PK, FK), JPA-сущность и поле для колонки, источник структуры: `migration` (Flyway SQL / Liquibase YAML/XML, применяются по порядку версий: create, alter add/drop/rename column, add constraint, rename table, drop), `entity` (только `@Entity`/`@Document`: `@Table`, `@Column`, `@JoinColumn`, `@Id`, `@ManyToOne`/`@OneToOne`), `both`, `code` (таблица видна только в репозитории/запросе). Какие фичи читают и пишут таблицу — из рёбер потоков к стоку `db_table:<имя>`.
+- **Источник данных** (`Datasource`): `*.datasource.url`, `r2dbc.url`, `mongodb.uri`, `flyway/liquibase.url` в базе и в профилях; хранится без логина и пароля.
+- **Свойство** (`ConfigProperty`): значение без профиля, значения по профилям (`application-<p>.yml`, документы с `spring.config.activate.on-profile`), где задано, кто читает: `@Value`, плейсхолдеры в аннотациях (`@Scheduled`, `@KafkaListener`...), `Environment.getProperty`, `@ConfigurationProperties(prefix)` (чтение префикса прикрепляется ко всем свойствам под ним). Секреты маскируются (`***`). `missing` — код читает, но значения нет нигде и нет default: должно прийти из окружения.
+
 ## Версионирование схемы
 
 `schemaVersion` в `service.yaml`. Миграции модели — отдельный механизм; без обратно-совместимого чтения старой схемы формат на диске не менять.

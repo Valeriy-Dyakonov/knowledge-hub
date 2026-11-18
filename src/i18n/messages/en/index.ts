@@ -1,5 +1,7 @@
 import type { ru } from "../ru";
 import { common } from "./common";
+import { config } from "./config";
+import { database } from "./database";
 import { diagrams } from "./diagrams";
 import { errors } from "./errors";
 import { features } from "./features";
@@ -10,4 +12,4 @@ import { run } from "./run";
 import { settings } from "./settings";
 import { shell } from "./shell";
 
-export const en: typeof ru = { common, diagrams, errors, features, render, repos, review, run, settings, shell };
+export const en: typeof ru = { common, config, database, diagrams, errors, features, render, repos, review, run, settings, shell };

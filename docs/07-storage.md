@@ -8,6 +8,9 @@
 knowledge/
   <service-id>/
     service.yaml                 # schemaVersion, имя, репозиторий, ветка, стек, последний проанализированный коммит
+    database.yaml                # схема БД: источники данных (без учётных данных), таблицы, колонки, ключи, сущности
+    config.yaml                  # свойства: значения по профилям (секреты замаскированы), кто их читает
+    database.md, config.md       # СГЕНЕРИРОВАНО: справочники БД и конфигурации
     features/
       <feature-id>/
         feature.yaml             # модель: триггеры, шаги, стоки, claims, статусы, evidence
@@ -16,6 +19,7 @@ knowledge/
     diagrams/
       context.mmd                # СГЕНЕРИРОВАНО: L1
       components.mmd             # СГЕНЕРИРОВАНО: L2
+      er.mmd                     # СГЕНЕРИРОВАНО: ER-диаграмма
     .state/                      # не коммитится: hub.db (запуски, чекпойнты, очередь ревью, журнал), index.db (FTS5), history/
 ```
 

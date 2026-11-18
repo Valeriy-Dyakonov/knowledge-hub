@@ -38,6 +38,13 @@ pub fn summary(f: &SourceFacts) -> String {
     for e in &f.events {
         lines.push(format!("EVENT {}.{} -> {}{}", e.component_id, e.method, e.event_type.as_deref().unwrap_or("?"), at(&e.evidence)));
     }
+    for e in &f.entities {
+        let cols: Vec<String> = e.columns.iter().map(|c| format!("{}={}:{}{}{}{}", c.field, c.column, c.kotlin_type, if c.nullable { "?" } else { "" }, if c.primary_key { ":pk" } else { "" }, c.references_entity.as_ref().map(|r| format!("->{r}")).unwrap_or_default())).collect();
+        lines.push(format!("ENTITY {} table={} [{}]{}", e.id, e.table, cols.join(", "), at(&e.evidence)));
+    }
+    for c in &f.config_usages {
+        lines.push(format!("CONFIG {} <- {}{} {}{}{}", c.key, c.component_id, c.method.as_ref().map(|m| format!(".{m}")).unwrap_or_default(), c.kind, c.default.as_ref().map(|d| format!(" default={d}")).unwrap_or_default(), at(&c.evidence)));
+    }
     for u in &f.unresolved {
         lines.push(format!("UNRESOLVED {}.{} {} {}{}", u.component_id, u.method, u.reason, u.detail, at(&u.evidence)));
     }

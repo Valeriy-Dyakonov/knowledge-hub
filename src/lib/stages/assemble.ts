@@ -1,5 +1,7 @@
 import { SCHEMA_VERSION, type Claim, type Evidence, type Feature, type KnowledgeModel, type OwnershipRule, type SubjectRef } from "../../types";
 import { EDGE_CLAIM, isUnverified, newClaim } from "../model/claims";
+import { buildConfig } from "../model/config";
+import { buildDatabase } from "../model/database";
 import { mergeModels } from "../model/merge";
 import type { Descriptions, FeatureCandidate, RunContext, Stage } from "./types";
 
@@ -63,6 +65,9 @@ export function assemble(ctx: RunContext): KnowledgeModel {
     },
     catalog: { components, sinks, claims: catalogClaims },
     features,
+    // Reference facts with evidence: regenerated on every run, not merged with review.
+    database: scan ? buildDatabase(scan.facts, scan.context, sinks) : undefined,
+    config: scan ? buildConfig(scan.facts, scan.context) : undefined,
   };
 }
 

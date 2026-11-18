@@ -218,6 +218,12 @@ pub struct KnowledgeModel {
     pub catalog: Catalog,
     #[serde(default)]
     pub features: Vec<Feature>,
+    /// Tables, columns, keys, datasources (shape owned by `DatabaseInfo` in src/types.ts).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub database: Option<serde_json::Value>,
+    /// Properties, values per profile, who reads them (`ConfigInfo` in src/types.ts).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

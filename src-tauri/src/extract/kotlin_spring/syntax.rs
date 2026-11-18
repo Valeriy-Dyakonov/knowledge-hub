@@ -77,6 +77,8 @@ impl Annotation {
 pub struct Param {
     pub name: String,
     pub type_name: String,
+    /// The type is marked `?`.
+    pub nullable: bool,
     pub annotations: Vec<Annotation>,
 }
 
@@ -120,6 +122,7 @@ pub struct Property {
     pub annotations: Vec<Annotation>,
     pub modifiers: Vec<String>,
     pub string_value: Option<String>,
+    pub nullable: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -522,6 +525,7 @@ impl<'s> Walker<'s> {
         Param {
             name: find(n, "identifier").map(|i| self.text(i).to_string()).unwrap_or_default(),
             type_name: named(n).into_iter().find_map(|c| (c.kind() != "modifiers").then(|| self.type_name_of(c)).flatten()).unwrap_or_default(),
+            nullable: named(n).into_iter().any(|c| c.kind() == "nullable_type"),
             annotations: named(n).into_iter().filter(|c| c.kind() == "modifiers" || c.kind() == "parameter_modifiers").flat_map(|m| self.annotations(m)).collect(),
         }
     }
@@ -566,6 +570,7 @@ impl<'s> Walker<'s> {
             annotations: modifiers_node.map(|m| self.annotations(m)).unwrap_or_default(),
             modifiers,
             string_value: find(n, "string_literal").map(|s| self.string(s)),
+            nullable: var.is_some_and(|v| named(v).into_iter().any(|c| c.kind() == "nullable_type")),
         }
     }
 

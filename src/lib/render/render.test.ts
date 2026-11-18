@@ -37,7 +37,7 @@ describe("renderers", () => {
 
   it("produce diagrams that Mermaid parses", async () => {
     const diagrams = render(model).filter((f) => f.relativePath.endsWith(".mmd"));
-    expect(diagrams.length).toBe(3 + model.features.length);
+    expect(diagrams.length).toBe(4 + model.features.length);
     for (const d of diagrams) await expect(mermaid.parse(d.content), d.relativePath).resolves.toBeTruthy();
   });
 

@@ -404,13 +404,13 @@ _Описание ещё не составлено._
 
 ## Что запускает
 
-- `schedule 0 0 * * * * ReconciliationJob.reconcile` — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:13`
+- `schedule 0 0 * * * * ReconciliationJob.reconcile` — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:17`
 
 ## Поток
 
-1. schedule 0 0 \* \* \* \* ReconciliationJob.reconcile вызывает **ReconciliationJob** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:13`
-2. ReconciliationJob вызывает API **ledger.example.com** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:16`
-3. ReconciliationJob читает **Возвраты** (`findAllByStatus`) через RefundRepository — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:15`
+1. schedule 0 0 \* \* \* \* ReconciliationJob.reconcile вызывает **ReconciliationJob** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:17`
+2. ReconciliationJob вызывает API **ledger.example.com** (`reconcile`) — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:21`
+3. ReconciliationJob читает **Возвраты** (`findAllByStatus`) через RefundRepository — `src/main/kotlin/com/example/refunds/jobs/ReconciliationJob.kt:19`
 
 ```mermaid
 sequenceDiagram
@@ -857,3 +857,115 @@ sequenceDiagram
   %% claim c-1633e71e0f8c5417
   %% claim c-0f71f9f289845d0d
   p3->>p4: читает: findById (RefundRepository)
+
+=== database.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# База данных
+
+## Источники данных
+
+- `postgresql` `db:5432` / `refunds` — `spring.datasource.url`
+
+## Таблицы
+
+### audit\_log
+
+- Откуда известна структура: миграции — `src/main/resources/db/migration/V1__init.sql`
+
+| Колонка | Тип | Ключи и ограничения | Поле сущности |
+|---|---|---|---|
+| `text` | varchar(255) |  |  |
+| `refund_id` | uuid | FK → refunds.id |  |
+
+### refund\_items
+
+- Откуда известна структура: миграции и JPA-сущность — `src/main/resources/db/migration/V2__items.sql`
+- Сущность: `com.example.refunds.persistence.RefundItemEntity`
+
+| Колонка | Тип | Ключи и ограничения | Поле сущности |
+|---|---|---|---|
+| `id` | bigserial | PK | `id` |
+| `refund_id` | uuid | FK → refunds.id, NOT NULL | `refund` |
+| `sku` | varchar(64) | NOT NULL | `stockKeepingUnit` |
+| `quantity` | int | NOT NULL | `quantity` |
+
+### refunds
+
+- Откуда известна структура: миграции и JPA-сущность — `src/main/resources/db/migration/V1__init.sql`
+- Сущность: `com.example.refunds.persistence.RefundEntity`
+- Используется в фичах: POST /api/v1/refunds/{id}/approve (пишет); async CacheWarmer.warmUp (читает); kafka payments.completed (читает, пишет); schedule 0 0 \* \* \* \* ReconciliationJob.reconcile (читает); Создание возврата (пишет); GET /api/v1/refunds/{id} (читает)
+
+| Колонка | Тип | Ключи и ограничения | Поле сущности |
+|---|---|---|---|
+| `id` | uuid | PK | `id` |
+| `amount` | numeric | NOT NULL | `amount` |
+| `status` | varchar(32) | NOT NULL | `status` |
+| `refund_reason` | text |  |  |
+| `created_at` | timestamp | NOT NULL |  |
+
+## ER-диаграмма
+
+```mermaid
+erDiagram
+  audit_log {
+    varchar(255) text
+    uuid refund_id FK
+  }
+  refund_items {
+    bigserial id PK
+    uuid refund_id FK "not null"
+    varchar(64) sku "not null"
+    int quantity "not null"
+  }
+  refunds {
+    uuid id PK
+    numeric amount "not null"
+    varchar(32) status "not null"
+    text refund_reason
+    timestamp created_at "not null"
+  }
+  audit_log }o--o| refunds : "refund_id"
+  refund_items }o--|| refunds : "refund_id"
+```
+
+=== config.md
+<!-- Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью. -->
+# Конфигурация
+
+| Свойство | Значение по умолчанию | профиль prod | Кто читает |
+|---|---|---|---|
+| `clients.payments.api-key` (секрет, скрыт) | `***` |  |  |
+| `clients.payments.url` | `http://payments:8080` | `https://payments.prod.example.com` | `PaymentsClient` |
+| `payments.topics.completed` | `payments.completed` | `prod.payments.completed` | `PaymentEventsConsumer.onPaymentCompleted` |
+| `refunds.limits.daily-count` |  |  | `RefundLimits`, `ReconciliationJob` |
+| `refunds.limits.max-amount` |  | `100000` | `RefundLimits`, `ReconciliationJob` |
+| `refunds.reconciliation.cron` |  |  | `ReconciliationJob.reconcile` |
+| `refunds.region` **не задано** |  |  | `ReconciliationJob.reconcile` |
+| `refunds.topics.created` | `refunds.created` |  | `RefundEventsListener` |
+| `spring.application.name` | `refunds` |  |  |
+| `spring.datasource.password` (секрет, скрыт) | `***` |  |  |
+| `spring.datasource.url` | `jdbc:postgresql://db:5432/refunds` |  |  |
+| `spring.datasource.username` | `refunds` |  |  |
+
+=== diagrams/er.mmd
+%% Сгенерировано Knowledge Hub из модели знаний. Не редактируйте вручную: правки вносятся через ревью.
+erDiagram
+  audit_log {
+    varchar(255) text
+    uuid refund_id FK
+  }
+  refund_items {
+    bigserial id PK
+    uuid refund_id FK "not null"
+    varchar(64) sku "not null"
+    int quantity "not null"
+  }
+  refunds {
+    uuid id PK
+    numeric amount "not null"
+    varchar(32) status "not null"
+    text refund_reason
+    timestamp created_at "not null"
+  }
+  audit_log }o--o| refunds : "refund_id"
+  refund_items }o--|| refunds : "refund_id"

@@ -1,0 +1,9 @@
+payments:
+  topics:
+    completed: prod.payments.completed
+clients:
+  payments:
+    url: https://payments.prod.example.com
+refunds:
+  limits:
+    max-amount: 100000

@@ -10,6 +10,8 @@ use std::path::{Component as PathPart, Path, PathBuf};
 pub const SERVICE_FILE: &str = "service.yaml";
 pub const FEATURE_FILE: &str = "feature.yaml";
 pub const FEATURES_DIR: &str = "features";
+pub const DATABASE_FILE: &str = "database.yaml";
+pub const CONFIG_FILE: &str = "config.yaml";
 pub const STATE_DIR: &str = ".state";
 
 /// A saved previous version of a feature. Part of the store contract; no screen shows the history yet.
@@ -154,11 +156,20 @@ impl KnowledgeStore for FsStore {
             features.push(fd.feature);
         }
         features.sort_by(|a, b| a.id.cmp(&b.id));
+        let extra = |name: &str| -> AppResult<Option<serde_json::Value>> {
+            let f = dir.join(name);
+            if !f.is_file() {
+                return Ok(None);
+            }
+            Ok(Some(read_yaml(&f)?))
+        };
         Ok(Some(KnowledgeModel {
             schema_version: SCHEMA_VERSION,
             service: doc.service,
             catalog: Catalog { components: doc.components, sinks: doc.sinks, claims: doc.claims },
             features,
+            database: extra(DATABASE_FILE)?,
+            config: extra(CONFIG_FILE)?,
         }))
     }
 
@@ -177,6 +188,17 @@ impl KnowledgeStore for FsStore {
             claims: model.catalog.claims.clone(),
         };
         write_if_changed(&dir.join(SERVICE_FILE), &serde_yaml::to_string(&doc).map_err(AppError::store)?)?;
+        // Database and configuration in files of their own: large, and diffs stay readable.
+        for (name, value) in [(DATABASE_FILE, &model.database), (CONFIG_FILE, &model.config)] {
+            match value {
+                Some(v) => {
+                    write_if_changed(&dir.join(name), &serde_yaml::to_string(v).map_err(AppError::store)?)?;
+                }
+                None => {
+                    let _ = fs::remove_file(dir.join(name));
+                }
+            }
+        }
 
         let stamp = chrono::Utc::now().format("%Y-%m-%dT%H-%M-%SZ").to_string();
         let features_dir = dir.join(FEATURES_DIR);
@@ -254,6 +276,8 @@ mod tests {
             service: Service { id: "svc".into(), name: "Svc".into(), repo: "/r".into(), branch: None, stack: vec![], last_analyzed_commit: Some("abc".into()) },
             catalog: Catalog::default(),
             features,
+            database: None,
+            config: None,
         }
     }
 
