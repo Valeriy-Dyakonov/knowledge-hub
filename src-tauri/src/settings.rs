@@ -32,6 +32,8 @@ pub struct Settings {
     pub llm_model: String,
     pub review_policy: String,
     pub reviewer: String,
+    /// Link that opens a file in the IDE; `{path}` and `{line}` are substituted. Empty = no button.
+    pub ide_url: String,
 }
 
 impl Default for Settings {
@@ -43,6 +45,7 @@ impl Default for Settings {
             llm_model: String::new(),
             review_policy: "strict".into(),
             reviewer: String::new(),
+            ide_url: "vscode://file/{path}:{line}".into(),
         }
     }
 }

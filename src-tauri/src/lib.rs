@@ -12,12 +12,13 @@ mod settings;
 mod state;
 mod store;
 
-use commands::{knowledge, llm as llm_cmd, repo as repo_cmd, runs, settings as config};
+use commands::{knowledge, llm as llm_cmd, repo as repo_cmd, review, runs, settings as config};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             config::load_settings,
             config::save_settings,
@@ -38,6 +39,15 @@ pub fn run() {
             runs::load_checkpoint,
             runs::append_run_log,
             runs::run_logs,
+            review::save_batch,
+            review::find_batch,
+            review::open_batches,
+            review::save_answer,
+            review::close_batch,
+            review::append_journal,
+            review::review_journal,
+            review::add_question,
+            review::review_questions,
             llm_cmd::llm_chat
         ])
         .run(tauri::generate_context!())

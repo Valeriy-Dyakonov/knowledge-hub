@@ -2,6 +2,7 @@
 pub mod knowledge;
 pub mod llm;
 pub mod repo;
+pub mod review;
 pub mod runs;
 pub mod settings;
 

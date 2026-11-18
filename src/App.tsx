@@ -82,7 +82,7 @@ export default function App() {
               {tab === "run" && repo && <RunScreen repo={repo} settings={settings} />}
               {tab === "features" && repo && <Features repo={repo} />}
               {tab === "diagrams" && repo && <Diagrams repo={repo} />}
-              {tab === "review" && repo && <Review />}
+              {tab === "review" && repo && <Review repo={repo} settings={settings} />}
             </main>
           </div>
         </div>

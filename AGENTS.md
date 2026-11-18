@@ -32,7 +32,7 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
   - `steps.ts` — the single skip/required/warning policy.
   - `stages/` — one file per stage (`scan`, `discover`, `trace`, `describe`, `assemble`, `render`, `index`), registry `STAGES`.
   - `model/` — `ids.ts` (stable ids), `claims.ts` (claim creation and review transitions), `merge.ts` (merge with the previous model + projection of names), `placeholders.ts`, `status.ts`.
-  - `review/` — `ReviewPolicy` implementations (strict, lenient), registry, review use-cases.
+  - `review/` — `policy.ts` (`ReviewPolicy`, strict and lenient, registry `POLICIES`), `controls.ts` (control items), `service.ts` (`ReviewService`: next batch, answer, close and apply), `statement.ts` (claim in plain words).
   - `render/` — `Renderer`s (`markdown.ts`, `mermaid.ts` with L1–L3), registry `RENDERERS`; `render.test.ts` runs under jsdom and checks every diagram with `mermaid.parse`.
   - `testing/fixture.ts` — the fixture service (Rust scan JSON) run through stages 2–5, shared by tests.
   - `prompt.ts` — LLM prompts per language.
@@ -48,7 +48,7 @@ Before committing, run typecheck + `npm test` + `vite build`, and the Rust tests
 - `context/` — `ContextSource` trait + registry (`spring_config`, `openapi`, `migrations`, `codeowners`).
 - `redact.rs` — secret masking for configuration values and any text sent to the LLM or stored.
 - `store/` — `KnowledgeStore` on a local folder (`docs/07-storage.md`).
-- `state.rs` — SQLite in `.state/hub.db`: runs, checkpoints, logs, review batches, answers, journal, questions.
+- `state.rs` — SQLite in `.state/hub.db`: runs, checkpoints, logs, review batches, answers, journal, questions (JSON documents owned by the frontend).
 - `index/` — `Indexer` on SQLite FTS5 (`.state/index.db`).
 - `llm.rs` — OpenAI-compatible client. `secrets.rs` — keyring. `settings.rs` — `settings.json`.
 - `mcp/` — `stdio.rs` (transport), `tools.rs` (tool logic, standard envelope).

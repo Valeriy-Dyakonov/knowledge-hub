@@ -15,6 +15,8 @@ export const settings = {
   llmKeyPlaceholder: "Введите, чтобы заменить",
   reviewer: "Имя ревьюера",
   reviewerTip: "Записывается в каждое решение ревью.",
+  ideUrl: "Ссылка для открытия в IDE",
+  ideUrlTip: "Шаблон ссылки: {path} — полный путь к файлу, {line} — строка. VS Code: vscode://file/{path}:{line}; IntelliJ IDEA: idea://open?file={path}&line={line}. Пусто — кнопки не будет.",
   reviewPolicy: "Политика ревью",
   policies: { strict: "Строгая", lenient: "Мягкая" } as Record<string, string>,
   policyTip: "Строгая: пачки до 15 пунктов и контрольные пункты. Мягкая — для черновиков и экспериментов.",

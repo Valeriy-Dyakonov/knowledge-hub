@@ -17,6 +17,8 @@ export const settings: typeof ru = {
   llmKeyPlaceholder: "Type to replace",
   reviewer: "Reviewer name",
   reviewerTip: "Recorded with every review decision.",
+  ideUrl: "Open-in-IDE link",
+  ideUrlTip: "Link template: {path} is the full file path, {line} the line. VS Code: vscode://file/{path}:{line}; IntelliJ IDEA: idea://open?file={path}&line={line}. Empty hides the button.",
   reviewPolicy: "Review policy",
   policies: { strict: "Strict", lenient: "Lenient" },
   policyTip: "Strict: batches of up to 15 items and control items. Lenient is for drafts and experiments.",

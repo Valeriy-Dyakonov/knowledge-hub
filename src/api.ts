@@ -1,7 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { t } from "./i18n";
 import type { ErrorParams } from "./i18n/messages/ru/errors";
-import type { GeneratedFile, KnowledgeModel, LogEntry, RepoInfo, RunRecord, ScanResult, Settings } from "./types";
+import type { ReviewBackend } from "./lib/review/service";
+import type {
+  GeneratedFile, JournalEntry, KnowledgeModel, LogEntry, RepoInfo, ReviewAnswer, ReviewBatch, ReviewQuestion, RunRecord, ScanResult, Settings, StoredBatch,
+} from "./types";
 
 /** A backend failure worded in the UI language; `String(e)` gives just the message. */
 export class BackendError extends Error {
@@ -70,8 +73,20 @@ export const api = {
   appendRunLog: (serviceId: string, runId: string, entries: LogEntry[]) => call<void>("append_run_log", { serviceId, runId, entries }),
   runLogs: (serviceId: string, runId: string) => call<LogEntry[]>("run_logs", { serviceId, runId }),
 
+  saveBatch: (serviceId: string, batch: ReviewBatch) => call<void>("save_batch", { serviceId, batch }),
+  findBatch: (serviceId: string, batchId: string) => call<StoredBatch | null>("find_batch", { serviceId, batchId }),
+  openBatches: (serviceId: string) => call<StoredBatch[]>("open_batches", { serviceId }),
+  saveAnswer: (serviceId: string, batchId: string, answer: ReviewAnswer) => call<void>("save_answer", { serviceId, batchId, answer }),
+  closeBatch: (serviceId: string, batchId: string, state: "CLOSED" | "REJECTED", flags: string[]) => call<void>("close_batch", { serviceId, batchId, state, flags }),
+  appendJournal: (serviceId: string, entries: JournalEntry[]) => call<void>("append_journal", { serviceId, entries }),
+  reviewJournal: (serviceId: string) => call<JournalEntry[]>("review_journal", { serviceId }),
+  addQuestion: (serviceId: string, question: ReviewQuestion) => call<void>("add_question", { serviceId, question }),
+  reviewQuestions: (serviceId: string) => call<ReviewQuestion[]>("review_questions", { serviceId }),
+
   llmChat: (system: string, user: string) => call<string>("llm_chat", { system, user }),
 };
+
+export const reviewBackend: ReviewBackend = api;
 
 export const backend: Backend = api;
 

@@ -244,6 +244,83 @@ export interface RunRecord {
   error?: { code: string; params?: Record<string, unknown> };
 }
 
+// ---- Review (docs/04-review.md) ----
+
+export type BatchKind = "REGULAR" | "STATIC_SUMMARY";
+
+/**
+ * One reviewable point. `control` items are deliberately wrong claims mixed into a batch; they never reach the model.
+ * `options` turns the item into a clarifying question ("which table does this step write to?").
+ */
+export interface ReviewItem { id: string; claim: Claim; control?: boolean; options?: string[] }
+
+export interface StaticSummary { count: number; byKind: Record<string, number>; files: number; examples: ClaimId[] }
+
+export interface ReviewBatch {
+  id: string;
+  serviceId: ServiceId;
+  policy: string;
+  kind: BatchKind;
+  reviewer: string;
+  owner?: string;
+  items: ReviewItem[];
+  summary?: StaticSummary;
+  openedAt: string;
+}
+
+/** Item id of the single answer that closes a static summary batch. */
+export const SUMMARY_ITEM = "summary";
+
+/**
+ * Answer to one item. EDIT carries the corrected `payload`. A static summary is accepted only when the reviewer types
+ * the number of facts it shows (`acknowledgedCount`), which proves the summary was read.
+ */
+export interface ReviewAnswer {
+  itemId: string;
+  action: ReviewAction;
+  payload?: Record<string, string>;
+  comment?: string;
+  acknowledgedCount?: number;
+  answeredAt: string;
+  millisSpent?: number;
+}
+
+export interface CloseDecision {
+  accepted: boolean;
+  reasonCode?: string;
+  params?: Record<string, string>;
+  flags: string[];
+  failedControlItems: string[];
+}
+
+export type BatchState = "OPEN" | "CLOSED" | "REJECTED";
+
+export interface StoredBatch { batch: ReviewBatch; state: BatchState; answers: ReviewAnswer[]; flags: string[] }
+
+export interface JournalEntry {
+  batchId: string;
+  itemId: string;
+  claimId: string;
+  reviewer: string;
+  action: ReviewAction;
+  control: boolean;
+  at: string;
+  millisSpent?: number;
+  comment?: string;
+}
+
+/** "Не знаю": a question to the feature owner; the claim stays PROPOSED. */
+export interface ReviewQuestion {
+  id: string;
+  serviceId: ServiceId;
+  claimId: ClaimId;
+  featureId: FeatureId | null;
+  owner?: string;
+  askedBy: string;
+  comment?: string;
+  at: string;
+}
+
 // ---- Settings (mirror of src-tauri/src/settings.rs) ----
 
 export interface RepoEntry {
@@ -262,6 +339,8 @@ export interface Settings {
   llmModel: string;
   reviewPolicy: string;
   reviewer: string;
+  /** Link that opens a file in the IDE; `{path}` and `{line}` are substituted. Empty = no button. */
+  ideUrl: string;
 }
 
 export const defaultSettings: Settings = {
@@ -271,6 +350,7 @@ export const defaultSettings: Settings = {
   llmModel: "",
   reviewPolicy: "strict",
   reviewer: "",
+  ideUrl: "vscode://file/{path}:{line}",
 };
 
 /** A file generated from the model (markdown, Mermaid); path is relative to the service folder. */

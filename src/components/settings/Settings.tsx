@@ -109,6 +109,9 @@ function ReviewSection({ form, set }: SectionProps) {
       <Field label={t.reviewer} tip={t.reviewerTip}>
         <input value={form.reviewer} onChange={(e) => set({ reviewer: e.target.value })} />
       </Field>
+      <Field label={t.ideUrl} tip={t.ideUrlTip}>
+        <input value={form.ideUrl} onChange={(e) => set({ ideUrl: e.target.value })} />
+      </Field>
       <Field label={t.reviewPolicy} tip={t.policyTip}>
         <Segmented
           options={Object.entries(t.policies).map(([value, label]) => ({ value, label }))}

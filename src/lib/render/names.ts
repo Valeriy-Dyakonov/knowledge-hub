@@ -15,7 +15,7 @@ export function namer(model: KnowledgeModel, lang: string) {
     },
     sink: (id: string) => {
       const s = sinks.get(id);
-      return (s && pick(s.businessName, lang)) ?? s?.technicalName ?? id;
+      return (s && pick(s.businessName, lang)) ?? s?.technicalName ?? id.slice(id.indexOf(":") + 1);
     },
     sinkKind: (id: string) => sinks.get(id)?.kind ?? "DB_TABLE",
     componentKind: (id: string) => components.get(id)?.kind ?? "COMPONENT",
